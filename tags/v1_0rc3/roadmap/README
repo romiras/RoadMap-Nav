@@ -1,0 +1,1082 @@
+RoadMap - a street navigation system using the US Census maps and GPS
+---------------------------------------------------------------------
+
+                           R E A D M E
+
+            By Pascal Martin (pascal.martin@iname.com)
+
+
+INTRODUCTION:
+
+   RoadMap is a program for Linux that displays street maps. The maps
+   are provided by the US Census Bureau, and thus only cover the US.
+
+   RoadMap has been designed to be usable on both a desktop or laptop
+   computer, or on a PDA such as the iPAQ from HP (formely from COMPAQ)
+   or the Sharp Zaurus.
+   
+   In its current version, RoadMap can work with either the Gtk+ 1.2,
+   Gtk 2.0, QT/X11 or QT/QPE graphic environments. The QT environment
+   --especially its QT/QPE version--is still experimental, the Gtk 1.2
+   environment being the most stable.
+
+   RoadMap is at an early stage of development. At this time there
+   are not much features implemented yet. RoadMap can merely display
+   the map around a specified street address or follow a GPS device
+   (using gpsd). The plan for the future is to implement some navigation
+   features similar to those found in commercial street navigation systems,
+   and to port RoadMap to as many environment as possible.
+
+   RoadMap uses a binary file format for representing the maps that is
+   compact enough to allow the storage of many maps on a Compact Flash or
+   MultiMedia card. The map of Los Angeles county takes a little more than
+   10 Mbytes of flash space. RoadMap comes with a set of tools to convert
+   the US Census bureau data into its own map format.
+
+   RoadMap is distributed with the map of San Francisco as an example of
+   map. The complete set of maps is available at the following URL:
+   
+           http://roadmap.saignon.net/maps.html
+   
+   Please refrain from downloading all the US states at once, as the map
+   files are huges and the bandwidth is expensive.
+   
+   If you do need the complete set, please drop an email to the author.
+
+
+INSTALLATION:
+
+   Roadmap comes either as a set of sources, or as a set of binary files,
+   depending on which distribution you downloaded. RoadMap comes in three
+   distribution formats:
+
+      1- a binary tarball with executables for Linux/i686.
+      2- a set of Familiar's .ipk packages for Linux/armv4l
+      3- a source tarball.
+
+   The arm and i686 executables can use the same map files. Please note
+   that the map files are dependent on the computer's endianess: map files
+   built on a Mac (PowerPC CPU) would not be compatible with an Intel or
+   (small endian) ARM computer.
+
+   Note: the main Gtk RoadMap executables (roadmap and roadgps) are
+   built as "gtkroadmap" and "gtkroadgps", while the QT equivalent are
+   built as "qtroadmap" and qtroadgps" to avoid a clash. These executables
+   are installed under their "standard" names using symbolic links, so
+   that only one version can be installed at a time (the reason is to
+   share one roadmap.menu file..).
+
+
+   A version of RoadMap for the Sharp Zaurus is available at:
+   
+            http://moria.ionkov.net/zaurus/zroadmap/
+            
+            
+   INSTALLING FROM THE BINARY TARBALL:
+
+   The binary distribution contains three sets of files: the directory
+   src/gtk contains the executable files for Debian GNU/Linux (kernel 2.4)
+   and the directory src contains the example map datafiles.
+
+   The default RoadMap configuration is defined such that it is possible
+   to run from the src subdirectory. For example, use: gtk/gtkroadmap
+
+
+   INSTALLING FROM THE FAMILIAR PACKAGES:
+
+   The packages are provided in a compressed tar file. The tar file contains
+   two package files: the first package contains the RoadMap executables and
+   configuration files, the second package contains the San Francisco map.
+
+   I strongly recommend to install RoadMap on a CompactFlash card, and
+   not on the iPAQ internal flash. The reason is that the maps are too
+   big to be installed on the iPAQ flash. Note that all RoadMap packages
+   must be installed at the same place (this is because they all install
+   some files in the "share/roadmap" directory). The binary package should
+   be installed first (it creates the "share/roadmap" directory).
+
+   If RoadMap is available from your feed:
+
+      ipkg -d ext install roadmap-gtk
+      ipkg -d ext install roadmap-sfca
+
+   If you downloaded the ipk files on the iPAQ:
+
+      ipkg -d ext install roadmap-gtk_X.X_arm.ipk
+      ipkg -d ext install roadmap-sfca_X.X_arm.ipk
+
+   Other maps must be generated from the US Census Bureau's files (see below).
+
+   Many map files are too big to be installed as packages on the iPAQ.
+   The more reasonable way of handling the map files is to store them
+   on a desktop computer and transfer the ones you need on a compact flash
+   or MMC memory card. To build the maps, you need the Linux/i686 binary
+   tarball, or the source tarball.
+
+
+   INSTALLING FROM THE SOURCE TARBALL:
+
+   It is also possible to rebuild RoadMap and the map files from scratch
+   from the source distribution:
+
+   1- Install the development libraries for Gtk+ 1.2
+
+   2- install the RoadMap's tarball:
+
+      tar xzvf <tarball>
+
+   3- Compile roadmap for the Gtk, Gtk2 or the QT toolkit:
+
+      cd roadmap/src/gtk     -- if using the Gtk 1.2 toolkit
+      make
+      cd ..
+
+      cd roadmap/src/gtk2    -- if using the Gtk 2.0 toolkit
+      make
+      cd ..
+
+      cd roadmap/src/qt      -- if using the QT toolkit
+      make
+      cd ..
+
+      (If you want to build only the "runtime" programs--and skip the
+      "build" programs, use "make runtime" instead of "make").
+
+   4- download some maps from the US Census bureau:
+
+         http://www.census.gov/geo/www/tiger/tiger2002/tgr2002.html
+
+   This download can be automated by using the shell script
+   roadmap/src/rdmdownload:
+
+      rdmgenmaps <tiger-path> [<state-symbol> ..]
+
+   CAUTION: THE COMMAND ABOVE DOWNLOADS THE TIGER 2002 FILES. TO DOWNLOAD
+   THE TIGER 2000 FILES, USE THE format OPTIONS:
+
+      rdmgenmaps <tiger-path> format=2000 [<state-symbol> ..]
+
+   5- download the list of counties from the US Census bureau:
+
+         http://www.census.gov/geo/tigerline/app_a02.txt
+
+      (A version of app_a02.txt is also provided in directory src.)
+
+   6- Build the maps:
+
+      rdmgenmaps <tiger-path> [maps=<map-path>]
+
+   This command processes all the Census Bureau files found in <tiger-path>
+   and creates the map files for RoadMap in the <map-path> directory. There
+   is one map file generated for each county.
+
+      rdmgenmaps <tiger-path> [maps=<map-path>] <county> ..
+
+   This other command processes only the listed counties. The county
+   shall be identified by its FIPS (e.g. 06075 for San francisco, CA).
+
+   CAUTION: THE DESCRIPTION ABOVE ASSUMES THE TIGER 2002 FORMAT. USE
+   THE OPTION format=2000 TO CONVERT TIGER 2000 FILES. FOR EXAMPLE:
+
+      rdmgenmaps <tiger-path> format=2000 [maps=<map-path>]
+
+
+   The rdmgemaps tool is a shell script that extract the TIGER files from
+   the downloaded ZIP files, invokes the buildmap tool and then cleans
+   up the TIGER files. Last, rdmgemaps invokes the buildus tool to generate
+   the US states & counties catalog. The main purpose of rdmgemaps is really
+   to keep the TIGER files in compressed form, considering their huge size..
+
+
+   The buildmap tool takes the TIGER files as input, processes one county
+   at a time, and produces one RoadMap .rdm map file per county.
+
+   The buildmap tool uses popt for parsing the command line arguments:
+   the option --help gives more information about the available options.
+
+
+   The buildus tool creates a catalog of maps that is used by RoadMap
+   to combine all states & counties into a giant US map. It looks for
+   (1) the file AllSt.txt and (2) the various existing RoadmMap maps.
+
+   This is not a problem if the catalog references a map file that does not
+   exists: this way it is possible to store locally only a small portion of
+   the US maps. This is useful when using a PDA with limited storage space
+   (like the iPAQ).
+
+   The buildus tool uses popt for parsing the command line arguments:
+   the option --help gives more information about the available options.
+
+   9- run make to install roadmap:
+
+      cd gtk
+      make install
+      cd ..
+
+   This last step installs the RoadMap executables. The maps should have
+   been generated at their proper location in steps 3 to 7. The install
+   is not required for running RoadMap: the roadmap program (and the build
+   tools) can run from the local directory as well.
+
+
+ROADMAP APPLICATIONS:
+
+   RoadMap includes the following applications:
+
+   roadmap           This is the main application. It displays the map
+   (gtk/gtkroadmap)  and can keep track of the current GPS position.
+
+   roadgps           A very handy Gtk GPS console, inspired by the Garmin
+   (gtk/gtkroadgps)  satellite status page, with a NMEA log capability.
+                     Thanks to gpsd, roadgps and roadmap can be active
+                     at the same time.
+
+   buildmap          A program that takes the US Census Bureau files
+                     as input and produces the map files used by roadmap.
+                     This application is to be run once on a desktop or
+                     beefed-up laptop to prepare the map files and is not
+                     needed when using the maps.
+
+   buildus           A program that takes a set of roadmap map files and
+                     produce a directory file that helps roadmap choose
+                     the map(s) to display according to the location or
+                     city. This application is to be run once on a desktop
+                     or laptop and is not needed when using the maps.
+
+   dumpmap           Display the data tables from a map file. This application
+                     is used for debug purposes only and is not needed when
+                     using the maps.
+
+   rdmgenmaps        A script to simplify the generation of the maps.
+
+
+USING ROADMAP:
+
+   RoadMap's Command Line Options:
+   
+   The RoadMap application accepts the following command line options:
+   
+   --location=LONGITUDE,LATITUDE
+   
+       Set the location point (see menu entry Screen/Show Location..).
+       This option is sticky.
+
+   --metric
+   
+       Use the metric system for all units. This option is sticky.
+
+   --imperial
+   
+       Use the imperial system for all units. This option is sticky.
+
+   --no-area
+   
+       Do not show the polygons (parks, hospitals, malls, airports, etc..).
+
+   -geometry=WIDTHxHEIGHT
+   --geometry=WIDTHxHEIGHT
+   --geometry:WINDOW=WIDTHxHEIGHT
+   
+       Set the geometry of a specific RoadMap's window, according to its
+       title. The two first forms set the size of the main windows
+       (otherwise called "Main"). If the window's title include spaces,
+       dashes can be used in place of the spaces (the goal here is to be
+       shell friendly). This option is sticky.
+
+   --no-toolbar
+   
+       Do not show the toolbar. This option is sticky.
+
+   --square
+   
+       Show squares' boundaries using grey boxes. This option is for
+       debug purpose only.
+
+   --gps=URL
+   
+       Use a specific GPS source. This option is not sticky: it overrides
+       the preferences setting this time, but the rpeferences setting is
+       not modified. The main use of this option is to rerun GPS logs
+       created using roadgps.
+
+   --debug
+   
+       Print all informational and debug traces.
+
+   --verbose
+   
+       Print all informational traces.
+
+   --help
+
+       Show a description of all command line options.
+
+   The options marked as "sticky" remain in effect the next time RoadMap
+   is run. The use of the option actually changes the RoadMap preferences.
+
+
+   The RoadMap Display:
+
+   The main RoadMap window shows the menu, the toolbar and the map's canvas.
+   The toolbar is optional: all the commands are also available from the menu
+   bar or from the keyboard or iPAQ buttons.
+
+   When RoadMap starts, the map tracks the current GPS position. It is possible
+   to select another mode: show the current destination point (see the section
+   "Managing Trips" below), show a specific location, track the GPS position
+   with the north shown up, track the GPS position with the direction of
+   movement shown up.
+
+   Clicking on the map screen displays the name of the closest street (with
+   the selected street block's range of address), road or freeway (if any).
+   This display is shown for a limited amount of time (see preference
+   "Highlight.Duration").
+
+   RoadMap indicates the current street a few seconds after the GPS position
+   reached the street. This display is also shown for a limited time. There
+   are several conditions for RoadMap to "lock" on a new current street: the
+   GPS location must have gone far enough from the previous street, if any
+   (see preference Accuracy.Street); The GPS location must be close to the
+   street (same preference as before); the same street must be "confirmed"
+   by multiple readings (The main reason for these conditions is to avoid
+   locking on streets at the intersections--see Accuracy.Confirm)
+
+   RoadMap can also display 3 messages at the following corners of the map:
+   bottom left, bottom right and top right (the top left corner is already
+   used to show the orientation of the map). These messages can be defined
+   by the user using RoadMap's specific format strings (see section
+   "Configuring the RoadMap text and voice messages").
+
+   If the flite program has been installed, or if RoadMap was configured
+   for another speech application, RoadMap will complement the screen
+   information with an audio one: Roadmap will "tell" the name of the street
+   on the audio output device. As a general rule, RoadMap tries not to repeat
+   the same message again, as frequent audio messages tend to border on the
+   irritating side. Thus if the same street is selected more than once, the
+   screen information will be displayed each time, but the voice messge
+   will be provided only once. As voice messages tend to take a significant
+   time to be produced, RoadMap memorizes the latest message requested while
+   the current message was produced and will 'air" it after the current
+   message has been completed. Only one message is stored that way, the last
+   requested one: any message generated in between is ignored.
+
+   It is possible to mute the RoadMap's voice, using the File / Mute Voice
+   item from the menu bar. The voice can be enabled later using the File /
+   Enable Voice item.
+
+
+   Key Bindings:
+
+   On the iPAQ the buttons are mapped as follow:
+
+   "calendar" button:         zoom out.
+   "telephone" button:        zoom in.
+   the button on the right:   reset the zoom level.
+   arrow buttons:             scroll the map.
+   Compaq ("menu") button:    quit roadmap.
+
+   On a desktop or laptop, the keyboard keys are mapped as follow:
+
+   '+'           zoom in.
+   '-'           zoom out.
+   'r'           reset the zoom level.
+   arrow keys:   scroll the map.
+   'q'           quit roadmap.
+
+
+   Waypoints and addresses:
+
+   RoadMap manages four types of points: a destination point (selected using
+   a street address), a location point (same method), the GPS position
+   (updated automatically if a GPS fix is available) and user-defined
+   waypoints. One can select which of the first three locations serves as the
+   center of the map. The GPS and waypoints positions are special cases:
+   see the section on trip management.
+
+   The destination and location waypoints can be entered manually by providing
+   a valid USPS address: street number, name, city and state names.
+
+
+   Street name options:
+
+   When entering a street name, the street prefix, suffix and type, if provided,
+   must be among the abbreviations listed by the US Census Bureau (N for north,
+   E for east, Blvd for boulevard, etc..). In almost all cases, the US Census
+   Bureau conventions follow the usual abbreviations, so there is no need to
+   worry here. In addition, any of these fields is optional: not providing
+   them only makes the search less selective. If several matches are found,
+   RoadMap shows a list of all matching streets and lets the user select the
+   appropriate one.
+
+   The exact format of the data expected by RoadMap as a complete street name
+   is as follow:
+
+           [prefix ' '] name [[' ' suffix] ' ' type]
+
+   The name itself may include space characters. Potential conflicts are
+   resolved by excluding the prefix, suffix and type fields from the name
+   only when a match is found with the valid set for that county. As such,
+   the following names would work OK in any circumstances:
+
+           N Rio del Sol St   --> RoadMap detects both a prefix and a type.
+           Rio del Sol St     --> RoadMap detects the type, no valid prefix.
+           N Rio del Sol      --> RoadMap detects the prefix, no valid type.
+           Rio del Sol        --> RoadMap detects no valid prefix or type.
+
+   Lets go through an example: we will search for 100 East Washington
+   Boulevard in Los Angeles, California. The name of the street should be
+   typed as follow:
+
+           e washington blvd
+
+   The 'e' stands for "east", 'blvd' stands for boulevard, according to the
+   US Census Bureau documentation. Note that RoadMap is not case sensitive.
+
+   The result is a single match, so RoadMap shows the location immediately
+   without any additional question. However it is possible to omit either
+   the prefix, street type, or both, with the effect of broadening the search.
+   Let say we entered:
+
+           washington blvd
+
+   Now RoadMap display a dialog that lists 3 matches:
+
+           Washington Blvd, Los Angeles
+           W Washington Blvd, Los Angeles
+           E Washington Blvd, Los Angeles
+
+   The first item in the list is shown selected, and RoadMap displays a new
+   location in the map display. In fact, each time the user selects one
+   address in the list, RoadMap displays the corresponding map location.
+   When the user hits the OK button, this simply confirms the current choice
+   as the final one.
+
+   Note that not providing a prefix, suffix or street type does broaden
+   the search, but the street name must always be provided in full: at that
+   time RoadMap provides only an exact street names search. Thus providing
+   "wash" instead of "washington" only triggers the error message "No street
+   with that name could be found".
+
+
+   Other Address options:
+
+   It is possible not to specify the street number part of the address:
+   in that case, all street blocks matching the street and city names will
+   be listed. Be careful, that might make a long list, and RoadMap has a
+   limit of 256 items per list (matching items beyond the 256th one are
+   discarded).
+
+   It is also possible to specify an approximate city search: if the city
+   name is prefixed with a character '?', then the name of the city is used
+   to find the county, but is not used in the street match: the idea is to
+   list all similar addresses around (i.e. in the county). This is useful
+   when one is not sure of the city name, or only knows the name of a city
+   nearby.
+
+
+   Managing Trips
+   
+   A trip is made of one destination point and many user-defined waypoints.
+   The purpose of a RoadMap trip is to describe a real-life trip and to
+   provide the user information about the trip progress.
+   
+   RoadMap supports an infinite number of trips: each trip context is saved
+   in a trip file. One trip at a time can be edited or activated. A saved
+   trip can be reloaded from the trip file, of course. each trip support an
+   infinite number of waypoints.
+
+   The last trip created or loaded will be reloaded the next time RoadMap
+   starts.
+   
+   A trip must have been loaded before it can be edited. There are three trip
+   edition actions available in the "Trips" menu: set the destination point,
+   add a waypoint or remove a waypoint. The destination point is defined
+   using a street address by selecting the "Set Destination.." entry. A
+   waypoint is added by highlighting a location on the map and then selecting
+   the "Add as Waypoint" entry. Waypoints can be deleted by selecting the
+   "Delete Waypoints.." entry, then selecting a specific waypoint and hitting
+   the "Delete" button.
+   
+   A trip that has been created or loaded can then be activated. Activating
+   a trip defines the departure point (as the current GPS location) and
+   enable the "trip display" mode, i.e. some trip information displayed on
+   top of the map. These trip displays include an arrow beside the GPS
+   location symbol to indicate the direction of the next waypoint (if any)
+   or else of the destination, as well as user configurable messages, such
+   as distance information, at the corners of the map. (see CONFIGURATION
+   for more information about these user configurable messages).
+
+   When a trip is active, RoadMap tracks the GPS position in realtime and
+   updates its map accordingly. The GPS position can be shown in two modes:
+   either North up, or GPS direction up. In the second case, the map is
+   rotated according to the direction information received from the GPS.
+   This dynamic rotation is in addition to the map manual rotation.
+
+   A trip can be stopped at any time and then resumed. Resuming a trip
+   does not modify the departure point. The trip can also be resumed in
+   reverse mode: in that case the departure point and the destination
+   point switch roles. Note that this does not modify the trip, only the
+   way RoadMap uses the trip information. The reverse mode makes it
+   possible to use the same RoadMap trip on the way back.
+
+
+   RoadMap Preferences:
+
+   It is possible to edit the roadmap's preferences (select File/Preferences
+   from the menu bar). Most preference items take effect only when roadmap
+   start, so quitting roadmap is usually required. Editing the roadmap
+   preferences requires a keyboard to be available. One way to configure
+   the iPAQ preferences is to run roadmap from the iPAQ, redirected to the
+   desktop's or laptop's X server.
+
+
+USING ROADGPS:
+
+   The RoadGps tool can be started on its own (using command line options
+   similar to those of RoadMap), or from the RoadMap's File / GPS Console
+   menu item.
+
+   The screen shows the list of satellites, their position in the sky
+   (north up) and the strength of the signal. It marks in reverse video
+   those satellites used to compute the current position.
+
+   More importantly, RoadGps allows to log all the NMEA sentences received.
+   RoadGps rotates through up to 127 log files. The log file are created
+   in /var/tmp, with the name formatted as: "roadgps-%d.log" (where %d
+   represents an integer in the range 1..127).
+
+   When RoadGps starts, the logging function is off. Whenever the logging
+   function is turned on a new log file is created (if the logging function
+   was already on, the current log file is closed and a new one is created).
+
+   RoadGps uses a subset of the RoadMap preferences setup, but has no
+   preferences editor of its own: configure RoadMap first, and then use
+   RoadGps.
+
+
+CONFIGURATION:
+
+   Files.
+   
+   The RoadMap configuration is stored in text files located in the following
+   directories:
+
+            /usr/share/roadmap
+            /usr/local/share/roadmap
+            ~/.roadmap
+            ~/.roadmap/trips
+
+   The directory ~/.roadmap contains the user configuration: any user change
+   to the configuration is written there. The items in the user configuration
+   take precedence over the "default" configuration in the "shared" directories.
+
+   The directory ~/.roadmap/trips is used as the default location for the
+   trip files. Note that trip files can be stored anywhere, not only in
+   ~/.roadmap/trips.
+   
+   The user configuration directories are created when needed, if they do
+   not exist.
+
+   The syntax of most RoadMap configuration files is similar to the X
+   ressources file format (the exceptions are the sprites file and the
+   trip files). Each configuration item is represented by one line of text,
+   using the following format:
+
+            name ': ' value
+
+   The following configuration files are used:
+
+      schema          The definition of the geographic entities.
+      preferences     User's preferences.
+      session         The latest context used (locations)
+      sprites         The definition of the graphic symbols
+
+   The session file contains the state of roadmap, which is saved (if needed)
+   when roadmap exits. The preferences file contains all the preferences
+   items, and can be edited by the user. The schema file describes the
+   geographic entities that are shown on the map; it should normally not be
+   modified by the users. The sprites file contains the graphical definition
+   of the symbols usd by RoadMap to indicates the various locations, to draw
+   the compass, etc..
+
+
+   Configuring the RoadMap text and voice messages.
+   
+   The RoadMap text displays and voice messages can be configured by the
+   user using format strings in the preferences. The format strings contain
+   static and dynamic parts. The dynamic parts (or "macros") are specified
+   using the character '%' followed by one character that denotes a predefined
+   RoadMap variable:
+   
+   A:   estimated time of arrival (not yet implemented).
+   B:   Route bearing (not yet implemented).
+   D:   Distance to the destination time (set only when a trip is active).
+   S:   Speed (set only when a trip is active).
+   T:   Current time, format HH:MM (set only when a trip is active).
+   W:   Distance to the next waypoint (set only when a trip is active).
+   #:   the street number range to the selected or current street block.
+   N:   the name of the selected or current street.
+   C:   the name of the city for the selected or current street.
+   F:   the full name (number, name, city) of the selected or current street.
+   
+   Example: "%D (%W)" shows the distance to the destination point, followed
+   by the distance to the next waypoint (in parenthesis).
+   
+   A message is evaluated, and displayed, only when all referenced macros
+   have a defined value. Therefore the example above will show nothing if
+   there is no trip active, or if there is no next waypoint. It is possible
+   to define several alternatives, separated by the character '|': the first
+   alternative that has been successfully evaluated will be displayed.
+   
+   Example: "%D (%W)|%D" shows both distances to the destination point and
+   to the next waypoint if both distances are defined, or else only the
+   distance to the destination point if this distance is defined. If none
+   of the two distance have been defined (for example when no trip is
+   active), then no display is shown and/or no sound is produced.
+
+   It is possible to "link" together parts of a string using simple or
+   double quotes. This is used when the string specifies an external command
+   to execute. RoadMap does not use the shell to execute commands (so to stay
+   independent from the OS-specific shell syntax), but it does recognise the
+   use of quotes to specify a command parameter that includes spaces. Such
+   a parameter may be enclosed in single or double quotes. There is no
+   difference between one quote or another, except that the parameter must
+   be terminated with the same quote character it was started with.
+ 
+   Example: "flite -t 'On %N'" to specify the command flite with two
+   parameters ("-f" and "On %N").
+
+
+   RoadMap preferences items:
+
+     General.Database:
+
+         Description: the database paths.
+         Format: a comma-separated list of directory paths.
+         Default: .,~/maps,/usr/share/roadmap/maps
+
+     General.Unit:
+
+         Description: the unit system used, either "imperial" or "metric"
+         Default: imperial
+
+     General.Default Zoom:
+
+         Description: the zoom level when roadmap is started.
+         Format: integer
+         Default: 60
+
+     General.Keyboard:
+
+         Description: show (yes) or hide (no) a keyboard on the screen.
+         Format: boolean
+         Default: yes
+
+     General.Toolbar:
+
+         Description: show (yes) or hide (no) the roadmap toolbar.
+         Format: boolean
+         Default: yes
+
+     Geometry.Main:
+
+         Description: sets the size of the RoadMap main window.
+         Format: WIDTHxHEIGHT
+         Default: 800x600
+
+     Geometry.WINDOW:
+
+         Description: sets the size of the RoadMap window named WINDOW.
+         Format: WIDTHxHEIGHT
+         Default: 300x200
+
+     Display.Bottom Right:
+     
+         Description: define the message on the bottom right corner
+         Format: RoadMap format string
+         Default: %D (%W)|%D
+
+     Display.Bottom Left:
+     
+         Description: define the message on the bottom left corner
+         Format: RoadMap format string
+         Default: %S
+
+     Display.Top Right:
+     
+         Description: define the message on the top right corner
+         Format: RoadMap format string
+         Default: ETA: %A|%T
+
+     Display.Duration:
+
+         Description: The time during which a selection or message is shown.
+         Format: number of seconds.
+         Default: 10
+         Comment: the selection is only removed when the map is redrawn.
+
+     Map.Background:
+
+         Description: the color used for the background of the maps.
+         Format: color name (see file rgb.txt)
+         Default: LightYellow
+
+     GPS.Background:
+
+         Description: the background color for the RoadGps screen.
+         Format: color name (see file rgb.txt)
+         Default: LightYellow
+         Comment: this color is used by RoadGps, not by RoadMap.
+
+     GPS.Foreground:
+
+         Description: the foreground color for the RoadGps screen.
+         Format: color name (see file rgb.txt)
+         Default: Black
+         Comment: this color is used by RoadGps, not by RoadMap.
+
+     GPS.Timeout:
+
+         Description: a timeout for detecting that the GPS link is down.
+         Format: number of seconds.
+         Default: 10
+         Comment: the GPS link is considered down if no new GPS data was
+                  received for the specified amount of time.
+
+     GPS.Source:
+
+         Description: the URL that gives the address of the GPS data source.
+         Format: gpsd://<hostname>[:<port>]
+         Default: gpsd://localhost
+         Comment: the syntax "file://<path>" is also possible, for debug.
+
+     GPS.Color:
+
+         Description: the color used for the current GPS position symbol
+         Format: color name (see file rgb.txt)
+         Default: green
+         Comment: this color is used by RoadMap, not by RoadGps.
+
+     Destination.Color:
+
+         Description: the color used for the destination symbol
+         Format: color name (see file rgb.txt)
+         Default: red
+
+     Selected Street.Background:
+
+         Description: the color for the background of the selected street name.
+         Format: color name (see file rgb.txt)
+         Default: yellow
+
+     Selected Street.Foreground:
+
+         Description: the color for the foreground of the selected street name.
+         Format: color name (see file rgb.txt)
+         Default: black
+
+     Selected Street.Text:
+
+         Description: the format used for the selected street's display.
+         Format: RoadMap format string
+         Default: %F
+
+     Console.Background:
+
+         Description: the color used for the background of the trip display
+         Format: color name (see file rgb.txt)
+         Default: yellow
+
+     Console.Foreground:
+
+         Description: the color used for the foreground of the trip display
+         Format: color name (see file rgb.txt)
+         Default: black
+
+     Current Street.Background:
+
+         Description: the color for the background of the current street's name
+         Format: color name (see file rgb.txt)
+         Default: DarkSeaGreen4
+
+     Current Street.Foreground:
+
+         Description: the color for the foreground of the current street's name
+         Format: color name (see file rgb.txt)
+         Default: white
+
+     Current Street.Text: %N, %C|%N
+
+         Description: the text used to display the current street's name
+         Format: color name (see file rgb.txt)
+         Default: black (I would recommend using white--see above)
+
+     Voice.Current Street:
+
+         Description: the command used to announce the current street's name
+         Format: RoadMap format string
+         Default: flite -t 'On %N'
+
+     Voice.Selected Street:
+
+         Description: the command used to announce the selected street's name
+         Format: RoadMap format string
+         Default: flite -t '%N'
+
+     Accuracy.Confirm:
+
+         Description: number of matches before assigning a current street.
+         Format: integer
+         Default: 3
+         Comment: the purpose of using multiple matches is to avoid assigning
+                  a crossing street as the current street because it was the
+                  best match once.
+
+     Accuracy.Mouse:
+
+         Description: the size of the street selection search area
+         Format: number of pixels
+         Default: 20
+         Comment: on a mouse click, RoadMap defines the street search area
+                  as the rectangle delimited by the two points
+                  (x-accuracy, y-accuracy) and (x+accuracy, y+accuracy).
+                  Limiting the search to this area speeds up the process,
+                  compared to searching in the whole screen area.
+
+     Accuracy.Street:
+
+         Description: the street selection accuracy.
+                      one street to the other.
+         Format: integer (using the current unit system).
+         Default: 80
+         Comment: This distance is used when switching to a new street.
+                  The GPS position must be at a distance greater than the
+                  accuracy from the current street, and at a distance lower
+                  than the accuracy from the would be next current street.
+
+     Shapes.Declutter:
+
+         Description: the zoom level when the shapes are not drawn anymore.
+         Format: integer
+         Default: 1300
+         Comment: the definition of this item is rather obscure. To be fixed.
+
+     Polygons.Declutter:
+
+         Description: the zoom level when the polygons are not drawn anymore.
+         Format: integer
+         Default: 1300
+         Comment: the definition of this item is rather obscure. To be fixed.
+
+     History.Depth: 100
+
+         Description: the maximum number of items in the address history
+         Format: integer
+         Default: 100
+
+     Approach.Background:
+     Approach.Foreground:
+     Approach.Text:
+     Voice.Approach:
+
+         Description: reserved for future use (approaching waypoint).
+
+     Voice.Next Intersection:
+
+         Description: reserved for future use (announcing next intersection).
+
+
+   RoadMap session items:
+
+     Locations.Location
+
+         Description: the latest selected position.
+         Format: longitude ',' latitude.
+         Default: -122394181,37794928
+         Comment: the name of this item is kind of silly, to be changed.
+
+     Locations.GPS
+
+         Description: the latest received GPS position.
+         Format: longitude ',' latitude.
+         Default: -122394181,37794928
+
+     Locations.Trip
+     
+         Description: the name of the last used trip file.
+         Format: string
+         Default: default
+         
+ (*) NOTE: the default position values match 1 Market St, San Francisco, CA.
+
+
+   RoadMap schema items:
+
+     The schema file uses the same format as the preference file. It defines
+     the properties of the various categories of objects that make a map.
+     the list of categories matches the list of Tiger file's categories
+     (see Tiger's CFCC field) that have been filtered by buildmap.
+
+     The two differences with the preferences files are that there is no
+     pre-defined category in RoadMap: categories are defined by the maps
+     (FIXME: this is still to be done--as a temporary hack, the categories
+     have been hardcoded somewhere) and there is no default value.
+
+     For each category, RoadMap use the following items:
+
+     <category>.Class:
+
+         Description: the class of object this category belongs to.
+         Format: Road, Feature or Area.
+         Comment: Road and Feature categories are searched in the "line"
+                  table of the map files and drawn as lines. The Road
+                  category is searched when a street name is looked for.
+                  The Area objects are drawn separatly, as polygons.
+
+     <category>.Color:
+
+         Description: the color used when drawing the objects.
+         Format: color name (see file rgb.txt)
+
+     <category>.Declutter:
+
+         Description: the zoom level from which the objects are not drawn.
+         Format: integer
+         Comment: the definition of this item is rather obscure. To be fixed.
+
+     <category>.Thickness:
+
+         Description: the thickness used to draw lines.
+         Format: number of pixels
+
+     RoadMap uses the following categories:
+
+         Freeways
+         Ramps
+         Highways
+         Streets
+         Trails
+         Rivers
+         Shore
+         Hospitals
+         Malls
+         Airports
+         Stations
+         Lakes
+         Parks
+         Sea
+
+
+   RoadMap sprites file:
+
+     This file define the drawing commands used to draw the various symbols
+     used by RoadMap:
+
+         GPS (indicates the current GPS position and direction),
+         Position (indicates the currently selected location),
+         Destination,
+         Highlight (marks the endpoints of a selected street block) and
+         Compass (used to indicates the direction of the North pole).
+
+     The sprites file is made of a sequence of single-line commands:
+
+         S <name>               Starts a sprite.
+
+         F <color> <thickness>  Define the pen to be used by the subsequent
+                                drawing commands.
+
+         L <x>,<y> ..           Draw a line.
+         P <x>,<y> ..           Draw a filled polygon.
+         C <x>,<y> <radius>     Draw a circle.
+         D <x>,<y> <radius>     Draw a disk (filled circle).
+
+     The coordinates are pixel positions, relative to the sprites "hot point".
+
+
+   RoadMap trip files:
+   
+     Each trip file contains the information relative to one trip. A trip
+     file use a CSV format where each record describe a point and contains
+     four fields: type, name, longitude, latitude.
+     
+     The type field is either "Destination" or "Waypoint".
+     
+     The name field is the name of the waypoint (the name of the destination
+     is always "Destination").
+
+     The following trip file example defines a trip from the Golden Gate's
+     bridge to 1, Market St, in san Francisco, California:
+     
+     Destination,Destination,-122394181,37794928
+     Waypoint,1000 - 1098 The Embarcadero  San Francisco,-122401781,37803934
+     Waypoint,100 - 198 Richardson Ave  San Francisco,-122446481,37799826
+
+
+TOOLS:
+
+   A RoadMap map file is a small database of C tables. The tables are organized
+   in a tree fashion and each table is identified by a path. One specific set
+   of tables (the dictionary) groups all the names that appear in the map.
+
+   RoadMap comes with a tool to display information extracted from a map file:
+
+   dumpmap [--usage] [-d TABLE] [--strings] [--volume=NAME] [--search=NAME]
+
+   dumpmap uses the popt library for parsing command line argument: the
+   option --help provides a full description of each option. The name of
+   map files must be provided after the options: dumpmap will process each
+   provided file sequentially, according to the options that was selected.
+
+
+APPENDIX: Configuration examples
+
+~/.roadmap/preferences ("factory" defaults):
+
+Accuracy.Confirm: 3
+Accuracy.GPS: 1000
+Accuracy.Mouse: 20
+Accuracy.Street: 200
+Approach.Background: yellow
+Approach.Foreground: black
+Approach.Text: Approaching %N, %C|Approaching %N
+Console.Background: yellow
+Console.Foreground: black
+Current Street.Background: yellow
+Current Street.Foreground: black
+Current Street.Text: %N, %C|%N
+Destination.Color: red
+Display.Bottom Left: %S
+Display.Bottom Right: %D (%W)|%D
+Display.Top Right: ETA: %A|%T
+Display.Duration: 10
+General.Database: .,~/.roadmap,/usr/share/roadmap,/usr/local/share/roadmap
+General.Default Zoom: 20
+General.Keyboard: no
+General.Toolbar: yes
+General.Unit: imperial
+Geometry.Main: 800x600
+Geometry.Preferences: 800x300
+GPS.Background: LightYellow
+GPS.Color: red
+GPS.Foreground: black
+GPS.Source: gpsd://localhost
+GPS.Timeout: 10
+History.Depth: 100
+Map.Background: LightYellow
+Polygons.Declutter: 1300
+Selected Street.Background: yellow
+Selected Street.Foreground: black
+Selected Street.Text: %F
+Shapes.Declutter: 1300
+Voice.Approach: flite -t 'Approaching %N'
+Voice.Current Street: flite -t 'On %N'
+Voice.Next Intersection: flite -t 'Next intersection: %N'
+Voice.Selected Street: flite -t '%N'
+
+
+~/.roadmap/session ("factory" defaults):
+
+Locations.Location: -122394181,37794928
+Locations.GPS: -122394181,37794928
+Locations.Trip: default
+
