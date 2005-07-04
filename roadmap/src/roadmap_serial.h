@@ -1,4 +1,4 @@
-/* roadmap_gps.h - GPS interface for the RoadMap application.
+/* roadmap_serial.h - a module to open/read/close a serial IO device.
  *
  * LICENSE:
  *
@@ -19,21 +19,26 @@
  *   You should have received a copy of the GNU General Public License
  *   along with RoadMap; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ *
+ * DESCRIPTION:
+ *
+ *   This module hides the OS specific API to access a serial device.
  */
 
-#ifndef _ROADMAP_NET__H_
-#define _ROADMAP_NET__H_
+#ifndef INCLUDE__ROADMAP_SERIAL__H
+#define INCLUDE__ROADMAP_SERIAL__H
 
-typedef int RoadMapSocket; /* UNIX style. */
-#define ROADMAP_NET_IS_VALID(s) (s != (RoadMapSocket)-1)
 
-RoadMapSocket roadmap_net_connect (const char *protocol,
-                                   const char *name, int default_port);
+typedef int RoadMapSerial; /* UNIX style. */
+#define ROADMAP_SERIAL_IS_VALID(f) (f != (RoadMapSerial)-1)
 
-int roadmap_net_receive (RoadMapSocket s, void *data, int size);
-int roadmap_net_send    (RoadMapSocket s, const void *data, int length);
 
-void roadmap_net_close  (RoadMapSocket s);
+RoadMapSerial roadmap_serial_open  (const char *name, const char *mode);
 
-#endif // _ROADMAP_NET__H_
+int   roadmap_serial_read  (RoadMapSerial serial, void *data, int size);
+int   roadmap_serial_write (RoadMapSerial serial, const void *data, int length);
+void  roadmap_serial_close (RoadMapSerial serial);
+
+#endif // INCLUDE__ROADMAP_FILE__H
 
