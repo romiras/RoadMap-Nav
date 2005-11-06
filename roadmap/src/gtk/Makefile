@@ -56,7 +56,7 @@ clean:
 strip:
 	$(STRIP) -s $(RUNTIME)
 
-install:
+install: all strip
 	mkdir -p $(DESTDIR)$(bindir)
 	cd $(DESTDIR)$(bindir) && rm -f $(RUNTIME) roadmap roadgps
 	install $(RUNTIME) $(DESTDIR)$(bindir)
