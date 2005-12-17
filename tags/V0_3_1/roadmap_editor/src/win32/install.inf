@@ -1,0 +1,73 @@
+[CEStrings]
+AppName = "Roadmap"
+InstallDir = %CE1%\%AppName%
+
+[Strings]
+CompanyName = "RoadMap"
+
+[Version]
+Signature = "$Chicago$"
+CESignature = "$Windows CE$"
+Provider = %CompanyName%
+
+[DefaultInstall]
+CEShortcuts = Shortcuts.All
+
+[DefaultInstall.ARM]
+CopyFiles = Files.Config, Files.Maps , Files.ARM
+
+[SourceDisksNames]
+1 = ,"Common config files",,L:\shared\roadmap_editor\src
+2 = ,"Common map files",,L:\shared\roadmap_editor\maps
+5 = ,"WinCE preferences",,L:\shared\roadmap_editor\src\win32
+6 = ,"Manual",,L:\shared\roadmap_editor\manual
+
+[SourceDisksNames.ARM]
+3 = ,"ARM files",,L:\shared\roadmap_editor\src\win32\wince_env\Roadmap\ARMV4Rel
+4 = ,"ARM files",,L:\shared\roadmap_editor\src\win32\wince_env\RoadGPS\ARMV4Rel
+
+[SourceDisksFiles]
+drivers = 1
+preferences = 5
+session = 5
+roadmap.toolbar = 5
+schema = 1
+sprites = 1
+usc77001.rdm = 2
+usdir.rdm = 2
+apt_toc.gif = 6
+manual.html = 6
+
+[SourceDisksFiles.ARM]
+Roadmap.exe = 3
+RoadGPS.exe = 4
+
+[DestinationDirs]
+Shortcuts.All = 0,%CE11%
+Files.Config = 0,%InstallDir%
+Files.Maps = 0,%InstallDir%\Maps
+Files.ARM = 0,%InstallDir%
+DefaultDestDir = 0,%InstallDir%
+
+[Shortcuts.All]
+%AppName%,0,Roadmap.exe
+RoadGPS,0,RoadGPS.exe
+
+[Files.Config]
+drivers,,,0x00000010
+preferences,,,0x00000010
+session,,,0x00000010
+roadmap.toolbar,,,0x00000010
+schema,,,0x00000010
+sprites,,,0x00000010
+apt_toc.gif,,,0
+manual.html,,,0
+
+[Files.Maps]
+usc77001.rdm,,,0x00000010
+usdir.rdm,,,0x00000010
+
+[Files.ARM]
+Roadmap.exe,,,0
+RoadGPS.exe,,,0
+
