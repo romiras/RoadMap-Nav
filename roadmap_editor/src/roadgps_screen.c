@@ -336,7 +336,7 @@ static void roadgps_screen_format_frame (void) {
    canvas_height = roadmap_canvas_height();
 
    roadmap_canvas_get_text_extents
-       ("09", -1, &text_width, &text_ascent, &text_descent, NULL);
+       ("09", &text_width, &text_ascent, &text_descent);
 
    text_height = text_ascent + text_descent + 2;
 
@@ -431,8 +431,21 @@ void roadgps_screen_initialize (void) {
    roadmap_canvas_register_configure_handler (&roadgps_screen_configure);
 }
 
+static unsigned long dbg_time_rec[1];
+static unsigned long dbg_time_tmp[1];
+
+#ifdef __WIN32
+void dbg_time_start(int type) {
+   dbg_time_tmp[type] = GetTickCount();
+}
+
+void dbg_time_end(int type) {
+   dbg_time_rec[type] += GetTickCount() - dbg_time_tmp[type];
+}
+#else
 void dbg_time_start(int type) {
 }
 
 void dbg_time_end(int type) {
 }
+#endif

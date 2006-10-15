@@ -412,7 +412,7 @@ static void roadmap_street_locate (const char *name,
             roadmap_dictionary_locate
                (RoadMapRangeActive->RoadMapStreetPrefix, buffer);
 
-         if (street->prefix != ROADMAP_INVALID_STRING) {
+         if (street->prefix > 0) {
             name = name + length;
             while (*name == ' ') ++name;
          }
@@ -434,7 +434,7 @@ static void roadmap_street_locate (const char *name,
             roadmap_dictionary_locate
                (RoadMapRangeActive->RoadMapStreetType, trailer);
 
-         if (street->type != ROADMAP_INVALID_STRING) {
+         if (street->type > 0) {
 
             length = (unsigned)(space - name);
 
@@ -455,7 +455,7 @@ static void roadmap_street_locate (const char *name,
                      roadmap_dictionary_locate
                         (RoadMapRangeActive->RoadMapStreetSuffix, trailer);
 
-                  if (street->suffix != ROADMAP_INVALID_STRING) {
+                  if (street->suffix > 0) {
 
                      while (*space == ' ') {
                         *space = 0;
@@ -472,9 +472,6 @@ static void roadmap_street_locate (const char *name,
 
    street->name =
       roadmap_dictionary_locate (RoadMapRangeActive->RoadMapStreetNames, name);
-   if (street->prefix == ROADMAP_INVALID_STRING) street->prefix = 0;
-   if (street->suffix == ROADMAP_INVALID_STRING) street->suffix = 0;
-   if (street->type   == ROADMAP_INVALID_STRING) street->type   = 0;
 }
 
 
@@ -506,20 +503,6 @@ static int roadmap_street_block_by_county_subdivision
          range_index = by_street->first_range;
          range_end  =
              by_street->first_range + by_street->count_range;
-
-         if ((range_index == range_end) && (city < 0)) {
-
-            blocks[count].street = i;
-            blocks[count].first  = range_index;
-            blocks[count].city   = 0;
-            blocks[count].count  = 0;
-
-            if (++count >= size) {
-               return count;
-            }
-
-            continue;
-         }
 
          for (j = by_street->first_city; range_index < range_end; j++) {
 
@@ -566,7 +549,7 @@ int roadmap_street_blocks_by_city
    if (RoadMapRangeActive == NULL) return 0;
 
    roadmap_street_locate (street_name, &street);
-   if (street.name == ROADMAP_INVALID_STRING) {
+   if (street.name <= 0) {
       return ROADMAP_STREET_NOSTREET;
    }
 
@@ -578,7 +561,7 @@ int roadmap_street_blocks_by_city
 
       city = roadmap_dictionary_locate (RoadMapRangeActive->RoadMapCityNames,
                                            city_name);
-      if (city == ROADMAP_INVALID_STRING) {
+      if (city <= 0) {
             return ROADMAP_STREET_NOCITY;
       }
    }
@@ -651,7 +634,7 @@ int roadmap_street_blocks_by_zip
 
    roadmap_street_locate (street_name, &street);
 
-   if (street.name == ROADMAP_INVALID_STRING) {
+   if (street.name <= 0) {
       return ROADMAP_STREET_NOSTREET;
    }
 
@@ -857,8 +840,7 @@ static int roadmap_street_get_distance_with_shape
 
          current.distance =
             roadmap_math_get_distance_from_segment
-               (position, &current.from, &current.to,
-                &current.intersection, NULL);
+               (position, &current.from, &current.to, &current.intersection);
 
          if (current.distance < smallest_distance) {
             smallest_distance = current.distance;
@@ -875,7 +857,7 @@ static int roadmap_street_get_distance_with_shape
 
       current.distance =
          roadmap_math_get_distance_from_segment
-            (position, &current.to, &current.from, &current.intersection, NULL);
+            (position, &current.to, &current.from, &current.intersection);
 
       if (current.distance < smallest_distance) {
          smallest_distance = current.distance;
@@ -899,7 +881,7 @@ static int roadmap_street_get_distance_no_shape
       neighbour->distance =
          roadmap_math_get_distance_from_segment
             (position, &neighbour->from, &neighbour->to,
-             &neighbour->intersection, NULL);
+             &neighbour->intersection);
 
       roadmap_plugin_set_line
          (&neighbour->line,
@@ -1590,10 +1572,10 @@ int roadmap_street_intersection (const char *state,
       if (roadmap_locator_activate (fips[i]) != ROADMAP_US_OK) continue;
 
       roadmap_street_locate (street1_name, &street1);
-      if (street1.name == ROADMAP_INVALID_STRING) continue;
+      if (street1.name <= 0) continue;
 
       roadmap_street_locate (street2_name, &street2);
-      if (street2.name == ROADMAP_INVALID_STRING) continue;
+      if (street2.name <= 0) continue;
 
       results += roadmap_street_intersection_county
                      (fips[i], &street1, &street2,
@@ -2030,7 +2012,7 @@ void roadmap_street_search (const char *city, const char *str,
       city_index = roadmap_dictionary_locate
          (RoadMapRangeActive->RoadMapCityNames, city);
 
-      if (city_index == ROADMAP_INVALID_STRING) return;
+      if (city_index <= 0) return;
    }
 
    RoadMapStreetSearchCount = 0;

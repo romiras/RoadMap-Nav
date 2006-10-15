@@ -131,7 +131,6 @@ RMLIBSRCS=roadmap_log.c \
           roadmap_state.c \
           roadmap_driver.c \
           roadmap_adjust.c \
-          roadmap_lang.c \
           roadmap_sunrise.c
 
 RMLIBOBJS=$(RMLIBSRCS:.c=.o)
@@ -175,35 +174,27 @@ RMPLUGINSRCS=roadmap_copy.c \
              editor/editor_plugin.c \
              editor/editor_screen.c \
              editor/static/editor_dialog.c \
-             editor/static/update_range.c \
-             editor/static/edit_marker.c \
-             editor/static/notes.c \
              editor/db/editor_street.c \
              editor/db/editor_point.c \
              editor/db/editor_shape.c \
              editor/db/editor_line.c \
              editor/db/editor_square.c \
              editor/db/editor_route.c \
-             editor/db/editor_marker.c \
              editor/db/editor_dictionary.c \
-				 buildmap_dbwrite.c \
+             buildmap_dbwrite.c \
 				 buildmap_metadata.c \
-				 buildmap_messages.c \
-				 editor/db/editor_override.c \
-				 editor/export/editor_export.c \
-             editor/export/editor_download.c \
+             buildmap_messages.c \
+             editor/db/editor_override.c \
+             editor/export/editor_export.c \
              editor/export/editor_upload.c \
-             editor/export/editor_sync.c \
              editor/db/editor_trkseg.c \
              editor/track/editor_track_filter.c \
              editor/track/editor_track_util.c \
              editor/track/editor_track_main.c \
              editor/track/editor_track_unknown.c \
              editor/track/editor_track_known.c \
-				 editor/db/editor_db.c \
+             editor/db/editor_db.c \
 				 navigate/navigate_main.c \
-				 navigate/navigate_instr.c \
-				 navigate/navigate_bar.c \
 				 navigate/navigate_plugin.c \
 				 navigate/navigate_dglib.c \
 
@@ -291,9 +282,6 @@ clean: cleanone
 		fi ; \
 	done
 	if [ -d unix ] ; then $(MAKE) -C unix cleanone ; fi
-	find editor -name \*.o -exec rm {} \;
-	find navigate -name \*.o -exec rm {} \;
-	find agg -name \*.o -exec rm {} \;
 
 cleanone:
 	rm -f *.o *.a *.da $(BUILD) $(TOOLS) $(DRIVERS)

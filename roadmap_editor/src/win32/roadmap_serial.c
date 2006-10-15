@@ -31,9 +31,7 @@
 
 static int serial_ports[MAX_SERIAL_ENUMS];
 
-#define MAX_SERIAL_SPEEDS 10
-
-static BOOL CALLBACK list_port_callback(LPVOID pCallbackValue,
+static BOOL list_port_callback(LPVOID pCallbackValue,
                                LISTPORTS_PORTINFO* lpPortInfo) {
 
    int index;
@@ -138,18 +136,9 @@ const int *roadmap_serial_enumerate (void)
 {
    if (!serial_ports[0]) {
       
-      ListPorts (&list_port_callback, NULL);
+      ListPorts (list_port_callback, NULL);
    }
 
    return serial_ports;
-}
-
-
-const char **roadmap_serial_get_speeds (void)
-{
-   static const char *serial_speeds[MAX_SERIAL_SPEEDS] = 
-               {"4800", "9600", "19200", "38400", "57600", NULL};
-
-   return serial_speeds;
 }
 

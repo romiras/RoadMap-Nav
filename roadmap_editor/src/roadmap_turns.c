@@ -264,12 +264,6 @@ int roadmap_turns_find_restriction (int node, int from_line, int to_line) {
    int last_turn;
    int i;
 
-   from_line = abs(from_line);
-   to_line = abs(to_line);
-
-   /* no U turns */
-   if (from_line == to_line) return 1;
-   
    roadmap_point_position (node, &pos);
 
    square = roadmap_square_search (&pos);
@@ -288,12 +282,8 @@ int roadmap_turns_find_restriction (int node, int from_line, int to_line) {
    if (!i) return 0;
 
    for (; first_turn <= last_turn; first_turn++) {
-
       if ((RoadMapTurnsActive->Turns[first_turn].from_line == from_line) &&
-            RoadMapTurnsActive->Turns[first_turn].to_line == to_line) {
-
-         return 1;
-      }
+            RoadMapTurnsActive->Turns[first_turn].to_line == to_line) return 1;
    }
 
    return 0;

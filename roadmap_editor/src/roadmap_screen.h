@@ -36,7 +36,6 @@ enum { ORIENTATION_DYNAMIC = 0,
 };
 
 void roadmap_screen_initialize (void);
-void roadmap_screen_shutdown   (void);
 
 void roadmap_screen_set_initial_position (void);
 
@@ -68,8 +67,7 @@ void roadmap_screen_get_center (RoadMapPosition *center);
 typedef void (*RoadMapScreenSubscriber) (void);
 typedef void (*RoadMapShapeItr) (int shape, RoadMapPosition *position);
 
-RoadMapScreenSubscriber roadmap_screen_subscribe_after_refresh
-                                    (RoadMapScreenSubscriber handler);
+void roadmap_screen_subscribe_after_refresh (RoadMapScreenSubscriber handler);
 
 void roadmap_screen_draw_one_line (RoadMapPosition *from,
                                    RoadMapPosition *to,

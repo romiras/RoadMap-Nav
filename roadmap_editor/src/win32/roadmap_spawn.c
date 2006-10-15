@@ -27,122 +27,26 @@
  */
 
 #include <windows.h>
-#include <stdio.h>
 #include "../roadmap.h"
 #include "../roadmap_list.h"
 #include "../roadmap_spawn.h"
 
-typedef void (*text2speech)(const char *text);
-static int flite_dll_initialized = 0;
-static HINSTANCE flite_dll_inst;
-static text2speech flite_t2s;
-static HANDLE flite_thread;
-static HANDLE flite_inuse_event;
-static HANDLE flite_launch_event;
-static RoadMapFeedback *flite_feedback;
-static const char *flite_text;
 
 static char *RoadMapSpawnPath = NULL;
 
-static RoadMapList RoadMapSpawnActive;
-
-DWORD WINAPI FliteThread(LPVOID lpParam) {
-
-   while (1) {
-      char *text;
-
-      if (WaitForSingleObject(flite_launch_event, INFINITE) != WAIT_OBJECT_0) {
-         roadmap_log (ROADMAP_ERROR,
-            "FliteThread - error waiting for event. No more talking.");
-         break;
-      }
-
-      text = strdup(flite_text);
-      SetEvent(flite_inuse_event);
-
-      flite_t2s(text);
-      free(text);
-
-      flite_feedback->handler (flite_feedback->data);
-   }
-
-   return 0;
-}
-
-
-#ifdef UNDER_CE
-static int exec_flite_dll (const char *command_line,
-					   RoadMapFeedback *feedback) {
-
-   if (flite_dll_initialized == -1) return -1;
-
-   if (!flite_dll_initialized) {
-	   char full_name[MAX_PATH];
-	   LPWSTR full_name_unicode;
-
-      snprintf(full_name, MAX_PATH, "%s\\flite_dll.dll", RoadMapSpawnPath);
-      full_name_unicode = ConvertToWideChar(full_name, CP_UTF8);
-
-      flite_dll_inst = LoadLibrary(full_name_unicode);
-      free (full_name_unicode);
-      if (!flite_dll_inst) {
-         flite_dll_initialized = -1;
-         return -1;
-      }
-
-      flite_t2s = (text2speech)GetProcAddress(flite_dll_inst, L"text2speech");
-      if (!flite_t2s) {
-         FreeLibrary(flite_dll_inst);
-         flite_dll_initialized = -1;
-         return -1;
-      }
-
-      flite_inuse_event = CreateEvent(NULL, FALSE, FALSE, NULL);
-      flite_launch_event = CreateEvent(NULL, FALSE, FALSE, NULL);
-
-		flite_thread = CreateThread(NULL, 0, FliteThread, 0, 0, NULL);
-
-      SetThreadPriority(flite_thread, THREAD_PRIORITY_TIME_CRITICAL);
-
-      flite_dll_initialized = 1;
-   }
-
-   do {
-      while (*command_line && (*command_line == ' ')) command_line++;
-      if(*command_line == '-') {
-         while (*command_line && (*command_line != ' ')) command_line++;
-      }
-   } while ((*command_line == ' ') || (*command_line == '-'));
-
-   flite_text = command_line;
-   flite_feedback = feedback;
-
-   SetEvent (flite_launch_event);
-   if (WaitForSingleObject (flite_inuse_event, 1000) != WAIT_OBJECT_0) {
-
-      ResetEvent (flite_launch_event);
-      feedback->handler (feedback->data);
-   }
-
-   return 0;
-}
-#endif
+static RoadMapList RoadMapSpawnActive = ROADMAP_LIST_EMPTY;
 
 
 static int roadmap_spawn_child (const char *name,
 								const char *command_line,
-								RoadMapPipe pipes[2],
-                        int feedback)
+								RoadMapPipe pipes[2])
 {
 	PROCESS_INFORMATION pi;
-	STARTUPINFO si;
 	char full_name[MAX_PATH];
 	LPWSTR full_path_unicode;
 	LPWSTR command_line_unicode;
 
-
 	memset(&pi, 0, sizeof(pi));
-	memset(&si, 0, sizeof(si));
 
 	if (*name != '\\') {
 		snprintf(full_name, MAX_PATH, "%s\\%s", RoadMapSpawnPath, name);
@@ -157,10 +61,8 @@ static int roadmap_spawn_child (const char *name,
 			command_line_unicode = NULL;
 	}
 
-	si.cb = sizeof(STARTUPINFO);
-
 	if (!CreateProcess(full_path_unicode, command_line_unicode, NULL,
-							NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
+							NULL, FALSE, 0, NULL, NULL, NULL, & pi)) {
 			free(full_path_unicode);
 			free(command_line_unicode);
 			roadmap_log (ROADMAP_ERROR, "CreateProcess(\"%s\") failed",
@@ -174,11 +76,7 @@ static int roadmap_spawn_child (const char *name,
 		free(command_line_unicode);
 	}
 
-   CloseHandle(pi.hThread);
-   if (!feedback) {
-      CloseHandle(pi.hProcess);
-   }
-
+	CloseHandle(pi.hThread);
 
 	if (pipes != NULL) {
 		pipes[0] = ROADMAP_SPAWN_INVALID_PIPE;
@@ -203,14 +101,13 @@ void roadmap_spawn_initialize (const char *argv0)
 		*tmp = '\0';
 	}
 	RoadMapSpawnPath = path;
-	ROADMAP_LIST_INIT(&RoadMapSpawnActive);
 }
 
 
 int roadmap_spawn (const char *name,
 				   const char *command_line)
 {
-	return roadmap_spawn_child (name, command_line, NULL, 0);
+	return roadmap_spawn_child (name, command_line, NULL);
 }
 
 
@@ -218,16 +115,8 @@ int  roadmap_spawn_with_feedback (const char *name,
 								  const char *command_line,
 								  RoadMapFeedback *feedback)
 {
-#ifdef UNDER_CE
-   if (!strcmp (name, "flite") &&
-      (exec_flite_dll(command_line, feedback) != -1)) {
-
-      return 0;
-   }
-#endif
-
 	roadmap_list_append (&RoadMapSpawnActive, &feedback->link);
-	feedback->child = roadmap_spawn_child (name, command_line, NULL, 1);
+	feedback->child = roadmap_spawn_child (name, command_line, NULL);
 
 	return feedback->child;
 }
@@ -239,7 +128,7 @@ int  roadmap_spawn_with_pipe (const char *name,
 							  RoadMapFeedback *feedback)
 {
 	roadmap_list_append (&RoadMapSpawnActive, &feedback->link);
-	feedback->child = roadmap_spawn_child (name, command_line, pipes, 0);
+	feedback->child = roadmap_spawn_child (name, command_line, pipes);
 
 	return feedback->child;
 }
@@ -247,18 +136,17 @@ int  roadmap_spawn_with_pipe (const char *name,
 
 void roadmap_spawn_check (void)
 {
-	RoadMapListItem *item, *tmp;
-	RoadMapFeedback *feedback;
+	RoadMapFeedback *item;
 
-	ROADMAP_LIST_FOR_EACH (&RoadMapSpawnActive, item, tmp) {
+	for (item = (RoadMapFeedback *)RoadMapSpawnActive.first;
+		item != NULL;
+		item = (RoadMapFeedback *)item->link.next) {
 
-		feedback = (RoadMapFeedback *)item;
-
-		if (WaitForSingleObject((HANDLE)feedback->child, 0) == WAIT_OBJECT_0) {
-			CloseHandle((HANDLE)feedback->child);
-			roadmap_list_remove (&feedback->link);
-			feedback->handler (feedback->data);
-		}
+			if (WaitForSingleObject((HANDLE)item->child, 0) == WAIT_OBJECT_0) {
+				CloseHandle((HANDLE)item->child);
+				roadmap_list_remove (&RoadMapSpawnActive, &item->link);
+				item->handler (item->data);
+			}
 	}
 }
 

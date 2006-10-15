@@ -85,17 +85,9 @@ agg::rgba8 roadmap_canvas_agg_parse_color (const char *color) {
 	int high, i, low;
 	
 	if (*color == '#') {
-		int r, g, b, a;
-      int count;
-      
-		count = sscanf(color, "#%2x%2x%2x%2x", &r, &g, &b, &a);
-
-      if (count == 4) {    
-         return agg::rgba8(r, g, b, a);
-      } else {
-         return agg::rgba8(r, g, b);
-      }
-
+		int r, g, b;
+		sscanf(color, "#%2x%2x%2x", &r, &g, &b);
+      return agg::rgba8(r, g, b);
 	} else {
 		/* Do binary search on color table */
 		for (low=(-1), high=sizeof(color_table)/sizeof(color_table[0]);
@@ -188,9 +180,7 @@ HWND roadmap_canvas_new (HWND hWnd, HWND tool_bar) {
    if (tool_bar != NULL) {
       RECT tb_rect;
       GetClientRect(tool_bar, &tb_rect);
-	  if (tb_rect.bottom < (ClientRect.bottom-2)) {
-		ClientRect.top += tb_rect.bottom + 2;
-	  }
+      ClientRect.top += tb_rect.bottom;
    }
    
    
@@ -269,11 +259,3 @@ RoadMapImage roadmap_canvas_agg_load_image (const char *path, const char *file_n
    agg::color_conv(&image->rbuf, &tmp_rbuf, agg::color_conv_bgr24_to_rgba32());
    return image;
 }
-
-
-void roadmap_canvas_agg_free_image (RoadMapImage image) {
-   
-   free (image->rbuf.buf());
-   delete image;
-}
-

@@ -25,20 +25,8 @@
 #ifndef _NAVIGATE_GRAPH_H_
 #define _NAVIGATE_GRAPH_H_
 
-#include "navigate_main.h"
-
-#define GRAPH_IGNORE_TURNS 1
-
-int navigate_reload_data (void);
-int navigate_load_data   (void);
-
-int navigate_get_route_segments (PluginLine *from_line,
-                                 int from_point,
-                                 PluginLine *to_line,
-                                 int to_point,
-                                 NavigateSegment *segments,
-                                 int *size,
-                                 int *result);
+int navigate_load_data (void);
+int navigate_get_route_segments (int from, int to, int *segments, int *size);
 
 #endif /* _NAVIGATE_GRAPH_H_ */
 

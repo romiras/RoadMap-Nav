@@ -133,7 +133,5 @@ int  roadmap_gps_is_nmea (void);
 
 void roadmap_gps_shutdown (void);
 
-void roadmap_gps_detect_receiver (void);
-
 #endif // INCLUDE__ROADMAP_GPS__H
 

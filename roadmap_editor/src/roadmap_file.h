@@ -35,11 +35,9 @@
 #ifdef _WIN32
 
 #include <windows.h>
-#include <stdio.h>
 
 typedef HANDLE RoadMapFile; /* WIN32 style. */
 #define ROADMAP_FILE_IS_VALID(f) (f != INVALID_HANDLE_VALUE)
-#define ROADMAP_INVALID_FILE INVALID_HANDLE_VALUE
 
 #else
 
@@ -47,7 +45,6 @@ typedef HANDLE RoadMapFile; /* WIN32 style. */
 
 typedef int RoadMapFile; /* UNIX style. */
 #define ROADMAP_FILE_IS_VALID(f) (f != (RoadMapFile)-1)
-#define ROADMAP_INVALID_FILE -1
 
 #endif
 
@@ -92,8 +89,6 @@ int  roadmap_file_sync (RoadMapFileContext file);
 void roadmap_file_unmap (RoadMapFileContext *file);
 
 const char *roadmap_file_unique (const char *base);
-
-int roadmap_file_free_space (const char *path);
 
 #endif // INCLUDE__ROADMAP_FILE__H
 
