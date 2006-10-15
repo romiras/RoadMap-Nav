@@ -45,7 +45,7 @@ typedef struct {
    PluginStreet         street;
    RoadMapPosition      from_pos;
    RoadMapPosition      to_pos;
-   RoadMapPosition      shape_initial_pos;
+   RoadMapPosition      shape_inital_pos;
    int                  first_shape;
    int                  last_shape;
    RoadMapShapeItr      shape_itr;
@@ -58,9 +58,8 @@ typedef struct {
  
 int navigate_is_enabled (void);
 void navigate_main_initialize (void);
-int  navigate_main_reload_data (void);
 void navigate_main_set (int status);
-int  navigate_main_calc_route (void);
+void navigate_main_calc_route (void);
 
 void navigate_main_screen_repaint (int max_pen);
 

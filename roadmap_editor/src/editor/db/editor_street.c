@@ -209,8 +209,7 @@ static int editor_street_get_distance_with_shape
 
          current.distance =
             roadmap_math_get_distance_from_segment
-               (position, &current.from,
-                &current.to, &current.intersection, NULL);
+               (position, &current.from, &current.to, &current.intersection);
 
          if (current.distance < smallest_distance) {
             smallest_distance = current.distance;
@@ -226,7 +225,7 @@ static int editor_street_get_distance_with_shape
    if (roadmap_math_line_is_visible (&current.from, &current.to)) {
       current.distance =
          roadmap_math_get_distance_from_segment
-            (position, &current.to, &current.from, &current.intersection, NULL);
+            (position, &current.to, &current.from, &current.intersection);
 
       if (current.distance < smallest_distance) {
          smallest_distance = current.distance;
