@@ -24,7 +24,6 @@
 #ifndef INCLUDE__EDITOR_SHAPE__H
 #define INCLUDE__EDITOR_SHAPE__H
 
-#include <time.h>
 #include "roadmap_types.h"
 #include "roadmap_dbread.h"
 

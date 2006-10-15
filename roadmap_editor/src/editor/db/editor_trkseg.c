@@ -302,7 +302,7 @@ int editor_trkseg_split (int trkseg,
       
       distance =
          roadmap_math_get_distance_from_segment
-            (split_position, &from, &to, &intersection, NULL);
+            (split_position, &from, &to, &intersection);
 
       if (distance < smallest_distance) {
          smallest_distance = distance;
@@ -326,7 +326,7 @@ int editor_trkseg_split (int trkseg,
 
    distance =
       roadmap_math_get_distance_from_segment
-      (split_position, &from, &to, &intersection, NULL);
+      (split_position, &from, &to, &intersection);
 
    if (distance < smallest_distance) {
       smallest_distance = distance;
@@ -544,15 +544,5 @@ int editor_trkseg_get_next_export (void) {
 void editor_trkseg_set_next_export (int id) {
 
    ActiveTrksegDB->header.next_export = id;
-}
-
-int editor_trkseg_get_count (void) {
-   
-   int count = ActiveTrksegDB->header.last_global_trkseg -
-               ActiveTrksegDB->header.next_export;
-
-   if (count < 0) count = 0;
-
-   return count;
 }
 

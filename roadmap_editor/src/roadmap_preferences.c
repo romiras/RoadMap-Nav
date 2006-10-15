@@ -155,7 +155,7 @@ static void roadmap_preferences_new_dialog
    const char *value;
 
    int   count;
-   const char *values[256];
+   char *values[256];
 
 
    while (cursor->reference != NULL) {

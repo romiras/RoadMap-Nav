@@ -176,7 +176,6 @@ static int find_split_point (PluginLine *line,
                           NULL,
                           NULL,
                           &result,
-                          0,
                           steering);
 
          if (start_point_id == -1) {
@@ -348,7 +347,7 @@ static int find_split_point (PluginLine *line,
                   (&split_pos,
                    track_point_pos (i),
                    track_point_pos (i-1),
-                   &intersection, NULL);
+                   &intersection);
 
          if (distance >= min_distance) break;
          min_distance = distance;
@@ -651,7 +650,6 @@ int editor_track_util_find_street
                   previous_street,
                   previous_line,
                   neighbourhood+i,
-                  0,
                   gps_position->steering);
       
       if (result > *best) {
@@ -677,8 +675,7 @@ int editor_track_util_find_street
                   previous_street,
                   previous_line,
                   neighbourhood+i,
-                  1,
-                  gps_position->steering);
+                  gps_position->steering - 180);
       
       if (!roadmap_fuzzy_is_good (result)) {
          RoadMapPosition connection;
@@ -1069,7 +1066,7 @@ int editor_track_util_create_line (int gps_first_point,
    editor_log_push ("editor_track_create_line");
 
    if (gps_first_point == gps_last_point) {
-      editor_log (ROADMAP_ERROR, "first point == last_point");
+      editor_log (ROADMAP_ERROR, "first point == gps_last_point");
       editor_log_pop ();
       return -1;
    }
