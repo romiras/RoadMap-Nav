@@ -45,16 +45,6 @@
 
 #include "roadmap_screen_obj.h"
 
-typedef struct {
-   const char   *name;
-   int           min_screen_height;
-} ObjectFile;
-
-static ObjectFile RoadMapObjFiles[] = {
-   {"objects",      300},
-   {"objects_wide", 200}
-};
-
 #define MAX_STATES 9
 
 struct RoadMapScreenObjDescriptor {
@@ -66,8 +56,7 @@ struct RoadMapScreenObjDescriptor {
 
    int                  states_count;
 
-   short                pos_x; /* position on screen */
-   short                pos_y; /* position on screen */
+   RoadMapGuiPoint      position; /* position on screen */
 
    int                  disable_rotate; /* rotate with screen? */
 
@@ -84,8 +73,6 @@ struct RoadMapScreenObjDescriptor {
 
 static RoadMapScreenObj RoadMapObjectList = NULL;
 static RoadMapScreenObj RoadMapScreenObjSelected = NULL;
-static int OffsetX = 0;
-static int OffsetY = 0;
 
 static char *roadmap_object_string (const char *data, int length) {
 
@@ -245,7 +232,6 @@ static void roadmap_screen_obj_decode_position
                          int argc, const char **argv, int *argl) {
 
    char arg[255];
-   int pos;
 
    argc -= 1;
    if (argc != 2) {
@@ -255,12 +241,10 @@ static void roadmap_screen_obj_decode_position
    }
 
    roadmap_screen_obj_decode_arg (arg, sizeof(arg), argv[1], argl[1]);
-   pos = atoi(arg);
-   object->pos_x = pos;
+   object->position.x = atoi(arg);
 
    roadmap_screen_obj_decode_arg (arg, sizeof(arg), argv[2], argl[2]);
-   pos = atoi(arg);
-   object->pos_y = pos;
+   object->position.y = atoi(arg);
 }
 
 
@@ -415,26 +399,6 @@ static void roadmap_screen_obj_load (const char *data, int size) {
 }
 
 
-static void roadmap_screen_obj_pos (RoadMapScreenObj object,
-                                    RoadMapGuiPoint *pos) {
-
-   pos->x = object->pos_x;
-   pos->y = object->pos_y;
-
-   if (pos->x < 0) {
-      pos->x += roadmap_canvas_width ();
-   } else {
-      pos->x += OffsetX;
-   }
-
-   if (pos->y < 0) {
-      pos->y += roadmap_canvas_height ();
-   } else {
-      pos->y += OffsetY;
-   }
-}
-
-
 RoadMapScreenObj roadmap_screen_obj_search (const char *name) {
 
    RoadMapScreenObj cursor;
@@ -448,22 +412,15 @@ RoadMapScreenObj roadmap_screen_obj_search (const char *name) {
 
 
 void roadmap_screen_obj_move (const char *name,
-                              const RoadMapGuiPoint *position) {
+                          const RoadMapGuiPoint *position) {
 
    RoadMapScreenObj cursor = roadmap_screen_obj_search (name);
 
    if (cursor != NULL) {
 
-      cursor->pos_x = position->x;
-      cursor->pos_y = position->y;
+      cursor->position.x = position->x;
+      cursor->position.y = position->y;
    }
-}
-
-
-void roadmap_screen_obj_offset (int x, int y) {
-
-   OffsetX += x;
-   OffsetY += y;
 }
 
 
@@ -486,29 +443,10 @@ void roadmap_screen_obj_initialize (void) {
 
    const char *cursor;
    RoadMapFileContext file;
-   unsigned int i;
-   int height = roadmap_canvas_height ();
-   const char *object_name = NULL;
 
-   for (i=0; i<sizeof(RoadMapObjFiles)/sizeof(RoadMapObjFiles[0]); i++) {
-
-      if (height >= RoadMapObjFiles[i].min_screen_height) {
-         object_name = RoadMapObjFiles[i].name;
-         break;
-      }
-   }
-
-   if (!object_name) {
-      roadmap_log
-         (ROADMAP_ERROR, "Can't find object file for screen height: %d",
-          height);
-      return;
-   }
-
-
-   for (cursor = roadmap_file_map ("config", object_name, NULL, "r", &file);
+   for (cursor = roadmap_file_map ("config", "objects", NULL, "r", &file);
         cursor != NULL;
-        cursor = roadmap_file_map ("config", object_name, cursor, "r", &file)) {
+        cursor = roadmap_file_map ("config", "objects", cursor, "r", &file)) {
 
       roadmap_screen_obj_load (roadmap_file_base(file), roadmap_file_size(file));
 
@@ -516,9 +454,9 @@ void roadmap_screen_obj_initialize (void) {
       return;
    }
 
-   for (cursor = roadmap_file_map ("user", object_name, NULL, "r", &file);
+   for (cursor = roadmap_file_map ("user", "objects", NULL, "r", &file);
         cursor != NULL;
-        cursor = roadmap_file_map ("user", object_name, cursor, "r", &file)) {
+        cursor = roadmap_file_map ("user", "objects", cursor, "r", &file)) {
 
       roadmap_screen_obj_load (roadmap_file_base(file), roadmap_file_size(file));
 
@@ -534,8 +472,7 @@ void roadmap_screen_obj_draw (void) {
 
    for (cursor = RoadMapObjectList; cursor != NULL; cursor = cursor->next) {
       int state = 0;
-      int image_mode = IMAGE_NORMAL;
-      RoadMapGuiPoint pos;
+      int image_mode = IMAGE_NORAML;
 
       if (cursor->state_fn) {
          state = (*cursor->state_fn) ();
@@ -546,21 +483,19 @@ void roadmap_screen_obj_draw (void) {
          image_mode = IMAGE_SELECTED;
       }
 
-      roadmap_screen_obj_pos (cursor, &pos);
-
       if (cursor->images[state]) {
 
-         roadmap_canvas_draw_image (cursor->images[state], &pos,
+         roadmap_canvas_draw_image (cursor->images[state], &cursor->position,
                                     cursor->opacity, image_mode);
       }
 
       if (cursor->sprites[state]) {
          
          if (cursor->disable_rotate) {
-            roadmap_sprite_draw (cursor->sprites[state], &pos,
+            roadmap_sprite_draw (cursor->sprites[state], &cursor->position,
                                  -roadmap_math_get_orientation());
          } else {
-            roadmap_sprite_draw (cursor->sprites[state], &pos, 0);
+            roadmap_sprite_draw (cursor->sprites[state], &cursor->position, 0);
          }
       }
    }
@@ -573,13 +508,10 @@ RoadMapScreenObj roadmap_screen_obj_by_pos (RoadMapGuiPoint *point) {
 
    for (cursor = RoadMapObjectList; cursor != NULL; cursor = cursor->next) {
 
-      RoadMapGuiPoint pos;
-      roadmap_screen_obj_pos (cursor, &pos);
-
-      if ((point->x >= (pos.x + cursor->bbox.minx)) &&
-          (point->x <= (pos.x + cursor->bbox.maxx)) &&
-          (point->y >= (pos.y + cursor->bbox.miny)) &&
-          (point->y <= (pos.y + cursor->bbox.maxy))) {
+      if ((point->x >= (cursor->position.x + cursor->bbox.minx)) &&
+          (point->x <= (cursor->position.x + cursor->bbox.maxx)) &&
+          (point->y >= (cursor->position.y + cursor->bbox.miny)) &&
+          (point->y <= (cursor->position.y + cursor->bbox.maxy))) {
 
          return cursor;
       }
@@ -613,10 +545,8 @@ void roadmap_screen_obj_pressed (RoadMapScreenObj object) {
    }
 
    if (object->images[state]) {
-      RoadMapGuiPoint pos;
-      roadmap_screen_obj_pos (object, &pos);
 
-      roadmap_canvas_draw_image (object->images[state], &pos,
+      roadmap_canvas_draw_image (object->images[state], &object->position,
                                  object->opacity, IMAGE_SELECTED);
    }
    

@@ -33,7 +33,6 @@
 typedef void (*RoadMapPointerHandler)    (RoadMapGuiPoint *point);
 
 void roadmap_pointer_initialize (void);
-const RoadMapGuiPoint *roadmap_pointer_position (void);
 
 RoadMapPointerHandler roadmap_pointer_register_short_click
                                  (RoadMapPointerHandler handler);

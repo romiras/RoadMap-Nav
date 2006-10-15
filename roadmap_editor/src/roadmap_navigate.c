@@ -42,9 +42,6 @@
 #include "roadmap_fuzzy.h"
 #include "roadmap_adjust.h"
 
-//FIXME remove when navigation will support plugin lines
-#include "editor/editor_plugin.h"
-
 #include "roadmap_navigate.h"
 
 static RoadMapConfigDescriptor RoadMapNavigateFlag =
@@ -143,7 +140,7 @@ static int roadmap_navigate_get_neighbours
     RoadMapPosition focus_position;
 
 
-    roadmap_log_push ("roadmap_navigate_get_neighbours");
+    roadmap_log_push ("roadmap_navigate_retrieve_line");
 
     if (roadmap_math_point_is_visible (position)) {
 
@@ -251,7 +248,6 @@ int roadmap_navigate_fuzzify
                  RoadMapTracking *previous_street,
                  RoadMapNeighbour *previous_line,
                  RoadMapNeighbour *line,
-                 int against_direction,
                  int direction) {
 
     RoadMapFuzzy fuzzyfied_distance;
@@ -280,12 +276,6 @@ int roadmap_navigate_fuzzify
     if ((line_direction == ROUTE_DIRECTION_NONE) ||
           (line_direction == ROUTE_DIRECTION_ANY)) {
        symetric = 1;
-    } else if (against_direction) {
-       if (line_direction == ROUTE_DIRECTION_WITH_LINE) {
-          line_direction = ROUTE_DIRECTION_AGAINST_LINE;
-       } else {
-          line_direction = ROUTE_DIRECTION_WITH_LINE;
-       }
     }
 
     if (symetric || (line_direction == ROUTE_DIRECTION_WITH_LINE)) {
@@ -601,17 +591,13 @@ void roadmap_navigate_locate (const RoadMapGpsPosition *gps_position) {
        }
     }
 
-    if (gps_position->speed < roadmap_gps_speed_accuracy()) {
-
-       RoadMapLatestGpsPosition.speed = gps_position->speed;
-       return;
-    }
-
     if ((RoadMapLatestGpsPosition.latitude == gps_position->latitude) &&
         (RoadMapLatestGpsPosition.longitude == gps_position->longitude)) return;
 
-
     RoadMapLatestGpsPosition = *gps_position;
+
+    if (gps_position->speed < roadmap_gps_speed_accuracy()) return;
+
 
     roadmap_fuzzy_start_cycle ();
 
@@ -643,7 +629,6 @@ void roadmap_navigate_locate (const RoadMapGpsPosition *gps_position) {
                                &RoadMapConfirmedStreet,
                                &RoadMapConfirmedLine,
                                &RoadMapConfirmedLine,
-                               0,
                                gps_position->steering);
         }
 
@@ -670,10 +655,6 @@ void roadmap_navigate_locate (const RoadMapGpsPosition *gps_position) {
 
     /* We must search again for the best street match. */
 
-    //FIXME remove when navigation will support plugin lines
-    if (RoadMapRouteInfo.enabled) {
-       editor_plugin_set_override (0);
-    }
     count = roadmap_navigate_get_neighbours
                 (&RoadMapLatestPosition, roadmap_fuzzy_max_distance(),
                  RoadMapNeighbourhood, ROADMAP_NEIGHBOURHOUD, LAYER_ALL_ROADS);
@@ -685,7 +666,6 @@ void roadmap_navigate_locate (const RoadMapGpsPosition *gps_position) {
                       &RoadMapConfirmedStreet,
                       &RoadMapConfirmedLine,
                       RoadMapNeighbourhood+i,
-                      0,
                       gps_position->steering);
 
 
@@ -719,11 +699,6 @@ void roadmap_navigate_locate (const RoadMapGpsPosition *gps_position) {
             nominated = candidate;
             nominated_in_route = candidate_in_route;
         }
-    }
-
-    //FIXME remove when navigation will support plugin lines
-    if (RoadMapRouteInfo.enabled) {
-       editor_plugin_set_override (1);
     }
 
     if (roadmap_fuzzy_is_acceptable (best)) {
@@ -793,13 +768,6 @@ void roadmap_navigate_locate (const RoadMapGpsPosition *gps_position) {
         INVALIDATE_PLUGIN(RoadMapConfirmedLine.line);
         RoadMapConfirmedStreet.valid = 0;
     }
-
-    if (RoadMapRouteInfo.enabled) {
-
-       RoadMapRouteInfo.callbacks.update
-          (&RoadMapLatestPosition,
-           &RoadMapConfirmedLine.line);
-    }
 }
 
 
@@ -821,8 +789,6 @@ void roadmap_navigate_route (RoadMapNavigateRouteCB callbacks) {
       callbacks.get_next_line (&RoadMapConfirmedLine.line,
                                RoadMapConfirmedStreet.line_direction,
                                &RoadMapRouteInfo.next_line);
-
-      callbacks.update (&RoadMapLatestPosition, &RoadMapConfirmedLine.line);
    }
 
    RoadMapRouteInfo.enabled = 1;
@@ -835,14 +801,12 @@ void roadmap_navigate_end_route (RoadMapNavigateRouteCB callbacks) {
 }
 
 
-int roadmap_navigate_get_current (RoadMapGpsPosition *position,
-                                  PluginLine *line,
-                                  int *direction) {
+int roadmap_navigate_get_current (RoadMapPosition *position,
+                                   PluginLine *line,
+                                   int *direction) {
 
-   *position = RoadMapLatestGpsPosition;
+   *position = RoadMapLatestPosition;
    
-   if (!line || !direction) return 0;
-
    if (RoadMapConfirmedStreet.valid) {
       
       *line = RoadMapConfirmedLine.line;

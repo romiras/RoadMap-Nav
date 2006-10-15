@@ -50,8 +50,8 @@
 
 #include "editor_track_known.h"
 
-#define MAX_ENTRIES 7
-#define MAX_PATHS 10
+#define MAX_ENTRIES 5
+#define MAX_PATHS 5
 
 typedef struct {
    RoadMapTracking street;
@@ -355,7 +355,6 @@ int editor_track_known_locate_point (int point_id,
                             confirmed_street,
                             confirmed_line,
                             confirmed_line,
-                            0,
                             gps_position->steering);
       }
 
@@ -393,35 +392,6 @@ int editor_track_known_locate_point (int point_id,
        * Delay the decision if we're still close to the previous road.
        */
       if (confirmed_line->distance < editor_track_point_distance ()) {
-         RoadMapTracking candidate;
-
-         if (roadmap_plugin_same_line (&RoadMapNeighbourhood[found].line,
-                                       &confirmed_line->line)) {
-            /* We don't have any candidates other than the current line */
-            return 0;
-         }
-
-         /* We have two candidates here */
-
-         /* current line */
-         KnownCandidates[0].entries[0].street = *confirmed_street;
-         KnownCandidates[0].entries[0].line = *confirmed_line;
-         KnownCandidates[0].entries[0].point_id = 0;
-         KnownCandidates[0].count = 1;
-
-         /* new line */
-         candidate.opposite_street_direction = 0;
-         candidate.valid = 1;
-         candidate.fuzzyfied = roadmap_navigate_fuzzify
-                                 (&candidate, confirmed_street,
-                                  confirmed_line, RoadMapNeighbourhood+found,
-                                  0,
-                                  gps_position->steering);
-         KnownCandidates[1].entries[0].street = candidate;
-         KnownCandidates[1].entries[0].line = RoadMapNeighbourhood[found];
-         KnownCandidates[1].entries[0].point_id = point_id;
-         KnownCandidates[1].count = 1;
-         KnownCandidatesCount = 2;
          return 0;
       }
    }
@@ -442,7 +412,6 @@ int editor_track_known_locate_point (int point_id,
                      confirmed_street,
                      confirmed_line,
                      RoadMapNeighbourhood+i,
-                     0,
                      gps_position->steering);
       
          if (roadmap_fuzzy_is_good (result)) {
@@ -472,20 +441,10 @@ int editor_track_known_locate_point (int point_id,
 
             KnownCandidates[KnownCandidatesCount].count = 1;
             KnownCandidatesCount++;
-            if (KnownCandidatesCount == MAX_PATHS) {
-               roadmap_log (ROADMAP_ERROR, "ResolveCandidates - Reached max entries!");
-               break;
-            }
          }
       }
 
-      if (KnownCandidatesCount > 1) {
-
-         return 0;
-      } else {
-         /* We only got one candidate so fall through to use it */
-         KnownCandidatesCount = 0;
-      }
+      return 0;
    }
 
    if (roadmap_fuzzy_is_acceptable (best)) {

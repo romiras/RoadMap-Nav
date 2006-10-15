@@ -71,20 +71,12 @@
 #include "roadmap_messagebox.h"
 #include "roadmap_help.h"
 #include "roadmap_pointer.h"
-#include "roadmap_sound.h"
-#include "roadmap_lang.h"
-#include "roadmap_start.h"
 
 #include "navigate/navigate_main.h"
 #include "editor/editor_main.h"
 #include "editor/db/editor_db.h"
-#include "editor/static/update_range.h"
-#include "editor/static/edit_marker.h"
-#include "editor/static/notes.h"
 #include "editor/export/editor_export.h"
 #include "editor/export/editor_upload.h"
-#include "editor/export/editor_download.h"
-#include "editor/export/editor_sync.h"
 
 static const char *RoadMapMainTitle = "RoadMap";
 
@@ -105,9 +97,7 @@ static RoadMapConfigDescriptor RoadMapConfigMapPath =
                         ROADMAP_CONFIG_ITEM("Map", "Path");
 
 static RoadMapMenu LongClickMenu;
-static RoadMapMenu QuickMenu;
 
-static RoadMapScreenSubscriber roadmap_start_prev_after_refresh = NULL;
 
 /* The menu and toolbar callbacks: --------------------------------------- */
 
@@ -186,9 +176,63 @@ static void roadmap_start_export_reset (void) {
    editor_export_reset_dirty ();
 }
 
+static void roadmap_start_download_map_done (void) {
+
+   editor_main_set (1);
+   roadmap_download_subscribe_when_done (NULL);
+   roadmap_screen_redraw ();
+}
+
 static void roadmap_start_download_map (void) {
 
-   editor_download_update_map (NULL);
+   static int *fips = NULL;
+   static int ProtocolInitialized = 0;
+   RoadMapPosition center;
+   int count;
+   int i;
+
+   if (! ProtocolInitialized) {
+
+      /* PLUGINS NOT SUPPORTED YET.
+       * roadmap_plugin_load_all
+       *      ("download", roadmap_download_subscribe_protocol);
+       */
+
+      roadmap_copy_init (roadmap_download_subscribe_protocol);
+      roadmap_httpcopy_init (roadmap_download_subscribe_protocol);
+
+      ProtocolInitialized = 1;
+   }
+
+   roadmap_screen_get_center (&center);
+   count = roadmap_locator_by_position (&center, &fips);
+
+   if (count == 0) {
+      roadmap_display_text("Info", "No map available");
+      return;
+   }
+
+   for (i = count-1; i >= 0; --i) {
+
+      if (!editor_export_empty (fips[i])) {
+         roadmap_messagebox("Info", "You must first export your data.");
+         return;
+      }
+   }
+
+   editor_main_set (0);
+
+   roadmap_download_subscribe_when_done (roadmap_start_download_map_done);
+   roadmap_download_unblock_all ();
+
+   for (i = count-1; i >= 0; --i) {
+
+      editor_db_close (fips[i]);
+      editor_db_delete (fips[i]);
+      roadmap_download_get_county (fips[i], i ? 0 : 1);
+   }
+
+   roadmap_screen_redraw ();
 }
 
 static void roadmap_start_upload_gpx (void) {
@@ -307,21 +351,6 @@ static void roadmap_start_toggle_download (void) {
 static void roadmap_start_detect_receiver (void) {
     
     roadmap_gps_detect_receiver ();
-}
-
-
-static void roadmap_start_sync_data (void) {
-    
-    export_sync ();
-}
-
-
-static void roadmap_start_quick_menu (void) {
-    
-   if (QuickMenu != NULL) {
-      const RoadMapGuiPoint *point = roadmap_pointer_position ();
-      roadmap_main_popup_menu (QuickMenu, point->x, point->y);
-   }
 }
 
 
@@ -508,68 +537,10 @@ static RoadMapAction RoadMapStartActions[] = {
 
    {"uploadgpx", "Upload GPX file", NULL, NULL,
       "Export editor data", roadmap_start_upload_gpx},
-
    {"detectreceiver", "Detect GPS receiver", NULL, NULL,
       "Auto-detect GPS receiver", roadmap_start_detect_receiver},
 
-   {"sync", "Sync", NULL, NULL,
-      "Sync map and data", roadmap_start_sync_data},
-
-   {"quickmenu", "Open quick menu", NULL, NULL,
-      "Open quick menu", roadmap_start_quick_menu},
-
-   {"updaterange", "Update street range", NULL, NULL,
-      "Update street range", update_range_dialog},
-
-   {"viewmarkers", "View markers", NULL, NULL,
-      "View / Edit markers", edit_markers_dialog},
-
-   {"addquicknote", "Add a quick note", NULL, NULL,
-      "Add a quick note", editor_notes_add_quick},
-
-   {"addeditnote", "Add a note", NULL, NULL,
-      "Add a note and open edit dialog", editor_notes_add_edit},
-
-   {"addvoicenote", "Add a voice note", NULL, NULL,
-      "Add a voice note", editor_notes_add_voice},
-
    {NULL, NULL, NULL, NULL, NULL, NULL}
-};
-
-
-static const char *RoadMapStartCfgActions[] = {
-
-   "preferences",
-   "mutevoice",
-   "enablevoice",
-   "quit",
-   "zoomin",
-   "zoomout",
-   "zoom1",
-   "up",
-   "left",
-   "right",
-   "down",
-   "toggleview",
-   "toggleorientation",
-   "IncHorizon",
-   "DecHorizon",
-   "clockwise",
-   "counterclockwise",
-   "hold",
-   "address",
-   "destination",
-   "gps",
-   "location",
-   "full",
-   "sync",
-   "quickmenu",
-   "updaterange",
-   "viewmarkers",
-   "addquicknote",
-   "addeditnote",
-   "addvoicenote",
-   NULL
 };
 
 
@@ -582,7 +553,6 @@ static const char *RoadMapStartMenu[] = {
 
    RoadMapFactorySeparator,
 
-   "sync",
    "exportdata",
    "updatemap",
    "uploadgpx",
@@ -619,7 +589,8 @@ static const char *RoadMapStartMenu[] = {
    "down",
    "toggleorientation",
    "toggleview",
-   "full",
+   "IncHorizon",
+   "DecHorizon",
 
    RoadMapFactorySeparator,
 
@@ -721,29 +692,6 @@ static char const *RoadMapStartToolbar[] = {
 };
 
 
-static char const *RoadMapStartLongClickMenu[] = {
-
-   "setasdeparture",
-   "setasdestination",
-   "navigate",
-
-   NULL,
-};
-
-
-static char const *RoadMapStartQuickMenu[] = {
-
-   "address",
-   RoadMapFactorySeparator,
-   "detectreceiver",
-   "preferences",
-   "about",
-   "quit",
-
-   NULL,
-};
-
-#ifndef UNDER_CE
 static char const *RoadMapStartKeyBinding[] = {
 
    "Button-Left"     ROADMAP_MAPPED_TO "left",
@@ -788,103 +736,6 @@ static char const *RoadMapStartKeyBinding[] = {
    /* Z Unused. */
    NULL
 };
-
-#else
-static char const *RoadMapStartKeyBinding[] = {
-
-   "Button-Left"     ROADMAP_MAPPED_TO "counterclockwise",
-   "Button-Right"    ROADMAP_MAPPED_TO "clockwise",
-   "Button-Up"       ROADMAP_MAPPED_TO "zoomin",
-   "Button-Down"     ROADMAP_MAPPED_TO "zoomout",
-
-   "Button-App1"     ROADMAP_MAPPED_TO "",
-   "Button-App2"     ROADMAP_MAPPED_TO "",
-   "Button-App3"     ROADMAP_MAPPED_TO "",
-   "Button-App4"     ROADMAP_MAPPED_TO "",
-
-   NULL
-};
-#endif
-
-
-static void roadmap_start_init_key_cfg (void) {
-
-   const char **keys = RoadMapStartKeyBinding;
-   RoadMapConfigDescriptor config = ROADMAP_CONFIG_ITEM("KeyBinding", "");
-
-   while (*keys) {
-      char *text;
-      char *separator;
-      const RoadMapAction *this_action;
-      const char **cfg_actions = RoadMapStartCfgActions;
-      RoadMapConfigItem *item;
-
-      text = strdup (*keys);
-      roadmap_check_allocated(text);
-
-      separator = strstr (text, ROADMAP_MAPPED_TO);
-      if (separator != NULL) {
-
-         const char *new_config = NULL;
-         char *p;
-         for (p = separator; *p <= ' '; --p) *p = 0;
-
-         p = separator + strlen(ROADMAP_MAPPED_TO);
-         while (*p && (*p <= ' ')) ++p;
-
-         this_action = roadmap_start_find_action (p);
-
-         config.name = text;
-         config.reference = NULL;
-
-         if (this_action != NULL) {
-
-            item = roadmap_config_declare_enumeration
-                   ("preferences", &config,
-                    roadmap_lang_get (this_action->label_long), NULL);
-
-            if (strcmp(roadmap_lang_get (this_action->label_long),
-                     roadmap_config_get (&config))) {
-
-               new_config = roadmap_config_get (&config);
-            }
-
-            roadmap_config_add_enumeration_value (item, "");
-         } else {
-
-            item = roadmap_config_declare_enumeration
-                   ("preferences", &config, "", NULL);
-
-            if (strlen(roadmap_config_get (&config))) {
-               new_config = roadmap_config_get (&config);
-            }
-         }
-
-         while (*cfg_actions) {
-            const RoadMapAction *cfg_action =
-                        roadmap_start_find_action (*cfg_actions);
-            if (new_config &&
-                  !strcmp(new_config,
-                          roadmap_lang_get (cfg_action->label_long))) {
-               new_config = cfg_action->name;
-            }
-
-            roadmap_config_add_enumeration_value
-                     (item, roadmap_lang_get (cfg_action->label_long));
-            cfg_actions++;
-         }
-
-         if (new_config != NULL) {
-            char str[100];
-            snprintf(str, sizeof(str), "%s %s %s", text, ROADMAP_MAPPED_TO,
-                                                   new_config);
-            *keys = strdup(str);
-         }
-      }
-
-      keys++;
-   }
-}
 
 
 static void roadmap_start_set_unit (void) {
@@ -1001,19 +852,6 @@ static void roadmap_start_set_timeout (RoadMapCallback callback) {
 }
 
 
-static void roadmap_start_long_click (RoadMapGuiPoint *point) {
-   
-   RoadMapPosition position;
-
-   roadmap_math_to_position (point, &position, 1);
-   roadmap_trip_set_point ("Selection", &position);
-   
-   if (LongClickMenu != NULL) {
-      roadmap_main_popup_menu (LongClickMenu, point->x, point->y);
-   }
-}
- 
-
 static void roadmap_start_window (void) {
 
    roadmap_main_new (RoadMapMainTitle,
@@ -1024,16 +862,6 @@ static void roadmap_start_window (void) {
                     RoadMapStartActions,
                     RoadMapStartMenu,
                     RoadMapStartToolbar);
-
-   QuickMenu = roadmap_factory_menu ("quick",
-                                     RoadMapStartQuickMenu,
-                                     RoadMapStartActions);
-
-   LongClickMenu = roadmap_factory_menu ("long_click",
-                                         RoadMapStartLongClickMenu,
-                                         RoadMapStartActions);
-
-   roadmap_pointer_register_long_click (roadmap_start_long_click);
 
    roadmap_main_add_canvas ();
 
@@ -1096,19 +924,44 @@ static void roadmap_start_after_refresh (void) {
       roadmap_sprite_draw
          ("Download", &download_point, 0 - roadmap_math_get_orientation());
    }
-
-   if (roadmap_start_prev_after_refresh) {
-      (*roadmap_start_prev_after_refresh) ();
-   }
 }
 
 
 static void roadmap_start_usage (const char *section) {
 
-   roadmap_factory_keymap (RoadMapStartActions, RoadMapStartKeyBinding);
    roadmap_factory_usage (section, RoadMapStartActions);
 }
 
+
+static void roadmap_start_long_click (RoadMapGuiPoint *point) {
+   
+   RoadMapPosition position;
+
+   roadmap_math_to_position (point, &position, 1);
+   roadmap_trip_set_point ("Selection", &position);
+   
+   if (LongClickMenu != NULL) {
+      roadmap_main_popup_menu (LongClickMenu, point->x, point->y);
+   }
+}
+ 
+
+void roadmap_start_add_long_click_item (const char *name,
+                                        const char *description,
+                                        RoadMapCallback callback) {
+   if (LongClickMenu == NULL) {
+      LongClickMenu = roadmap_main_new_menu ();
+   }
+
+   if (name == NULL) {
+      roadmap_main_add_separator (LongClickMenu);
+      return;
+   }
+
+   roadmap_main_add_menu_item (LongClickMenu, name, description, callback);
+
+}
+   
 
 void roadmap_start_freeze (void) {
 
@@ -1147,6 +1000,20 @@ void roadmap_start (int argc, char **argv) {
    roadmap_config_declare
       ("preferences", &RoadMapConfigGeometryMain, "800x600");
 
+   roadmap_start_add_long_click_item ("Set as Departure",
+                  "Set current point as Departure point.",
+                  roadmap_start_set_departure);
+
+   roadmap_start_add_long_click_item ("Set as Destination",
+                  "Set current point as Destination point.",
+                  roadmap_start_set_destination);
+
+   roadmap_start_add_long_click_item ("Navigate",
+                  "Calculate a route",
+                  roadmap_start_navigate);
+
+   roadmap_pointer_register_long_click (roadmap_start_long_click);
+
    roadmap_option_initialize   ();
    roadmap_math_initialize     ();
    roadmap_trip_initialize     ();
@@ -1163,10 +1030,7 @@ void roadmap_start (int argc, char **argv) {
    roadmap_adjust_initialize   ();
    roadmap_driver_initialize   ();
    roadmap_config_initialize   ();
-   roadmap_lang_initialize     ();
-   roadmap_sound_initialize    ();
 
-   roadmap_start_set_title (roadmap_lang_get ("RoadMap"));
    roadmap_gps_register_listener (&roadmap_gps_update);
 
    RoadMapStartGpsID = roadmap_string_new("GPS");
@@ -1178,9 +1042,7 @@ void roadmap_start (int argc, char **argv) {
 
    roadmap_path_set("maps", roadmap_config_get(&RoadMapConfigMapPath));
 
-#if UNDER_CE
-   roadmap_start_init_key_cfg ();
-#endif   
+   roadmap_factory_keymap (RoadMapStartActions, RoadMapStartKeyBinding);
 
    roadmap_option (argc, argv, roadmap_start_usage);
 
@@ -1188,8 +1050,6 @@ void roadmap_start (int argc, char **argv) {
    
    roadmap_math_restore_zoom ();
    roadmap_start_window      ();
-   roadmap_factory_keymap (RoadMapStartActions, RoadMapStartKeyBinding);
-   roadmap_label_activate    ();
    roadmap_sprite_initialize ();
    roadmap_screen_obj_initialize ();
 
@@ -1197,14 +1057,14 @@ void roadmap_start (int argc, char **argv) {
 
    roadmap_history_load ();
    
-   roadmap_spawn_initialize (argv[0]);
-
    roadmap_driver_activate ();
+   roadmap_gps_open ();
+
+   roadmap_spawn_initialize (argv[0]);
 
    roadmap_help_initialize ();
 
-   roadmap_start_prev_after_refresh =
-      roadmap_screen_subscribe_after_refresh (roadmap_start_after_refresh);
+   roadmap_screen_subscribe_after_refresh (roadmap_start_after_refresh);
 
    editor_main_initialize ();
    navigate_main_initialize ();
@@ -1215,8 +1075,6 @@ void roadmap_start (int argc, char **argv) {
       roadmap_start_create_trip ();
    }
 
-   roadmap_gps_open ();
-
    roadmap_locator_declare (&roadmap_start_no_download);
    roadmap_main_set_periodic (200, roadmap_start_periodic);
 }
@@ -1226,11 +1084,9 @@ void roadmap_start_exit (void) {
     
     roadmap_plugin_shutdown ();
     roadmap_driver_shutdown ();
-    roadmap_sound_shutdown ();
     roadmap_history_save ();
-    roadmap_screen_shutdown ();
-    roadmap_start_save_trip ();
     roadmap_config_save (0);
+    roadmap_start_save_trip ();
     roadmap_db_end ();
     roadmap_gps_shutdown ();
 }
@@ -1246,10 +1102,5 @@ const RoadMapAction *roadmap_start_find_action (const char *name) {
    }
 
    return NULL;
-}
-
-
-void roadmap_start_set_title (const char *title) {
-   RoadMapMainTitle = title;
 }
 

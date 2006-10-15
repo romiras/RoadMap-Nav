@@ -25,7 +25,6 @@
  *   See roadmap_time.h
  */
 
-#include <stdio.h>
 #include "../roadmap.h"
 #include "../roadmap_time.h"
 

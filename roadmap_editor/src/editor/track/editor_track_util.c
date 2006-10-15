@@ -66,8 +66,6 @@
 #define SPLIT_NODE   0x4
 #define SPLIT_CHECK  0x8
 
-#define NODE_FROM 1
-#define NODE_TO   2
 
 void editor_track_util_set_focus(const RoadMapPosition *position) {
 
@@ -97,7 +95,7 @@ static int find_split_point (PluginLine *line,
                              int last_point_id,
                              int split_type,
                              int max_distance_allowed,
-                             int line_direction,
+                             int opposite_direction,
                              NodeNeighbour *connect_point) {
 #define MAX_RECENT_POINTS 50
 
@@ -163,7 +161,7 @@ static int find_split_point (PluginLine *line,
             continue;
          }
 
-         if (line_direction) {
+         if (opposite_direction) {
             steering = steering - 180;
          }
             
@@ -176,7 +174,6 @@ static int find_split_point (PluginLine *line,
                           NULL,
                           NULL,
                           &result,
-                          0,
                           steering);
 
          if (start_point_id == -1) {
@@ -348,7 +345,7 @@ static int find_split_point (PluginLine *line,
                   (&split_pos,
                    track_point_pos (i),
                    track_point_pos (i-1),
-                   &intersection, NULL);
+                   &intersection);
 
          if (distance >= min_distance) break;
          min_distance = distance;
@@ -385,18 +382,6 @@ static void editor_track_util_node_pos (NodeNeighbour *node,
 }
 
 
-static int editor_track_util_nodes_distance (NodeNeighbour *node1,
-                                             NodeNeighbour *node2) {
-
-   RoadMapPosition p1;
-   RoadMapPosition p2;
-
-   editor_track_util_node_pos (node1, &p1);
-   editor_track_util_node_pos (node2, &p2);
-
-   return roadmap_math_distance (&p1, &p2);
-}
-
 
 static int editor_track_util_same_node (NodeNeighbour *from_node,
                                         NodeNeighbour *to_node) {
@@ -416,23 +401,25 @@ static int editor_track_util_same_node (NodeNeighbour *from_node,
 }
 
 
-static int adjust_connect_node (NodeNeighbour *node, PluginLine *line) {
+static void adjust_connect_node (NodeNeighbour *node, PluginLine *line) {
 
    RoadMapPosition split_position;
    RoadMapNeighbour result;
 
    editor_track_util_node_pos (node, &split_position);
 
+   //editor_track_util_set_focus(&split_position);
    if (!roadmap_plugin_get_distance (&split_position, line, &result)) {
 
       assert (0);
-      return -1;
+      
+      //editor_track_util_release_focus ();
+      node->id = -1;
+      return;
    }
+   //editor_track_util_release_focus ();
 
-   if (result.distance > editor_track_point_distance ()) {
-
-      return -1;
-   }
+   assert (result.distance < 5*editor_track_point_distance ());
 
    split_position.longitude = result.intersection.longitude;
    split_position.latitude = result.intersection.latitude;
@@ -444,149 +431,32 @@ static int adjust_connect_node (NodeNeighbour *node, PluginLine *line) {
 
    //TODO: make sure that the point is not shared
    editor_point_set_pos (node->id, &split_position);
-
-   return 0;
-}
-
-
-static void editor_track_util_get_node (PluginLine *from,
-                                        int direction,
-                                        int node_type,
-                                        NodeNeighbour *node) {
-   
-   int plugin_id = roadmap_plugin_get_id (from);
-   int line_id   = roadmap_plugin_get_line_id (from);
-
-   if (direction == ROUTE_DIRECTION_AGAINST_LINE) {
-      /* toggle node type */
-
-      if (node_type == NODE_FROM) node_type = NODE_TO;
-      else node_type = NODE_FROM;
-   }
-
-   if (plugin_id == EditorPluginID) {
-
-      int from_point_id;
-      int to_point_id;
-      int roadmap_id;
-
-      editor_line_get_points (line_id, &from_point_id, &to_point_id);
-
-      if (node_type == NODE_FROM) {
-         editor_point_roadmap_id (from_point_id, &roadmap_id);
-      } else {
-         editor_point_roadmap_id (to_point_id, &roadmap_id);
-      }
-
-      if (roadmap_id != -1) {
-
-         node->plugin_id = ROADMAP_PLUGIN_ID;
-         node->id = roadmap_id;
-      } else {
-
-         node->plugin_id = EditorPluginID;
-
-         if (node_type == NODE_FROM) node->id = from_point_id;
-         else node->id = to_point_id;
-      }
-
-   } else {
-
-      int from_point_id;
-      int to_point_id;
-
-      roadmap_line_points (line_id, &from_point_id, &to_point_id);
-
-      node->plugin_id = ROADMAP_PLUGIN_ID;
-
-      if (node_type == NODE_FROM) node->id = from_point_id;
-      else node->id = to_point_id;
-   }
-}
-
-
-static int editor_track_util_is_connected (PluginLine *from,
-                                           int from_direction,
-                                           PluginLine *to,
-                                           int to_direction) {
-
-   NodeNeighbour from_node;
-   NodeNeighbour to_node;
-
-   editor_track_util_get_node (from, from_direction, NODE_TO, &from_node);
-   editor_track_util_get_node (to, to_direction, NODE_FROM, &to_node);
-
-   return editor_track_util_same_node (&from_node, &to_node);
-}
-
-
-int find_connecting_road (RoadMapPosition *pos,
-                          NodeNeighbour *from_node,
-                          NodeNeighbour *to_node) {
-
-   RoadMapNeighbour neighbourhood[16];
-   int max = sizeof(neighbourhood) / sizeof(neighbourhood[1]);
-   int count;
-   int layers[128];
-   int layer_count;
-   int i;
-
-   layer_count = roadmap_layer_all_roads (layers, 128);
-
-   count = roadmap_street_get_closest
-           (pos, layers, layer_count, neighbourhood, max);
-
-   count = roadmap_plugin_get_closest
-           (pos, layers, layer_count, neighbourhood, count, max);
-
-   for (i = 0; i < count; ++i) {
-      NodeNeighbour c_from_node;
-      NodeNeighbour c_to_node;
-
-      editor_track_util_get_node (&neighbourhood[i].line,
-                                  ROUTE_DIRECTION_WITH_LINE,
-                                  NODE_FROM, &c_from_node);
-
-      editor_track_util_get_node (&neighbourhood[i].line,
-                                  ROUTE_DIRECTION_WITH_LINE,
-                                  NODE_TO, &c_to_node);
-
-      if ((editor_track_util_same_node (from_node, &c_from_node) &&
-           editor_track_util_same_node (to_node, &c_to_node)) ||
-          (editor_track_util_same_node (from_node, &c_to_node) &&
-           editor_track_util_same_node (to_node, &c_from_node))) {
-
-         return 1;
-      }
-   }
-
-   return 0;
 }
 
 
 int editor_track_util_new_road_start (RoadMapNeighbour *line,
                                       const RoadMapPosition *pos,
                                       int points_count,
-                                      int line_direction,
+                                      int opposite_direction,
                                       NodeNeighbour *node) {
 
    node->id = -1;
    return find_split_point
             (&line->line, pos, points_count,
-             SPLIT_START, 2, line_direction, node);
+             SPLIT_START, 2, opposite_direction, node);
 }
 
 
 int editor_track_util_new_road_end (RoadMapNeighbour *line,
                                     const RoadMapPosition *pos,
                                     int points_count,
-                                    int line_direction,
+                                    int opposite_direction,
                                     NodeNeighbour *node) {
 
    node->id = -1;
    return find_split_point
             (&line->line, pos, points_count,
-             SPLIT_END, 2, line_direction, node);
+             SPLIT_END, 2, opposite_direction, node);
 }
 
 
@@ -651,7 +521,6 @@ int editor_track_util_find_street
                   previous_street,
                   previous_line,
                   neighbourhood+i,
-                  0,
                   gps_position->steering);
       
       if (result > *best) {
@@ -677,8 +546,7 @@ int editor_track_util_find_street
                   previous_street,
                   previous_line,
                   neighbourhood+i,
-                  1,
-                  gps_position->steering);
+                  gps_position->steering - 180);
       
       if (!roadmap_fuzzy_is_good (result)) {
          RoadMapPosition connection;
@@ -733,8 +601,8 @@ int editor_track_util_find_street
 
 int editor_track_util_connect_roads (PluginLine *from,
                                      PluginLine *to,
-                                     int from_direction,
-                                     int to_direction,
+                                     int from_opposite_direction,
+                                     int to_opposite_direction,
                                      const RoadMapGpsPosition *gps_position,
                                      int last_point_id) {
 
@@ -744,8 +612,6 @@ int editor_track_util_connect_roads (PluginLine *from,
    NodeNeighbour connect_node = NODE_NEIGHBOUR_NULL;
    int from_point;
    int to_point;
-   int roads_connected = editor_track_util_is_connected
-                          (from, from_direction, to, to_direction);
 
    editor_log_push ("editor_track_connect_roads");
 
@@ -759,10 +625,10 @@ int editor_track_util_connect_roads (PluginLine *from,
 
    from_point = find_split_point
                      (from, &position, last_point_id, SPLIT_START|SPLIT_CHECK,
-                      3, from_direction, &from_node);
+                      3, from_opposite_direction, &from_node);
    to_point = find_split_point
                      (to, &position, last_point_id, SPLIT_END|SPLIT_CHECK,
-                      3, to_direction, &to_node);
+                      3, to_opposite_direction, &to_node);
 
    if ((from_point != -1) && (to_point != -1)) {
 
@@ -775,42 +641,18 @@ int editor_track_util_connect_roads (PluginLine *from,
       }
 
       //TODO: need to handle a merge of two nodes (each with two roads or more)
-
-      if (find_connecting_road (track_point_pos((from_point + to_point) / 2),
-                                 &from_node, &to_node)) {
-
-         editor_log (ROADMAP_INFO, "Found a third line connecting both lines. Done.");
-         editor_log_pop ();
-         return (from_point + to_point) / 2;
-      }
-
-      if (editor_track_util_nodes_distance (&from_node, &to_node) >
-            2 * editor_track_point_distance ()) {
-         editor_log (ROADMAP_INFO,
-               "The roads are too far away. Need a connection road.");
-         editor_log_pop ();
-         return -1;
-      }
-
+      //Check if there's a small line connecting both nodes.
       editor_log_pop ();
       return (from_point + to_point) / 2;
    }
 
    if ((from_point == -1) && (to_point == -1)) {
 
-      if (roads_connected) {
-         editor_log (ROADMAP_INFO,
-               "Neither lines have a node near connection but the roads are connected. We need a connection road.");
-
-         editor_log_pop ();
-         return -1;
-      }
-
       editor_log (ROADMAP_INFO, "Neither lines have a node. Create a node.");
 
       from_point = find_split_point
                    (from, &position, last_point_id, SPLIT_START,
-                    3, from_direction, &from_node);
+                    3, from_opposite_direction, &from_node);
 
       if (from_point == -1) {
          assert (0);
@@ -819,51 +661,17 @@ int editor_track_util_connect_roads (PluginLine *from,
          return -1;
       }
 
-      connect_node = from_node;
-      
-      if (adjust_connect_node (&connect_node, to) == -1) {
-         editor_log (ROADMAP_INFO,
-               "The roads are too far away. Need a connection road.");
-         editor_log_pop ();
-         return -1;
-      }
+     connect_node = from_node;
+     adjust_connect_node (&connect_node, to);
      
    } else if (from_point != -1) {
 
-      if (roads_connected) {
-         editor_log (ROADMAP_INFO,
-               "'from' line has no node but roads are connected. Do nothing.");
-         editor_log_pop ();
-         return to_point;
-      }
-
-      connect_node = from_node;
-
-      if (adjust_connect_node (&connect_node, to) == -1) {
-         editor_log (ROADMAP_INFO,
-               "The roads are too far away. Need a connection road.");
-         editor_log_pop ();
-         return -1;
-      }
-     
+     connect_node = from_node;
+     adjust_connect_node (&connect_node, to);
    } else {
 
-      if (roads_connected) {
-         editor_log (ROADMAP_INFO,
-               "'to' line has no node but roads are connected. Do nothing.");
-         editor_log_pop ();
-         return from_point;
-      }
- 
-      connect_node = to_node;
-
-      if (adjust_connect_node (&connect_node, from) == -1) {
-         editor_log (ROADMAP_INFO,
-               "The roads are too far away. Need a connection road.");
-         editor_log_pop ();
-         return -1;
-      }
-     
+     connect_node = to_node;
+     adjust_connect_node (&connect_node, from);
    }
 
    if (connect_node.id == -1) {
@@ -880,16 +688,16 @@ int editor_track_util_connect_roads (PluginLine *from,
       
       from_point = find_split_point
                       (from, &position, last_point_id, SPLIT_START|SPLIT_NODE,
-                       3, from_direction, &connect_node);
+                       3, from_opposite_direction, &connect_node);
    }
 
    if (to_point == -1) {
       
-     editor_log (ROADMAP_INFO, "'to' line has no node. Need to split.");
+      editor_log (ROADMAP_INFO, "'to' line has no node. Need to split.");
       
       to_point = find_split_point
                         (to, &position, last_point_id, SPLIT_END|SPLIT_NODE,
-                         3, to_direction, &connect_node);
+                         3, to_opposite_direction, &connect_node);
    }
 
 
@@ -1069,7 +877,7 @@ int editor_track_util_create_line (int gps_first_point,
    editor_log_push ("editor_track_create_line");
 
    if (gps_first_point == gps_last_point) {
-      editor_log (ROADMAP_ERROR, "first point == last_point");
+      editor_log (ROADMAP_ERROR, "first point == gps_last_point");
       editor_log_pop ();
       return -1;
    }

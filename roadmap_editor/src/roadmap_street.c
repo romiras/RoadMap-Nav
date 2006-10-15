@@ -472,9 +472,6 @@ static void roadmap_street_locate (const char *name,
 
    street->name =
       roadmap_dictionary_locate (RoadMapRangeActive->RoadMapStreetNames, name);
-   if (street->prefix == ROADMAP_INVALID_STRING) street->prefix = 0;
-   if (street->suffix == ROADMAP_INVALID_STRING) street->suffix = 0;
-   if (street->type   == ROADMAP_INVALID_STRING) street->type   = 0;
 }
 
 
@@ -857,8 +854,7 @@ static int roadmap_street_get_distance_with_shape
 
          current.distance =
             roadmap_math_get_distance_from_segment
-               (position, &current.from, &current.to,
-                &current.intersection, NULL);
+               (position, &current.from, &current.to, &current.intersection);
 
          if (current.distance < smallest_distance) {
             smallest_distance = current.distance;
@@ -875,7 +871,7 @@ static int roadmap_street_get_distance_with_shape
 
       current.distance =
          roadmap_math_get_distance_from_segment
-            (position, &current.to, &current.from, &current.intersection, NULL);
+            (position, &current.to, &current.from, &current.intersection);
 
       if (current.distance < smallest_distance) {
          smallest_distance = current.distance;
@@ -899,7 +895,7 @@ static int roadmap_street_get_distance_no_shape
       neighbour->distance =
          roadmap_math_get_distance_from_segment
             (position, &neighbour->from, &neighbour->to,
-             &neighbour->intersection, NULL);
+             &neighbour->intersection);
 
       roadmap_plugin_set_line
          (&neighbour->line,
