@@ -31,8 +31,7 @@ void editor_upload_select     (void);
 void editor_upload_file       (const char *filename);
 
 int  editor_upload_auto       (const char *filename,
-                               RoadMapDownloadCallbacks *callbacks,
-                               char **message);
+                               RoadMapDownloadCallbacks *callbacks);
 
 #endif // INCLUDE__EDITOR_UPLOAD__H
 

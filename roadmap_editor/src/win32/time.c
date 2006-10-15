@@ -83,14 +83,12 @@ time_t time(time_t *t)
 }
 
 
-static int get_bias(int *is_dst)
+static int get_bias()
 {
 	TIME_ZONE_INFORMATION tzi;
 	if (GetTimeZoneInformation(&tzi) == TIME_ZONE_ID_DAYLIGHT) {
-      *is_dst = 1;
 		return tzi.Bias + tzi.DaylightBias;
 	} else {
-      *is_dst = 0;
 		return tzi.Bias;
 	}
 }
@@ -99,10 +97,8 @@ static int get_bias(int *is_dst)
 unsigned long
 mktime(struct tm *_tm)
 {
-   int is_dst;
-
 	return _mktime(_tm->tm_year + 1900, _tm->tm_mon + 1, _tm->tm_mday, _tm->tm_hour,
-		_tm->tm_min, _tm->tm_sec) + get_bias(&is_dst) * 60;
+		_tm->tm_min, _tm->tm_sec) + get_bias() * 60;
 }
 
 
@@ -185,13 +181,8 @@ struct tm *gmtime(const time_t *timep)
 struct tm *localtime(const time_t *timep)
 {
 	static struct tm t;
-	__offtime(timep, -get_bias(&t.tm_isdst) * 60, &t);
-	//t.tm_isdst = 1;
+	__offtime(timep, -get_bias() * 60, &t);
+	t.tm_isdst = 1;
 	return &t;
 }
 
-time_t timegm(struct tm *_tm)
-{
-	return _mktime(_tm->tm_year + 1900, _tm->tm_mon + 1, _tm->tm_mday, _tm->tm_hour,
-		_tm->tm_min, _tm->tm_sec);
-}
