@@ -36,7 +36,6 @@ enum { ORIENTATION_DYNAMIC = 0,
 };
 
 void roadmap_screen_initialize (void);
-void roadmap_screen_shutdown   (void);
 
 void roadmap_screen_set_initial_position (void);
 

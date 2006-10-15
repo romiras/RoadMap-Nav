@@ -31,13 +31,9 @@
 #include "../roadmap_path.h"
 #include "../roadmap_file.h"
 
-#ifndef INVALID_SET_FILE_POINTER
-#define INVALID_SET_FILE_POINTER (-1)
-#endif
 
 struct RoadMapFileContextStructure {
 
-	HANDLE  hMapFile;
 	HANDLE  hFile;
 	void *base;
 	int   size;
@@ -271,7 +267,7 @@ const char *roadmap_file_unique (const char *base)
 	GetThreadTimes(GetCurrentThread(), &ft[0], &ft[1], &ft[2], &ft[3]);
 
 	sprintf (UniqueNameBuffer,
-		"%s%d_%d", base, (int)(ft[0].dwLowDateTime%10000), UniqueNameCounter);
+		"%s%d_%d", base, ft[0].dwLowDateTime%10000, UniqueNameCounter);
 
 	UniqueNameCounter += 1;
 
@@ -289,50 +285,33 @@ const char *roadmap_file_map (const char *set,
 	DWORD file_size;
 	int map_mode;
 	int open_mode;
-	int view_mode;
 
 	context = malloc (sizeof(*context));
 	roadmap_check_allocated(context);
 
 	context->hFile = INVALID_HANDLE_VALUE;
-	context->hMapFile = INVALID_HANDLE_VALUE;
 	context->base = NULL;
 	context->size = 0;
 
 	if (strcmp(mode, "r") == 0) {
 		open_mode = GENERIC_READ;
-		map_mode  = PAGE_READONLY;
-		view_mode = FILE_MAP_READ;
+		map_mode = PAGE_READONLY;
 	} else if (strchr (mode, 'w') != NULL) {
 		open_mode = GENERIC_READ | GENERIC_WRITE;
-		map_mode  = PAGE_READWRITE;
-		view_mode = FILE_MAP_WRITE;
+		map_mode = PAGE_READWRITE;
 	} else {
 		roadmap_log (ROADMAP_ERROR,
 			"%s: invalid file access mode %s", name, mode);
 		return NULL;
 	}
 
-	if ((name[0] == '\\') || (name[0] == '/') || (name[1] == ':')) {
+	if ((name[0] == '\\') || (name[0] == '/')) {
 		LPWSTR name_unicode = ConvertToWideChar(name, CP_UTF8);
-
-#ifdef UNDER_CE                
 		context->hFile = CreateFileForMapping(
 			name_unicode,
 			open_mode,
 			FILE_SHARE_READ, NULL, OPEN_EXISTING, 
 			FILE_ATTRIBUTE_NORMAL|FILE_FLAG_WRITE_THROUGH, NULL);
-
-#else                
-		context->hFile = CreateFile(
-				name_unicode,
-				open_mode,
-				FILE_SHARE_READ,
-				NULL,
-				OPEN_EXISTING,
-				FILE_ATTRIBUTE_NORMAL,
-				0 );
-#endif                
 		free(name_unicode);
 		sequence = ""; /* Whatever, but NULL. */
 
@@ -373,23 +352,11 @@ const char *roadmap_file_map (const char *set,
 			strcat (full_name, name);
 
 			full_name_unicode = ConvertToWideChar(full_name, CP_UTF8);
-#ifdef UNDER_CE
 			context->hFile = CreateFileForMapping(
 				full_name_unicode,
 				open_mode,
 				FILE_SHARE_READ, NULL, OPEN_EXISTING, 
 				FILE_ATTRIBUTE_NORMAL, NULL);
-#else
-
-                        context->hFile = CreateFile(
-                              full_name_unicode,
-                              open_mode,
-                              FILE_SHARE_READ,
-                              NULL,
-                              OPEN_EXISTING,
-                              FILE_ATTRIBUTE_NORMAL,
-                              0 );
-#endif                
 			free(full_name_unicode);
 
 			if (context->hFile != INVALID_HANDLE_VALUE) break;
@@ -421,13 +388,13 @@ const char *roadmap_file_map (const char *set,
 
 	context->size = file_size;
 
-	context->hMapFile = CreateFileMapping(
+	context->hFile = CreateFileMapping(
 		context->hFile, 
 		NULL,
 		map_mode,
 		0,0,0);
 
-	if (context->hMapFile == INVALID_HANDLE_VALUE) {
+	if (context->hFile == INVALID_HANDLE_VALUE) {
 		if (sequence == 0) {
 			roadmap_log (ROADMAP_INFO, "cannot open file %s", name);
 		}
@@ -437,8 +404,8 @@ const char *roadmap_file_map (const char *set,
 
 	context->base =
 		MapViewOfFile(
-		context->hMapFile,
-		view_mode,
+		context->hFile,
+		FILE_MAP_READ,
 		0,0,0 );
 
 	if (context->base == NULL) {
@@ -479,16 +446,9 @@ void roadmap_file_unmap (RoadMapFileContext *file)
 		UnmapViewOfFile(context->base);
 	}
 
-	if (context->hMapFile != INVALID_HANDLE_VALUE ) {
-		CloseHandle(context->hMapFile);
-	}
-
-#ifndef UNDER_CE
 	if (context->hFile != INVALID_HANDLE_VALUE ) {
 		CloseHandle(context->hFile);
 	}
-#endif
-
 	free(context);
 	*file = NULL;
 }
@@ -530,7 +490,7 @@ RoadMapFile roadmap_file_open(const char *name, const char *mode)
 		os_mode,
 		FILE_SHARE_READ | FILE_SHARE_WRITE,
 		NULL,
-		OPEN_ALWAYS,
+		OPEN_EXISTING,
 		0,
 		NULL);
 	
@@ -569,24 +529,3 @@ void  roadmap_file_close(RoadMapFile file)
    CloseHandle((HANDLE)file);
 }
 
-
-int roadmap_file_free_space (const char *path)
-{
-   ULARGE_INTEGER FreeBytesAvailableToCaller;
-   ULARGE_INTEGER TotalNumberOfBytes;
-   ULARGE_INTEGER TotalNumberOfFreeBytes;
-
-   LPWSTR dir_name = ConvertToWideChar(path, CP_UTF8);
-
-   if (!GetDiskFreeSpaceEx(dir_name,
-         &FreeBytesAvailableToCaller,
-         &TotalNumberOfBytes,
-         &TotalNumberOfFreeBytes)) {
-
-         free (dir_name);
-         return -1;
-   }
-
-   free (dir_name);
-   return (int) (FreeBytesAvailableToCaller.QuadPart / 1024);
-}

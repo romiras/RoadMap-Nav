@@ -34,7 +34,6 @@
 #include "roadmap_display.h"
 
 #include "../editor_main.h"
-#include "navigate/navigate_main.h"
 #include "../db/editor_db.h"
 #include "editor_export.h"
 #include "editor_download.h"
@@ -42,13 +41,12 @@
 static void download_map_done (void) {
 
    editor_main_set (1);
-   navigate_main_reload_data ();
    roadmap_download_subscribe_when_done (NULL);
    roadmap_screen_unfreeze ();
    roadmap_screen_redraw ();
 }
 
-static int editor_download_map (RoadMapDownloadCallbacks *callbacks) {
+static int editor_download_map (int mode) {
 
    static int *fips = NULL;
    static int ProtocolInitialized = 0;
@@ -73,7 +71,7 @@ static int editor_download_map (RoadMapDownloadCallbacks *callbacks) {
 
    if (count == 0) {
 
-      if (callbacks) {
+      if (mode == EDITOR_DOWNLOAD_AUTO) {
          fips[0] = 77001;
          count = 1;
       } else {
@@ -86,7 +84,7 @@ static int editor_download_map (RoadMapDownloadCallbacks *callbacks) {
 
       if (!editor_export_empty (fips[i])) {
 
-         if (!callbacks) {
+         if (mode == EDITOR_DOWNLOAD_NORMAL) {
             roadmap_messagebox("Info", "You must first export your data.");
          }
 
@@ -106,7 +104,9 @@ static int editor_download_map (RoadMapDownloadCallbacks *callbacks) {
 
       editor_db_close (fips[i]);
       editor_db_delete (fips[i]);
-      res = roadmap_download_get_county (fips[i], i ? 0 : 1, callbacks);
+      res =
+         roadmap_download_get_county (fips[i], i ? 0 : 1,
+                                      mode == EDITOR_DOWNLOAD_NORMAL ? 1 : 0);
 
       if (res != 0) return -1;
    }
@@ -115,8 +115,8 @@ static int editor_download_map (RoadMapDownloadCallbacks *callbacks) {
 }
 
 
-int editor_download_update_map (RoadMapDownloadCallbacks *callbacks) {
+int editor_download_update_map (int mode) {
 
-   return editor_download_map (callbacks);
+   return editor_download_map (mode);
 }
 
