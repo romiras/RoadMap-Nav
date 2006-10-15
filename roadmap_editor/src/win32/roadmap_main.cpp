@@ -29,19 +29,14 @@
 #include <commctrl.h>
 #include "resource.h"
 #include <winsock.h>
-#include <time.h>
 #ifdef UNDER_CE
 #include <aygshell.h>
 #include <notify.h>
-#include "CEException.h"
-#include "CEDevice.h"
 #endif
 
 #ifndef I_IMAGENONE
 #define I_IMAGENONE (-2)
 #endif
-
-#define MIN_SYNC_TIME 1*3600
 
 #ifdef WIN32_PROFILE
 #include <C:\Program Files\Windows CE Tools\Common\Platman\sdk\wce500\include\cecap.h>
@@ -60,9 +55,6 @@ extern "C" {
 #include "../roadmap_messagebox.h"
 #include "../roadmap_screen.h"
 #include "../roadmap_download.h"
-#include "../roadmap_lang.h"
-#include "../roadmap_dialog.h"
-#include "../roadmap_gps.h"
 #include "wince_input_mon.h"
 #include "win32_serial.h"
 #include "roadmap_wincecanvas.h"
@@ -131,75 +123,7 @@ static WCHAR szOtherWindowClass[] = L"RoadGPSClass";
 static RoadMapConfigDescriptor RoadMapConfigGPSVirtual =
                         ROADMAP_CONFIG_ITEM("GPS", "Virtual");
 
-static RoadMapConfigDescriptor RoadMapConfigMenuBar =
-                        ROADMAP_CONFIG_ITEM("General", "Menu bar");
-
-#ifdef UNDER_CE
-static RoadMapConfigDescriptor RoadMapConfigAutoSync =
-                                  ROADMAP_CONFIG_ITEM("FreeMap", "Auto sync");
-static RoadMapConfigDescriptor RoadMapConfigLastSync =
-                                  ROADMAP_CONFIG_ITEM("FreeMap", "Last sync");
-#endif
-
-static RoadMapConfigDescriptor RoadMapConfigFirstTime =
-                                  ROADMAP_CONFIG_ITEM("FreeMap", "First time");
-
-static RoadMapConfigDescriptor RoadMapConfigUser =
-                                  ROADMAP_CONFIG_ITEM("FreeMap", "User Name");
-
-static RoadMapConfigDescriptor RoadMapConfigPassword =
-                                  ROADMAP_CONFIG_ITEM("FreeMap", "Password");
-
-static void first_time_wizard (void);
-
-static HANDLE g_hMutexAppRunning;
-
-static BOOL AppInstanceExists()
-{
-   BOOL bAppRunning = FALSE;
-
-   g_hMutexAppRunning = CreateMutex( NULL, FALSE, 
-                                     L"Global\\FreeMap RoadMap");
-
-   if (( g_hMutexAppRunning != NULL ) && 
-         ( GetLastError() == ERROR_ALREADY_EXISTS))
-   {
-
-      CloseHandle( g_hMutexAppRunning );
-      g_hMutexAppRunning = NULL;
-   }
-
-   return ( g_hMutexAppRunning == NULL );
-}
-
-
 #ifndef _ROADGPS
-#ifdef UNDER_CE
-static int roadmap_main_should_sync (void) {
-
-   roadmap_config_declare
-      ("session", &RoadMapConfigLastSync, "0");
-
-   if (roadmap_config_match(&RoadMapConfigAutoSync, "No")) {
-      return 0;
-   } else {
-      unsigned int last_sync_time =
-         roadmap_config_get_integer(&RoadMapConfigLastSync);
-
-      if (last_sync_time && 
-         ((last_sync_time + MIN_SYNC_TIME) > time(NULL))) {
-
-         return 0;
-      }
-
-      roadmap_config_set_integer (&RoadMapConfigLastSync, time(NULL));
-      roadmap_config_save (0);
-   }
-
-   return 1;
-}
-#endif
-
 static void roadmap_main_start_sync (void) {
 
    struct hostent *h;
@@ -269,17 +193,6 @@ const char *roadmap_main_get_virtual_serial (void) {
    return RoadMapMainVirtualSerial;
 }
 
-int handleException(EXCEPTION_POINTERS *exceptionPointers) {
-
-#ifdef UNDER_CE
-        CEException::writeException(TEXT("\\roadmapCrash"), exceptionPointers);
-#endif
-        exit(0);
-
-        return EXCEPTION_EXECUTE_HANDLER;
-}
-
-
 // our main function
 #ifdef UNDER_CE
 int WINAPI WinMain(HINSTANCE hInstance,
@@ -300,22 +213,17 @@ int WINAPI WinMain(HINSTANCE hInstance,
    cmd_line = lpCmdLine;
 #endif
 
+	// Perform application initialization:
+	if (!InitInstance(hInstance, cmd_line))
+	{
+		return FALSE;
+	}
+
 #ifdef WIN32_PROFILE
    //SuspendCAPAll();
 #endif
 
-   __try 
-   {
-      // Perform application initialization:
-	   if (!InitInstance(hInstance, cmd_line))
-	   {
-		   return FALSE;
-	   }
-
-      setup_virtual_serial ();
-
-   }
-   __except (handleException(GetExceptionInformation())) {}
+   setup_virtual_serial ();
 
 	ShowWindow(RoadMapMainWindow, nCmdShow);
 	UpdateWindow(RoadMapMainWindow);
@@ -379,15 +287,12 @@ BOOL InitInstance(HINSTANCE hInstance, LPTSTR lpCmdLine)
 #ifdef UNDER_CE
 	SHInitExtraControls();
 
-   if (!wcscmp(lpCmdLine, APP_RUN_AT_RS232_DETECT) ||
-       !wcscmp(lpCmdLine, APP_RUN_AFTER_SYNC)) {
+   if (!wcscmp(lpCmdLine, APP_RUN_AT_RS232_DETECT)) {
       do_sync = true;
    }
 
 #endif
    
-   BOOL other_instance = AppInstanceExists ();
-
 	//If it is already running, then focus on the window, and exit
 	hWnd = FindWindow(szWindowClass, NULL);	
 	if (hWnd) 
@@ -403,11 +308,7 @@ BOOL InitInstance(HINSTANCE hInstance, LPTSTR lpCmdLine)
 		   return 0;
       }
 	} 
-
-#ifndef _ROADGPS   
-   if (other_instance) return 0;
-#endif
-
+	
 	if (!MyRegisterClass(hInstance, szWindowClass))
 	{
 		return FALSE;
@@ -420,40 +321,18 @@ BOOL InitInstance(HINSTANCE hInstance, LPTSTR lpCmdLine)
 	
 	char *args[1] = {0};
 
-#ifdef UNDER_CE
 #ifndef _ROADGPS
    if (do_sync) {
       roadmap_config_initialize ();
-      roadmap_config_declare_enumeration
-         ("preferences", &RoadMapConfigAutoSync, "Yes", "No", NULL);    
-
-      if (!roadmap_main_should_sync ()) return 0;
-      roadmap_lang_initialize ();
-      roadmap_start_set_title (roadmap_lang_get ("RoadMap"));
       roadmap_download_initialize ();
       editor_main_initialize ();
-      editor_main_set (1);
-      roadmap_main_start_sync ();      
+      roadmap_main_start_sync ();
       return 0;
    }
 #endif
-#endif
-
 
 	roadmap_start(0, args);
 	
-#ifndef _ROADGPS
-#ifdef FREEMAP_IL
-
-   roadmap_config_declare_enumeration
-      ("session", &RoadMapConfigFirstTime, "Yes", "No", NULL);    
-
-   if (roadmap_config_match(&RoadMapConfigFirstTime, "Yes")) {
-      first_time_wizard();
-   }
-
-#endif
-#endif
 	return TRUE;
 }
 
@@ -463,27 +342,15 @@ static int roadmap_main_char_key_pressed(HWND hWnd, WPARAM wParam,
 {
 	char *key = NULL;
 	char regular_key[2];
-
-#ifdef UNDER_CE
-	switch (wParam)
-	{
-	case VK_APP1:	key = "Button-App1";	   break;
-	case VK_APP2:	key = "Button-App2";	   break;
-	case VK_APP3:	key = "Button-App3";	   break;
-	case VK_APP4:	key = "Button-App4";	   break;
-   }
-#endif
-
-  if ((key == NULL) && (wParam > 0 && wParam < 128)) {
-	   regular_key[0] = wParam;
-	   regular_key[1] = 0;
-	   key = regular_key;
-   }
-
-   if (key != NULL) {
-	   (*RoadMapMainInput) (key);
-	   return 1;
-   }
+	
+	if (wParam > 0 && wParam < 128) {
+		regular_key[0] = wParam;
+		regular_key[1] = 0;
+		key = regular_key;
+		(*RoadMapMainInput) (key);
+		return 1;
+	}
+	
 	return 0;
 }
 
@@ -491,7 +358,7 @@ static int roadmap_main_char_key_pressed(HWND hWnd, WPARAM wParam,
 static void CALLBACK AvoidSuspend (HWND hwnd, UINT uMsg, UINT idEvent,
                                    DWORD dwTime) {
 #ifdef UNDER_CE
-   CEDevice::wakeUp();
+   SystemIdleTimerReset ();
 #endif
 }
 
@@ -502,16 +369,10 @@ static int roadmap_main_vkey_pressed(HWND w, WPARAM wParam, LPARAM lParam)
 	
 	switch (wParam)
 	{
-	case VK_LEFT:	key = "Button-Left";	   break;
-	case VK_RIGHT:	key = "Button-Right";	break;
-	case VK_UP:		key = "Button-Up";	   break;
-	case VK_DOWN:	key = "Button-Down";	   break;
-#ifdef UNDER_CE
-	case VK_APP1:	key = "Button-App1";	   break;
-	case VK_APP2:	key = "Button-App2";	   break;
-	case VK_APP3:	key = "Button-App3";	   break;
-	case VK_APP4:	key = "Button-App4";	   break;
-#endif
+	case VK_LEFT:	key = "J";	break;
+	case VK_RIGHT:	key = "K";	break;
+	case VK_UP:		key = "+";	break;
+	case VK_DOWN:	key = "-";	break;
 #if 0
 		/* These binding are for the iPAQ buttons: */
 	case 0x1008ff1a: key = "Button-Menu";           break;
@@ -541,7 +402,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	static SHACTIVATEINFO s_sai;
 #endif
 	
-   __try {
 	switch (message) 
 	{
 	case WM_COMMAND:
@@ -577,13 +437,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 		
 	case WM_CREATE:
-		bool create_menu;
-#ifdef _ROADGPS
-      create_menu = true;
-#else
-      create_menu = roadmap_config_match (&RoadMapConfigMenuBar, "Yes") != 0;
-#endif
-
 #ifdef UNDER_CE
 		SHMENUBARINFO mbi;
 		
@@ -599,7 +452,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		// delete everything in it, to get an empty menu.
 		// If I try to just create an empty menu, it does't work! (can't
 		// add items to it).
-		if (!create_menu || !SHCreateMenuBar(&mbi)) 
+		if (!SHCreateMenuBar(&mbi)) 
 		{
 			RoadMapMainMenuBar = NULL;
 		}
@@ -612,17 +465,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 		}
 #else
-	  if (create_menu) {
-		RoadMapMainMenuBar = CreateMenu ();
-		SetMenu(hWnd, RoadMapMainMenuBar);
-	  }
+	RoadMapMainMenuBar = CreateMenu ();
+	{
+	DWORD res = SetMenu(hWnd, RoadMapMainMenuBar);
+	res = res;
+	}
 #endif
 		
 #ifdef UNDER_CE                
 		// Initialize the shell activate info structure
 		memset(&s_sai, 0, sizeof (s_sai));
 		s_sai.cbSize = sizeof (s_sai);
-      CEDevice::init();
 
       SetTimer (NULL, 0, 50000, AvoidSuspend);
 #endif
@@ -639,9 +492,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 		
 	case WM_DESTROY:
-#ifdef UNDER_CE
-      CEDevice::end();
-#endif
 		if (RoadMapMainMenuBar != NULL) {
 #ifdef UNDER_CE			
 			DestroyWindow(RoadMapMainMenuBar);
@@ -708,29 +558,28 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_ACTIVATE:
       if ((LOWORD(wParam)!=WA_INACTIVE) &&
             RoadMapMainFullScreen) {
-         SHFullScreen(RoadMapMainWindow, SHFS_HIDETASKBAR|SHFS_HIDESIPBUTTON);
-         MoveWindow(RoadMapMainWindow, 0, 0,
-            GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN),
-            TRUE);
+         SHFullScreen(RoadMapMainWindow, SHFS_HIDETASKBAR | SHFS_HIDESIPBUTTON);
+
       } else {
+
 		   // Notify shell of our activate message
 		   SHHandleWMActivate(hWnd, wParam, lParam, &s_sai, FALSE);
       }
 		break;
       
 	case WM_SETTINGCHANGE:
-		//SHHandleWMSettingChange(hWnd, wParam, lParam, &s_sai);
+		SHHandleWMSettingChange(hWnd, wParam, lParam, &s_sai);
 		break;
 #endif
 
 #ifdef UNDER_CE
 #ifndef _ROADGPS
    case WM_KILLFOCUS:
-      //roadmap_screen_freeze ();
+      roadmap_screen_freeze ();
       break;
 
    case WM_SETFOCUS:
-      //roadmap_screen_unfreeze ();
+      roadmap_screen_unfreeze ();
       break;
 #endif
 #endif
@@ -762,8 +611,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
-}
-__except (handleException(GetExceptionInformation())) {}
 	return 0;
 }
 
@@ -812,38 +659,34 @@ extern "C" {
 	void roadmap_main_toggle_full_screen (void)
 	{
 #ifdef UNDER_CE
+      #define MENU_HEIGHT 26
       RECT rc;
-      int menu_height = 0;
-
-      if (RoadMapMainMenuBar != NULL) {
-         menu_height = 26;
-      }
 
       //get window size
       GetWindowRect(RoadMapMainWindow, &rc);
 
       if (!RoadMapMainFullScreen) {
-         SHFullScreen(RoadMapMainWindow, SHFS_HIDETASKBAR|SHFS_HIDESIPBUTTON);
-         if (RoadMapMainMenuBar != NULL) ShowWindow(RoadMapMainMenuBar, SW_HIDE);
+         SHFullScreen(RoadMapMainWindow, SHFS_HIDETASKBAR | SHFS_HIDESIPBUTTON);
+         ShowWindow(RoadMapMainMenuBar, SW_HIDE);
 
          MoveWindow(RoadMapMainWindow,
 		      rc.left, 
-		      rc.top-26,
+		      rc.top-MENU_HEIGHT, 
 		      rc.right, 
-		      rc.bottom+menu_height,
+		      rc.bottom+MENU_HEIGHT, 
 		      TRUE);
 
          RoadMapMainFullScreen = true;
 
       } else {
 	
-         SHFullScreen(RoadMapMainWindow, SHFS_SHOWTASKBAR);
-         if (RoadMapMainMenuBar != NULL) ShowWindow(RoadMapMainMenuBar, SW_SHOW);
+         SHFullScreen(RoadMapMainWindow, SHFS_SHOWTASKBAR | SHFS_SHOWSIPBUTTON);
+         ShowWindow(RoadMapMainMenuBar, SW_SHOW);
          MoveWindow(RoadMapMainWindow, 
             rc.left, 
-            rc.top+26,
+            rc.top+MENU_HEIGHT, 
             rc.right, 
-            rc.bottom- 26 - menu_height,
+            rc.bottom-(2*MENU_HEIGHT), 
             TRUE);
 
          RoadMapMainFullScreen = false;
@@ -852,19 +695,13 @@ extern "C" {
 #endif
 	}
 
+	
 	void roadmap_main_new (const char *title, int width, int height)
 	{
 		LPWSTR szTitle = ConvertToWideChar(title, CP_UTF8);
 		DWORD style = WS_VISIBLE;
 
-      roadmap_config_declare_enumeration
-         ("preferences", &RoadMapConfigMenuBar, "No", "Yes", NULL);
-#ifdef UNDER_CE
-      roadmap_config_declare_enumeration
-         ("preferences", &RoadMapConfigAutoSync, "Yes", "No", NULL);
-      roadmap_config_declare
-         ("session", &RoadMapConfigLastSync, "0");
-#else
+#ifndef UNDER_CE
 		style |= WS_OVERLAPPEDWINDOW;
 #endif
 
@@ -894,34 +731,11 @@ extern "C" {
 				rc.bottom-rc.top, FALSE);
 		}
 #endif
-
-#ifdef FREEMAP_IL
-      editor_main_check_map ();
-      editor_main_set (1);
-#endif
-   }
+	}
 	
 	
-	void roadmap_main_set_keyboard
-      (struct RoadMapFactoryKeyMap *bindings, RoadMapKeyInput callback)
+	void roadmap_main_set_keyboard (RoadMapKeyInput callback)
 	{
-
-#ifdef UNDER_CE
-      const struct RoadMapFactoryKeyMap *binding;
-
-      for (binding = bindings; binding->key != NULL; ++binding) {
-
-         if (!strncmp(binding->key, "Button-App", 10)) {
-
-            int id = atoi(binding->key + 10);
-
-            if ((id <= 0) || (id > 4)) continue;
-
-            SHSetAppKeyWndAssoc(VK_APP1 + id - 1, RoadMapMainWindow);
-         }
-      }
-#endif
-
 		RoadMapMainInput = callback;
 	}
 
@@ -1111,70 +925,7 @@ extern "C" {
 	
 	void roadmap_main_add_canvas (void)
 	{
-#ifndef _ROADGPS
-      roadmap_main_toggle_full_screen ();
-#endif
-      
-      roadmap_canvas_new(RoadMapMainWindow, RoadMapMainToolbar);
-
-#ifdef FREEMAP_IL
-      RoadMapImage image = roadmap_canvas_load_image (roadmap_path_user(),
-                           "icons\\welcome.bmp");
-
-	  if (image) {
-		  RoadMapGuiPoint pos;
-		  pos.x = (roadmap_canvas_width () - roadmap_canvas_image_width(image)) / 2;
-		  pos.y = (roadmap_canvas_height () - roadmap_canvas_image_height(image)) / 2;
-		  roadmap_canvas_draw_image (image, &pos, 0, IMAGE_NORMAL);
-		  roadmap_canvas_free_image (image);
-		  roadmap_canvas_refresh ();
-		  Sleep (500);
-
-		  const char *message = roadmap_lang_get ("Loading please wait...");
-		  RoadMapPen pen = roadmap_canvas_create_pen ("splash");
-		  roadmap_canvas_set_foreground ("red");
-
-		  int width;
-		  int ascent;
-		  int descent;
-
-		  int current_x;
-
-		  if (roadmap_lang_rtl ()) {
-			 current_x = roadmap_canvas_width () - pos.x - 10;
-		  } else {
-			 current_x = pos.x + 10;
-		  }
-
-		  for (unsigned int i=0; i<strlen(message); i++) {
-			 char str[3] = {0};
-			 RoadMapGuiPoint position = {current_x, 300};
-
-			 for (int j=0; j<3; j++) {
-				str[j] = message[i];
-				if (str[j] != -41) break;
-				i++;
-			 }
-         
-			 roadmap_canvas_get_text_extents
-				(str, -1, &width, &ascent, &descent, NULL);
-
-			 if (roadmap_lang_rtl ()) {
-				current_x -= width;
-				position.x = current_x;
-			 } else {
-				current_x += width;
-			 }
-
-			 roadmap_canvas_draw_string_angle (&position, &position, 0, str);
-			 roadmap_canvas_refresh ();
-
-			 Sleep (30);
-		  }
-
-		  Sleep (1000);
-	  }
-#endif
+		roadmap_canvas_new(RoadMapMainWindow, RoadMapMainToolbar);
 	}
 	
 	
@@ -1324,17 +1075,8 @@ extern "C" {
 	void roadmap_main_set_status (const char *text) {}
 	
 	void roadmap_main_flush (void) 
-   {
-      HWND w = GetFocus();
-      MSG msg;
-
-      while(PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-      {
-         TranslateMessage(&msg);
-         DispatchMessage(&msg);
-      }
-
-      //UpdateWindow(w);
+   {      
+      UpdateWindow(GetFocus());
    }
 	
 	
@@ -1343,61 +1085,6 @@ extern "C" {
 		roadmap_start_exit ();
 		SendMessage(RoadMapMainWindow, WM_CLOSE, 0, 0);
 	}
-
-   void roadmap_main_set_cursor (int cursor)
-   {
-      switch (cursor) {
-
-      case ROADMAP_CURSOR_NORMAL:
-         SetCursor(NULL);
-         break;
-
-      case ROADMAP_CURSOR_WAIT:
-         SetCursor(LoadCursor(NULL, IDC_WAIT));
-         break;
-      }
-   }
+	
 } // extern "C"
-
-/* first time wizard */
-
-static void wizard_close (const char *name, void *context) {
-
-   roadmap_config_set (&RoadMapConfigUser,
-      (char *)roadmap_dialog_get_data ("main", "User Name"));
-
-   roadmap_config_set (&RoadMapConfigPassword,
-      (char *)roadmap_dialog_get_data ("main", "Password"));
-
-   roadmap_config_set (&RoadMapConfigFirstTime, "No");
-
-   roadmap_dialog_hide (name);
-}
-
-static void wizard_detect_gps (const char *name, void *context) {
-   roadmap_gps_detect_receiver ();
-}
-
-void first_time_wizard (void) {
-   if (roadmap_dialog_activate ("Setup wizard", NULL)) {
-
-      roadmap_config_declare ("preferences", &RoadMapConfigUser, "");
-      roadmap_config_declare_password ("preferences", &RoadMapConfigPassword, "");
-      roadmap_dialog_new_label  ("main", ".Welcome to FreeMap!");
-      roadmap_dialog_new_label  ("main", ".Enter your user name if you registered one.");
-      roadmap_dialog_new_label  ("main", ".Otherwise leave these fields empty.");
-      roadmap_dialog_new_entry  ("main", "User Name", NULL);
-      roadmap_dialog_new_password  ("main", "Password");
-      roadmap_dialog_add_button ("Ok", wizard_close);
-      roadmap_dialog_add_button ("Detect GPS", wizard_detect_gps);
-
-      roadmap_dialog_complete (0);
-   }
-
-   roadmap_dialog_set_data ("main", "User Name",
-         roadmap_config_get (&RoadMapConfigUser));
-   roadmap_dialog_set_data ("main", "Password",
-         roadmap_config_get (&RoadMapConfigPassword));
-
-}
 

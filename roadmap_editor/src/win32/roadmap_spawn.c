@@ -44,7 +44,7 @@ static const char *flite_text;
 
 static char *RoadMapSpawnPath = NULL;
 
-static RoadMapList RoadMapSpawnActive;
+static RoadMapList RoadMapSpawnActive = ROADMAP_LIST_EMPTY;
 
 DWORD WINAPI FliteThread(LPVOID lpParam) {
 
@@ -102,7 +102,7 @@ static int exec_flite_dll (const char *command_line,
 
 		flite_thread = CreateThread(NULL, 0, FliteThread, 0, 0, NULL);
 
-      SetThreadPriority(flite_thread, THREAD_PRIORITY_TIME_CRITICAL);
+      SetThreadPriority(flite_thread, THREAD_PRIORITY_HIGHEST);
 
       flite_dll_initialized = 1;
    }
@@ -131,8 +131,7 @@ static int exec_flite_dll (const char *command_line,
 
 static int roadmap_spawn_child (const char *name,
 								const char *command_line,
-								RoadMapPipe pipes[2],
-                        int feedback)
+								RoadMapPipe pipes[2])
 {
 	PROCESS_INFORMATION pi;
 	STARTUPINFO si;
@@ -174,11 +173,7 @@ static int roadmap_spawn_child (const char *name,
 		free(command_line_unicode);
 	}
 
-   CloseHandle(pi.hThread);
-   if (!feedback) {
-      CloseHandle(pi.hProcess);
-   }
-
+	CloseHandle(pi.hThread);
 
 	if (pipes != NULL) {
 		pipes[0] = ROADMAP_SPAWN_INVALID_PIPE;
@@ -203,14 +198,13 @@ void roadmap_spawn_initialize (const char *argv0)
 		*tmp = '\0';
 	}
 	RoadMapSpawnPath = path;
-	ROADMAP_LIST_INIT(&RoadMapSpawnActive);
 }
 
 
 int roadmap_spawn (const char *name,
 				   const char *command_line)
 {
-	return roadmap_spawn_child (name, command_line, NULL, 0);
+	return roadmap_spawn_child (name, command_line, NULL);
 }
 
 
@@ -227,7 +221,7 @@ int  roadmap_spawn_with_feedback (const char *name,
 #endif
 
 	roadmap_list_append (&RoadMapSpawnActive, &feedback->link);
-	feedback->child = roadmap_spawn_child (name, command_line, NULL, 1);
+	feedback->child = roadmap_spawn_child (name, command_line, NULL);
 
 	return feedback->child;
 }
@@ -239,7 +233,7 @@ int  roadmap_spawn_with_pipe (const char *name,
 							  RoadMapFeedback *feedback)
 {
 	roadmap_list_append (&RoadMapSpawnActive, &feedback->link);
-	feedback->child = roadmap_spawn_child (name, command_line, pipes, 0);
+	feedback->child = roadmap_spawn_child (name, command_line, pipes);
 
 	return feedback->child;
 }
@@ -247,18 +241,17 @@ int  roadmap_spawn_with_pipe (const char *name,
 
 void roadmap_spawn_check (void)
 {
-	RoadMapListItem *item, *tmp;
-	RoadMapFeedback *feedback;
+	RoadMapFeedback *item;
 
-	ROADMAP_LIST_FOR_EACH (&RoadMapSpawnActive, item, tmp) {
+	for (item = (RoadMapFeedback *)RoadMapSpawnActive.first;
+		item != NULL;
+		item = (RoadMapFeedback *)item->link.next) {
 
-		feedback = (RoadMapFeedback *)item;
-
-		if (WaitForSingleObject((HANDLE)feedback->child, 0) == WAIT_OBJECT_0) {
-			CloseHandle((HANDLE)feedback->child);
-			roadmap_list_remove (&feedback->link);
-			feedback->handler (feedback->data);
-		}
+			if (WaitForSingleObject((HANDLE)item->child, 0) == WAIT_OBJECT_0) {
+				CloseHandle((HANDLE)item->child);
+				roadmap_list_remove (&RoadMapSpawnActive, &item->link);
+				item->handler (item->data);
+			}
 	}
 }
 

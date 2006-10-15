@@ -40,7 +40,6 @@
 #include "roadmap_gtkmain.h"
 #include "roadmap_keyboard.h"
 
-#define ROADMAP_DIALOG_NO_LANG
 #include "roadmap_dialog.h"
 
 
@@ -51,7 +50,6 @@
 #define ROADMAP_WIDGET_LIST      4
 #define ROADMAP_WIDGET_LABEL     5
 #define ROADMAP_WIDGET_PASSWORD  6
-#define ROADMAP_WIDGET_MUL_ENTRY 7
 
 enum {
     RM_LIST_WAYPOINT_NAME,
@@ -403,28 +401,6 @@ void roadmap_dialog_new_entry (const char *frame, const char *name,
 }
 
 
-void roadmap_dialog_new_mul_entry (const char *frame, const char *name,
-                                   RoadMapDialogCallback callback) {
-
-   GtkWidget *w = gtk_text_view_new ();
-   RoadMapDialogItem child = roadmap_dialog_new_item (frame, name, w, 0);
-   child->callback = callback;
-   child->widget_type = ROADMAP_WIDGET_MUL_ENTRY;
-}
-
-
-void roadmap_dialog_new_progress (const char *frame, const char *name) {
-
-   name = "Progress";
-   GtkWidget *w = gtk_label_new (name);
-   RoadMapDialogItem child = roadmap_dialog_new_item (frame, name, w, 0);
-   child->widget_type = ROADMAP_WIDGET_LABEL;
-}
-
-
-void roadmap_dialog_new_image (const char *frame, const char *name) {}
-
-
 void roadmap_dialog_new_password (const char *frame, const char *name) {
 
    GtkWidget *w = gtk_entry_new ();
@@ -452,7 +428,7 @@ void roadmap_dialog_new_color (const char *frame, const char *name) {
 void roadmap_dialog_new_choice (const char *frame,
                                 const char *name,
                                 int count,
-                                const char **labels,
+                                char **labels,
                                 void **values,
                                 RoadMapDialogCallback callback) {
 
@@ -464,10 +440,6 @@ void roadmap_dialog_new_choice (const char *frame,
    RoadMapDialogSelection *choice;
 
    child->widget_type = ROADMAP_WIDGET_CHOICE;
-
-   if (labels == values) {
-      child->data_is_string = 1;
-   }
 
    menu = gtk_menu_new ();
 
@@ -482,11 +454,6 @@ void roadmap_dialog_new_choice (const char *frame,
       choice[i].callback = callback;
 
       menu_item = gtk_menu_item_new_with_label (labels[i]);
-      if (child->data_is_string) {
-         GtkWidget *menu_label = gtk_bin_get_child(GTK_BIN(menu_item));
-         choice[i].value = gtk_label_get_text(GTK_LABEL(menu_label));
-      }
-
       gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
 
       g_signal_connect_swapped
@@ -506,6 +473,9 @@ void roadmap_dialog_new_choice (const char *frame,
    child->num_choices = count;
    child->value  = choice[0].value;
 
+   if (labels == values) {
+      child->data_is_string = 1;
+   }
 }
 
 
@@ -638,8 +608,7 @@ void roadmap_dialog_show_list (const char  *frame,
 }
 
 
-void roadmap_dialog_add_button (const char *label,
-                                RoadMapDialogCallback callback) {
+void roadmap_dialog_add_button (char *label, RoadMapDialogCallback callback) {
 
    RoadMapDialogItem dialog = RoadMapDialogCurrent;
    RoadMapDialogItem child;
@@ -776,10 +745,6 @@ void roadmap_dialog_select (const char *dialog) {
 }
 
 
-void roadmap_dialog_set_focus (const char *frame, const char *name) {
-}
-
-
 void *roadmap_dialog_get_data (const char *frame, const char *name) {
 
    RoadMapDialogItem this_frame;
@@ -795,22 +760,6 @@ void *roadmap_dialog_get_data (const char *frame, const char *name) {
    case ROADMAP_WIDGET_ENTRY:
 
       return (void *)gtk_entry_get_text (GTK_ENTRY(this_item->w));
-
-   case ROADMAP_WIDGET_LABEL:
-      
-      return (void *)gtk_label_get_text (GTK_LABEL(this_item->w));
-      
-   case ROADMAP_WIDGET_MUL_ENTRY:
-      {
-         GtkTextIter start, end;
-         gtk_text_buffer_get_bounds
-            (gtk_text_view_get_buffer (GTK_TEXT_VIEW(this_item->w)),
-	     &start, &end );
-         return gtk_text_buffer_get_text
-            (gtk_text_view_get_buffer (GTK_TEXT_VIEW(this_item->w)),
-                                       &start, &end, TRUE);
-      }
-      break;
    }
 
    return this_item->value;
@@ -834,15 +783,6 @@ void  roadmap_dialog_set_data (const char *frame, const char *name,
    case ROADMAP_WIDGET_ENTRY:
 
       gtk_entry_set_text (GTK_ENTRY(this_item->w), (const char *)data);
-      break;
-
-   case ROADMAP_WIDGET_MUL_ENTRY:
-      {
-         GtkTextBuffer *buffer = gtk_text_buffer_new (NULL);
-         gtk_text_buffer_set_text (buffer, (const char *)data, strlen(data));
-         gtk_text_view_set_buffer (GTK_TEXT_VIEW(this_item->w), buffer);
-         g_object_unref (buffer);
-      }
       break;
 
    case ROADMAP_WIDGET_LABEL:
@@ -900,38 +840,44 @@ void  roadmap_dialog_set_data (const char *frame, const char *name,
              "activate",
              (GCallback) roadmap_dialog_chosen,
              (gpointer) (choice+i));
+         gtk_widget_show (item);
+         gtk_option_menu_set_history (GTK_OPTION_MENU(this_item->w), i);
+
          memcpy (this_item->choice + this_item->num_choices,
                  this_item->choice + this_item->num_choices - 1,
                  sizeof(RoadMapDialogSelection));
 
-         menu = gtk_bin_get_child(GTK_BIN(item));
-         this_item->choice[this_item->num_choices].value = 
-            gtk_label_get_text(GTK_LABEL(menu));
+         this_item->choice[this_item->num_choices].value = (const char *)data;
          this_item->num_choices++;
-
-         gtk_widget_show (item);
-         gtk_option_menu_set_history (GTK_OPTION_MENU(this_item->w), i);
       }
 
+#if 0
+         for (i=0; i < this_item->num_choices; i++) {
+            if (this_item->value == this_item->choice[i].value) {
+               break;
+            }
+         }
+
+         if (i == this_item->num_choices) break;
+
+         this_item->value = this_item->choice[i].value = (const char *)data;
+         {
+            GtkWidget *menu = gtk_option_menu_get_menu (GTK_OPTION_MENU(this_item->w));
+            gtk_option_menu_set_history (GTK_OPTION_MENU(this_item->w),
+                  (i + 1) % this_item->num_choices);
+
+            GList *glist = gtk_container_get_children (GTK_CONTAINER(menu));
+            GtkMenuItem *item = g_list_nth_data (glist, i);
+            GtkWidget *menu_label = gtk_bin_get_child(GTK_BIN(item));
+            gtk_label_set_text(GTK_LABEL(menu_label), (const char *)data);
+            gtk_option_menu_set_history (GTK_OPTION_MENU(this_item->w), i);
+
+            g_list_free (glist);
+         }
+      }
+#endif
       break;
    }
    this_item->value = (char *)data;
-}
-
-void  roadmap_dialog_set_progress (const char *frame, const char *name,
-                                   int progress) {
-   RoadMapDialogItem this_frame;
-   RoadMapDialogItem this_item;
-   int i;
-   char data[100];
-
-   this_frame  = roadmap_dialog_get (RoadMapDialogCurrent, frame);
-   this_item   = roadmap_dialog_get (this_frame, name);
-
-   if (this_item->widget_type != ROADMAP_WIDGET_LABEL) return;
-
-   snprintf(data, sizeof(data), "%d", progress);
-
-   gtk_label_set_text (GTK_LABEL(this_item->w), (const char *)data);
 }
 

@@ -24,13 +24,11 @@
 #ifndef INCLUDE__EDITOR_EXPORT__H
 #define INCLUDE__EDITOR_EXPORT__H
 
-#include "editor_sync.h"
-
-int editor_export_data(const char *name, RoadMapDownloadCallbacks *callbacks);
-void editor_export_gpx(void);
-void editor_export_reset_dirty(void);
-int editor_export_empty(int fips);
-void editor_export_initialize(void);
+int editor_export_data(const char *name, int ui);
+void editor_export_gpx (void);
+void editor_export_reset_dirty (void);
+int editor_export_empty (int fips);
+void editor_export_initialize (void);
 
 #endif // INCLUDE__EDITOR_EXPORT__H
 

@@ -3,13 +3,6 @@
 
 #include <windows.h>
 
-#if defined(__GNUC__)
-#define __try try
-#define __except(x) catch (...)
-#else
-#define inline _inline
-#endif
-
 #define MENU_ID_START	WM_USER
 #define MAX_MENU_ITEMS	100
 #define TOOL_ID_START	(MENU_ID_START + MAX_MENU_ITEMS + 1)
@@ -28,7 +21,5 @@
 LPWSTR ConvertToWideChar(LPCSTR string, UINT nCodePage);
 char* ConvertToMultiByte(const LPCWSTR s, UINT nCodePage);
 const char *roadmap_main_get_virtual_serial (void);
-
-time_t timegm(struct tm *_tm);
 
 #endif /* _ROADMAP_WIN32_H_ */

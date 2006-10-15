@@ -34,7 +34,6 @@
 #include "roadmap_path.h"
 #include "roadmap_line.h"
 #include "roadmap_locator.h"
-#include "roadmap_main.h"
 #include "roadmap_turns.h"
 #include "roadmap_metadata.h"
 #include "roadmap_messagebox.h"
@@ -47,14 +46,6 @@ static int fips_data_loaded = 0;
 static dglGraph_s graph;
 static dglSPCache_s spCache;
 
-typedef struct {
-   PluginLine from_line;
-   int from_against_dir;
-   int turn_restrictions;
-} NavigateClip;
-
-NavigateClip NavigateClipData;
-
 static int  clipper     (
                         dglGraph_s *    pgraph ,
                         dglSPClipInput_s * pIn ,
@@ -62,23 +53,6 @@ static int  clipper     (
                         void *          pvarg       /* caller's pointer */
                         )
 {       
-   NavigateClip *info = (NavigateClip *)pvarg;
-   int to_line = dglEdgeGet_Id(pgraph, pIn->pnEdge);
-   int from_line;
-
-   if (pIn->pnPrevEdge != NULL) {
-      
-      from_line = dglEdgeGet_Id(pgraph, pIn->pnPrevEdge);
-   } else {
-      from_line = roadmap_plugin_get_line_id (&info->from_line);
-      if (info->from_against_dir) from_line = -from_line;
-   }
-
-   /* no U turns */
-   if (from_line == -to_line) return 1;
-   
-   if (!info->turn_restrictions) return 0;
-
    if ( roadmap_turns_find_restriction (
             dglNodeGet_Id(pgraph, pIn->pnNodeFrom),
             pIn->pnPrevEdge != NULL ?
@@ -95,17 +69,6 @@ static int  clipper     (
 }
 
 
-int navigate_reload_data (void) {
-   
-   if (fips_data_loaded == 0) return 0;
-      
-   fips_data_loaded = 0;
-   dglRelease (& graph);
-
-   return navigate_load_data ();
-}
-
-   
 int navigate_load_data (void) {
    FILE *fd;
    int nret;
@@ -122,8 +85,6 @@ int navigate_load_data (void) {
       return -1;
    }
 
-   roadmap_main_set_cursor (ROADMAP_CURSOR_WAIT);
-
    do {
       snprintf (path, sizeof(path), "%s/usc%05d.dgl", sequence, fips);
       
@@ -135,7 +96,6 @@ int navigate_load_data (void) {
    } while (sequence != NULL);
 
    if ( fd == NULL ) {  
-      roadmap_main_set_cursor (ROADMAP_CURSOR_NORMAL);
       roadmap_messagebox ("Error", "Can't find route data.");
       return -1;
    }
@@ -143,8 +103,6 @@ int navigate_load_data (void) {
    nret = dglRead( & graph , fd );
 
    fclose( fd );
-
-   roadmap_main_set_cursor (ROADMAP_CURSOR_NORMAL);
 
    if ( nret < 0 ) {
       roadmap_messagebox ("Error", "Can't load route data.");
@@ -171,48 +129,21 @@ int navigate_get_route_segments (PluginLine *from_line,
                                  PluginLine *to_line,
                                  int to_point,
                                  NavigateSegment *segments,
-                                 int *size,
-                                 int *result) {
+                                 int *size) {
    
    int i;
    int nret;
    int total_cost;
-   int line_from_point;
-   int line_to_point;
    dglSPReport_s *pReport;
 
    if (fips_data_loaded != roadmap_locator_active ()) return -1;
 
-   *result = 0;
-
    /* save places for start & end lines */
    *size -= 2;
 
-   NavigateClipData.from_line = *from_line;
-
-   //FIXME add plugin support
-   roadmap_line_points (from_line->line_id, &line_from_point, &line_to_point);
-   if (from_point == line_from_point) {
-      NavigateClipData.from_against_dir = 1;
-   } else {
-      NavigateClipData.from_against_dir = 0;
-   }
-
-   NavigateClipData.turn_restrictions = 1;
-
    nret = dglShortestPath (&graph, &pReport, from_point, to_point,
-                           clipper, &NavigateClipData, NULL);
-   if (nret <= 0) {
-
-      *result = GRAPH_IGNORE_TURNS;
-
-      NavigateClipData.turn_restrictions = 0;
-      nret = dglShortestPath (&graph, &pReport, from_point, to_point,
-                              clipper, &NavigateClipData, NULL);
-      if (nret <= 0) {
-         return nret;
-      }
-   }
+                           clipper, (void *)from_line->line_id, NULL);
+   if (nret <= 0) return nret;
 
    if (pReport->cArc > *size) return -1;
    
