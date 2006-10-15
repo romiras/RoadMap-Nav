@@ -61,8 +61,6 @@ extern "C" {
 #include "../roadmap_screen.h"
 #include "../roadmap_download.h"
 #include "../roadmap_lang.h"
-#include "../roadmap_dialog.h"
-#include "../roadmap_gps.h"
 #include "wince_input_mon.h"
 #include "win32_serial.h"
 #include "roadmap_wincecanvas.h"
@@ -131,30 +129,19 @@ static WCHAR szOtherWindowClass[] = L"RoadGPSClass";
 static RoadMapConfigDescriptor RoadMapConfigGPSVirtual =
                         ROADMAP_CONFIG_ITEM("GPS", "Virtual");
 
+#ifdef UNDER_CE
 static RoadMapConfigDescriptor RoadMapConfigMenuBar =
                         ROADMAP_CONFIG_ITEM("General", "Menu bar");
 
-#ifdef UNDER_CE
 static RoadMapConfigDescriptor RoadMapConfigAutoSync =
                                   ROADMAP_CONFIG_ITEM("FreeMap", "Auto sync");
 static RoadMapConfigDescriptor RoadMapConfigLastSync =
                                   ROADMAP_CONFIG_ITEM("FreeMap", "Last sync");
 #endif
 
-static RoadMapConfigDescriptor RoadMapConfigFirstTime =
-                                  ROADMAP_CONFIG_ITEM("FreeMap", "First time");
-
-static RoadMapConfigDescriptor RoadMapConfigUser =
-                                  ROADMAP_CONFIG_ITEM("FreeMap", "User Name");
-
-static RoadMapConfigDescriptor RoadMapConfigPassword =
-                                  ROADMAP_CONFIG_ITEM("FreeMap", "Password");
-
-static void first_time_wizard (void);
-
 static HANDLE g_hMutexAppRunning;
 
-static BOOL AppInstanceExists()
+BOOL AppInstanceExists()
 {
    BOOL bAppRunning = FALSE;
 
@@ -174,7 +161,7 @@ static BOOL AppInstanceExists()
 
 
 #ifndef _ROADGPS
-#ifdef UNDER_CE
+
 static int roadmap_main_should_sync (void) {
 
    roadmap_config_declare
@@ -198,7 +185,7 @@ static int roadmap_main_should_sync (void) {
 
    return 1;
 }
-#endif
+
 
 static void roadmap_main_start_sync (void) {
 
@@ -403,10 +390,8 @@ BOOL InitInstance(HINSTANCE hInstance, LPTSTR lpCmdLine)
 		   return 0;
       }
 	} 
-
-#ifndef _ROADGPS   
+	
    if (other_instance) return 0;
-#endif
 
 	if (!MyRegisterClass(hInstance, szWindowClass))
 	{
@@ -429,7 +414,6 @@ BOOL InitInstance(HINSTANCE hInstance, LPTSTR lpCmdLine)
 
       if (!roadmap_main_should_sync ()) return 0;
       roadmap_lang_initialize ();
-      roadmap_start_set_title (roadmap_lang_get ("RoadMap"));
       roadmap_download_initialize ();
       editor_main_initialize ();
       editor_main_set (1);
@@ -442,18 +426,6 @@ BOOL InitInstance(HINSTANCE hInstance, LPTSTR lpCmdLine)
 
 	roadmap_start(0, args);
 	
-#ifndef _ROADGPS
-#ifdef FREEMAP_IL
-
-   roadmap_config_declare_enumeration
-      ("session", &RoadMapConfigFirstTime, "Yes", "No", NULL);    
-
-   if (roadmap_config_match(&RoadMapConfigFirstTime, "Yes")) {
-      first_time_wizard();
-   }
-
-#endif
-#endif
 	return TRUE;
 }
 
@@ -577,15 +549,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 		
 	case WM_CREATE:
-		bool create_menu;
-#ifdef _ROADGPS
-      create_menu = true;
-#else
-      create_menu = roadmap_config_match (&RoadMapConfigMenuBar, "Yes") != 0;
-#endif
-
 #ifdef UNDER_CE
 		SHMENUBARINFO mbi;
+      bool create_menu;
 		
 		memset(&mbi, 0, sizeof(SHMENUBARINFO));
 		mbi.cbSize     = sizeof(SHMENUBARINFO);
@@ -599,6 +565,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		// delete everything in it, to get an empty menu.
 		// If I try to just create an empty menu, it does't work! (can't
 		// add items to it).
+#ifdef _ROADGPS
+      create_menu = true;
+#else
+      create_menu = roadmap_config_match (&RoadMapConfigMenuBar, "Yes") != 0;
+#endif
 		if (!create_menu || !SHCreateMenuBar(&mbi)) 
 		{
 			RoadMapMainMenuBar = NULL;
@@ -612,10 +583,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 		}
 #else
-	  if (create_menu) {
-		RoadMapMainMenuBar = CreateMenu ();
-		SetMenu(hWnd, RoadMapMainMenuBar);
-	  }
+	RoadMapMainMenuBar = CreateMenu ();
+	{
+	DWORD res = SetMenu(hWnd, RoadMapMainMenuBar);
+	res = res;
+	}
 #endif
 		
 #ifdef UNDER_CE                
@@ -857,9 +829,9 @@ extern "C" {
 		LPWSTR szTitle = ConvertToWideChar(title, CP_UTF8);
 		DWORD style = WS_VISIBLE;
 
+#ifdef UNDER_CE
       roadmap_config_declare_enumeration
          ("preferences", &RoadMapConfigMenuBar, "No", "Yes", NULL);
-#ifdef UNDER_CE
       roadmap_config_declare_enumeration
          ("preferences", &RoadMapConfigAutoSync, "Yes", "No", NULL);
       roadmap_config_declare
@@ -895,10 +867,10 @@ extern "C" {
 		}
 #endif
 
-#ifdef FREEMAP_IL
+#ifdef FREEMAP_IL      
       editor_main_check_map ();
       editor_main_set (1);
-#endif
+#endif      
    }
 	
 	
@@ -1358,46 +1330,4 @@ extern "C" {
       }
    }
 } // extern "C"
-
-/* first time wizard */
-
-static void wizard_close (const char *name, void *context) {
-
-   roadmap_config_set (&RoadMapConfigUser,
-      (char *)roadmap_dialog_get_data ("main", "User Name"));
-
-   roadmap_config_set (&RoadMapConfigPassword,
-      (char *)roadmap_dialog_get_data ("main", "Password"));
-
-   roadmap_config_set (&RoadMapConfigFirstTime, "No");
-
-   roadmap_dialog_hide (name);
-}
-
-static void wizard_detect_gps (const char *name, void *context) {
-   roadmap_gps_detect_receiver ();
-}
-
-void first_time_wizard (void) {
-   if (roadmap_dialog_activate ("Setup wizard", NULL)) {
-
-      roadmap_config_declare ("preferences", &RoadMapConfigUser, "");
-      roadmap_config_declare_password ("preferences", &RoadMapConfigPassword, "");
-      roadmap_dialog_new_label  ("main", ".Welcome to FreeMap!");
-      roadmap_dialog_new_label  ("main", ".Enter your user name if you registered one.");
-      roadmap_dialog_new_label  ("main", ".Otherwise leave these fields empty.");
-      roadmap_dialog_new_entry  ("main", "User Name", NULL);
-      roadmap_dialog_new_password  ("main", "Password");
-      roadmap_dialog_add_button ("Ok", wizard_close);
-      roadmap_dialog_add_button ("Detect GPS", wizard_detect_gps);
-
-      roadmap_dialog_complete (0);
-   }
-
-   roadmap_dialog_set_data ("main", "User Name",
-         roadmap_config_get (&RoadMapConfigUser));
-   roadmap_dialog_set_data ("main", "Password",
-         roadmap_config_get (&RoadMapConfigPassword));
-
-}
 

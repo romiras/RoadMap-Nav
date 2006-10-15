@@ -611,7 +611,7 @@ int editor_export_data(const char *name, RoadMapDownloadCallbacks *callbacks) {
    int current_trk_open = 0;
    int fips;
    int exported;
-   int estimated_exports;
+   int estimated_lines;
 
    stream.type = NULL_STREAM;
 
@@ -680,7 +680,7 @@ int editor_export_data(const char *name, RoadMapDownloadCallbacks *callbacks) {
 
    export_markers (&stream, name);
 
-   estimated_exports = editor_trkseg_get_count ();
+   estimated_lines = editor_line_get_count ();
    exported = 0;
    while (trkseg != -1) {
       
@@ -772,8 +772,8 @@ close_trk:
       }
 
 next_trkseg:
-      if (exported < estimated_exports) exported++;
-      if (callbacks) (*callbacks->progress) (85 * exported / estimated_exports);
+      if (exported < estimated_lines) exported++;
+      if (callbacks) (*callbacks->progress) (85 * exported / estimated_lines);
       trkseg = editor_trkseg_next_in_global (trkseg);
    }
 

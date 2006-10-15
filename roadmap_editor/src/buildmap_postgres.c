@@ -67,8 +67,8 @@
 #define WaterTlidStart 1100000
 /* ROADS */
 
-static const char *roads_sql = "SELECT segments.id AS id, AsText(simplify(segments.the_geom,  0.00002)) AS the_geom, segments.road_type AS layer, segments.from_node AS from_node_id, segments.to_node AS to_node_id, streets.name AS street_name, streets.text2speech as text2speech, cities.name as city_name, fraddl, toaddl, fraddr, toaddr FROM segments LEFT JOIN streets ON segments.street_id = streets.id LEFT JOIN cities ON streets.city_id = cities.id WHERE segments.the_geom @ SetSRID ('BOX3D(34 29.2, 36.2 33.6)'::box3d, 4326);";
-static const char *roads_route_sql = "SELECT segments.id AS id, segments.from_car_allowed AS from_car_allowed, segments.to_car_allowed AS to_car_allowed, segments.from_max_speed AS from_max_speed, segments.to_max_speed AS to_max_speed, segments.from_cross_time AS from_cross_time, segments.to_cross_time AS to_cross_time, segments.road_type AS layer FROM segments WHERE segments.the_geom @ SetSRID ('BOX3D(34 29.2, 36.2 33.6)'::box3d, 4326);";
+static const char *roads_sql = "SELECT segments.id AS id, AsText(simplify(segments.the_geom,  0.00002)) AS the_geom, segments.road_type AS layer, segments.from_node AS from_node_id, segments.to_node AS to_node_id, streets.name AS street_name, streets.text2speech as text2speech, cities.name as city_name, fraddl, toaddl, fraddr, toaddr FROM segments LEFT JOIN streets ON segments.street_id = streets.id LEFT JOIN cities ON streets.city_id = cities.id;";
+static const char *roads_route_sql = "SELECT segments.id AS id, segments.from_car_allowed AS from_car_allowed, segments.to_car_allowed AS to_car_allowed, segments.from_max_speed AS from_max_speed, segments.to_max_speed AS to_max_speed, segments.from_cross_time AS from_cross_time, segments.to_cross_time AS to_cross_time, segments.road_type AS layer FROM segments;";
 static const char *country_borders_sql = "SELECT id AS id, AsText(simplify(the_geom,  0.00002)) AS the_geom FROM borders;";
 static const char *water_sql = "SELECT id AS id, AsText(simplify(the_geom,  0.00002)) AS the_geom FROM water;";
 static const char *turn_restrictions_sql = "SELECT node_id, seg1_id, seg2_id FROM turn_restrictions;";
@@ -318,9 +318,7 @@ static void buildmap_postgres_read_roads_lines (int verbose) {
          const char *fraddr = PQgetvalue(db_result, irec, column++);
          const char *toaddr = PQgetvalue(db_result, irec, column++);
 
-         if (fraddl[0] && fraddr[0] &&
-            (atoi(fraddr) >= 0) && (atoi(toaddr) >= 0) &&
-            (atoi(fraddl) >= 0) && (atoi(toaddl) >= 0)) {
+         if (fraddl[0] && fraddr[0]) {
 
             buildmap_range_add
                (line, street, atoi(fraddl), atoi(toaddl), zip, city);
