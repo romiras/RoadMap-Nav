@@ -302,7 +302,7 @@ int editor_trkseg_split (int trkseg,
       
       distance =
          roadmap_math_get_distance_from_segment
-            (split_position, &from, &to, &intersection, NULL);
+            (split_position, &from, &to, &intersection);
 
       if (distance < smallest_distance) {
          smallest_distance = distance;
@@ -316,26 +316,6 @@ int editor_trkseg_split (int trkseg,
 
       editor_shape_time (i, &shape_time);
       from = to;
-   }
-
-   if (flags & ED_TRKSEG_OPPOSITE_DIR) {
-      to = *line_from;
-   } else {
-      to = *line_to;
-   }
-
-   distance =
-      roadmap_math_get_distance_from_segment
-      (split_position, &from, &to, &intersection, NULL);
-
-   if (distance < smallest_distance) {
-      smallest_distance = distance;
-      result.from = from;
-      result.to = to;
-      result.intersection = intersection;
-      split_shape_point = i;
-      /* split_time is the time of the previous shape */
-      split_time = shape_time;
    }
 
    //roadmap_math_release_focus ();
@@ -370,9 +350,8 @@ int editor_trkseg_split (int trkseg,
       return new_trkseg_id;
    }
 
-   if ((split_shape_point > last_shape) ||
-         ((split_shape_point == last_shape) &&
-         !roadmap_math_compare_points (&result.to, &result.intersection))) {
+   if ((split_shape_point == last_shape) &&
+         !roadmap_math_compare_points (&result.to, &result.intersection)) {
 
       /* the split is after the trkseg points */
          
@@ -539,20 +518,5 @@ void editor_trkseg_reset_next_export (void) {
 int editor_trkseg_get_next_export (void) {
 
    return ActiveTrksegDB->header.next_export;
-}
-
-void editor_trkseg_set_next_export (int id) {
-
-   ActiveTrksegDB->header.next_export = id;
-}
-
-int editor_trkseg_get_count (void) {
-   
-   int count = ActiveTrksegDB->header.last_global_trkseg -
-               ActiveTrksegDB->header.next_export;
-
-   if (count < 0) count = 0;
-
-   return count;
 }
 

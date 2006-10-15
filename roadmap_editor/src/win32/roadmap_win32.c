@@ -34,7 +34,7 @@ LPWSTR ConvertToWideChar(LPCSTR string, UINT nCodePage)
 	int len = MultiByteToWideChar(nCodePage, 0, string, -1, 0, 0);
 
 	if (len < 0) {
-		return L"";
+		return _T("");
 	} else {
 		LPWSTR result = malloc(len * sizeof(WCHAR) + 2);
 		MultiByteToWideChar(nCodePage, 0, string, -1, result, len);
@@ -43,7 +43,7 @@ LPWSTR ConvertToWideChar(LPCSTR string, UINT nCodePage)
 }
 
 
-char* ConvertToMultiByte(const LPCWSTR s, UINT nCodePage)
+char* ConvertToMultiByte(const LPWSTR s, UINT nCodePage)
 {
    int len;
 	int nSize = wcslen(s);

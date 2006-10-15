@@ -67,12 +67,11 @@
 #define WaterTlidStart 1100000
 /* ROADS */
 
-static const char *roads_sql = "SELECT segments.id AS id, AsText(simplify(segments.the_geom,  0.00002)) AS the_geom, segments.road_type AS layer, segments.from_node AS from_node_id, segments.to_node AS to_node_id, streets.name AS street_name, streets.text2speech as text2speech, cities.name as city_name, fraddl, toaddl, fraddr, toaddr FROM segments LEFT JOIN streets ON segments.street_id = streets.id LEFT JOIN cities ON streets.city_id = cities.id WHERE segments.the_geom @ SetSRID ('BOX3D(34 29.2, 36.2 33.6)'::box3d, 4326);";
-static const char *roads_route_sql = "SELECT segments.id AS id, segments.from_car_allowed AS from_car_allowed, segments.to_car_allowed AS to_car_allowed, segments.from_max_speed AS from_max_speed, segments.to_max_speed AS to_max_speed, segments.from_cross_time AS from_cross_time, segments.to_cross_time AS to_cross_time, segments.road_type AS layer FROM segments WHERE segments.the_geom @ SetSRID ('BOX3D(34 29.2, 36.2 33.6)'::box3d, 4326);";
-static const char *country_borders_sql = "SELECT id AS id, AsText(simplify(the_geom,  0.00002)) AS the_geom FROM borders;";
-static const char *water_sql = "SELECT id AS id, AsText(simplify(the_geom,  0.00002)) AS the_geom FROM water;";
+static const char *roads_sql = "SELECT segments.id AS id, AsText(segments.the_geom) AS the_geom, segments.road_type AS layer, segments.from_node AS from_node_id, segments.to_node AS to_node_id, streets.name AS street_name, streets.text2speech as text2speech, cities.name as city_name FROM segments LEFT JOIN streets ON segments.street_id = streets.id LEFT JOIN cities ON streets.city_id = cities.id;";
+static const char *roads_route_sql = "SELECT segments.id AS id, segments.from_car_allowed AS from_car_allowed, segments.to_car_allowed AS to_car_allowed, segments.from_max_speed AS from_max_speed, segments.to_max_speed AS to_max_speed, segments.from_cross_time AS from_cross_time, segments.to_cross_time AS to_cross_time FROM segments;";
+static const char *country_borders_sql = "SELECT id AS id, AsText(the_geom) AS the_geom FROM boundaries;";
+static const char *water_sql = "SELECT id AS id, AsText(the_geom) AS the_geom FROM water;";
 static const char *turn_restrictions_sql = "SELECT node_id, seg1_id, seg2_id FROM turn_restrictions;";
-static const char *cities_sql = "SELECT name FROM cities;";
 
 static BuildMapDictionary DictionaryPrefix;
 static BuildMapDictionary DictionaryStreet;
@@ -82,6 +81,8 @@ static BuildMapDictionary DictionarySuffix;
 static BuildMapDictionary DictionaryCity;
 static BuildMapDictionary DictionaryLandmark;
 
+static int BuildMapCanals = ROADMAP_WATER_RIVER;
+static int BuildMapRivers = ROADMAP_WATER_RIVER;
 static int BuildMapSea = ROADMAP_WATER_SEA;
 static int BuildMapBorders = ROADMAP_WATER_SHORELINE;
 
@@ -104,8 +105,6 @@ static int pg2layer (int layer) {
       case 1: return ROADMAP_ROAD_STREET;
       case 2: return ROADMAP_ROAD_MAIN;
       case 3: return ROADMAP_ROAD_FREEWAY;
-      case 4: return ROADMAP_ROAD_RAMP;
-      case 5: return ROADMAP_ROAD_TRAIL;
    }
 
    return ROADMAP_ROAD_STREET;
@@ -313,28 +312,11 @@ static void buildmap_postgres_read_roads_lines (int verbose) {
          buildmap_range_add_no_address (line, street);
       } else {
 
-         const char *fraddl = PQgetvalue(db_result, irec, column++);
-         const char *toaddl = PQgetvalue(db_result, irec, column++);
-         const char *fraddr = PQgetvalue(db_result, irec, column++);
-         const char *toaddr = PQgetvalue(db_result, irec, column++);
+         buildmap_range_add
+            (line, street, 1, 11, zip, city);
 
-         if (fraddl[0] && fraddr[0] &&
-            (atoi(fraddr) >= 0) && (atoi(toaddr) >= 0) &&
-            (atoi(fraddl) >= 0) && (atoi(toaddl) >= 0)) {
-
-            buildmap_range_add
-               (line, street, atoi(fraddl), atoi(toaddl), zip, city);
-            buildmap_range_add
-               (line, street, atoi(fraddr), atoi(toaddr), zip, city);
-            
-         } else {
-
-            //buildmap_range_add_no_address (line, street);
-            buildmap_range_add
-                          (line, street, 0, 0, zip, city);
-                          buildmap_range_add
-                          (line, street, 0, 0, zip, city);
-        }
+         buildmap_range_add
+            (line, street, 2, 12, zip, city);
       }
 
       free (lon_arr);
@@ -362,7 +344,6 @@ static void buildmap_postgres_read_roads_route (int verbose) {
    unsigned char to_max_speed;
    unsigned short from_cross_time;
    unsigned short to_cross_time;
-   unsigned char layer;
   
    PGresult *db_result;
 
@@ -397,7 +378,6 @@ static void buildmap_postgres_read_roads_route (int verbose) {
       to_max_speed    = atoi(PQgetvalue(db_result, irec, column++));
       from_cross_time = atoi(PQgetvalue(db_result, irec, column++));
       to_cross_time   = atoi(PQgetvalue(db_result, irec, column++));
-      layer =           (unsigned char) pg2layer (atoi(PQgetvalue(db_result, irec, column++)));
 
       line = buildmap_line_find_sorted(tlid);
 
@@ -408,7 +388,7 @@ static void buildmap_postgres_read_roads_route (int verbose) {
 
       buildmap_dglib_add
          (from_car_allowed, to_car_allowed, from_max_speed, to_max_speed,
-          from_cross_time, to_cross_time, layer,
+          from_cross_time, to_cross_time,
           line);
    }
 
@@ -807,42 +787,12 @@ static void buildmap_postgres_read_water_polygons (int verbose) {
 }
 
 
-static void buildmap_postgres_read_cities (int verbose) {
-
-   int    irec;
-   int    record_count;
-
-   PGresult *db_result;
-
-   db_result = PQexec(hPGConn, cities_sql);
-
-   if (!db_result_ok (db_result)) {
-
-      fprintf
-         (stderr, "Can't query database: %s\n", PQerrorMessage(hPGConn));
-      PQfinish(hPGConn);
-      exit(-1);
-   }
-
-   record_count = PQntuples(db_result);
-
-   for (irec=0; irec<record_count; irec++) {
-
-      str2dict (DictionaryCity, PQgetvalue(db_result, irec, 0));
-   }
-
-   PQclear(db_result);
-
-   postgres_summary (verbose, record_count);
-}
-
-
 
 #endif // ROADMAP_USE_POSTGRES
 
 
 void buildmap_postgres_process (const char *source,
-                                 int verbose, int empty) {
+                                 int verbose, int canals, int rivers) {
 
 #if ROADMAP_USE_POSTGRES
 
@@ -852,28 +802,25 @@ void buildmap_postgres_process (const char *source,
    DictionarySuffix = buildmap_dictionary_open ("suffix");
    DictionaryCity   = buildmap_dictionary_open ("city");
 
+   if (! canals) {
+      BuildMapCanals = 0;
+   }
+
+   if (! rivers) {
+      BuildMapRivers = 0;
+   }
+
    buildmap_postgres_connect (source);
    buildmap_postgres_read_borders_lines (verbose);
    buildmap_postgres_read_water_lines (verbose);
-
-   if (!empty) {
-      buildmap_postgres_read_roads_lines (verbose);
-   }
-
+   buildmap_postgres_read_roads_lines (verbose);
    buildmap_line_sort();
    buildmap_postgres_read_borders_shape_points (verbose);
-
-   if (!empty) {
-      buildmap_postgres_read_roads_route (verbose);
-      buildmap_postgres_read_roads_shape_points (verbose);
-      buildmap_postgres_read_turn_restrictions (verbose);
-   }
+   buildmap_postgres_read_roads_route (verbose);
+   buildmap_postgres_read_roads_shape_points (verbose);
+   buildmap_postgres_read_turn_restrictions (verbose);
    //buildmap_postgres_read_water_shape_points (verbose);
    buildmap_postgres_read_water_polygons (verbose);
-
-   if (!empty) {
-      buildmap_postgres_read_cities (verbose);
-   }
    PQfinish (hPGConn);
 
 #else

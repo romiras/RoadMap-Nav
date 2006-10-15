@@ -25,7 +25,6 @@
 #define _ROADMAP_LOCATOR__H_
 
 #include "roadmap_types.h"
-#include "roadmap_dictionary.h"
 
 #define ROADMAP_US_OK      0
 #define ROADMAP_US_NOSTATE -1
@@ -49,8 +48,6 @@ void roadmap_locator_close (int fips);
 void roadmap_locator_close_dir (void);
 
 RoadMapString roadmap_locator_get_state (const char *state);
-void roadmap_locator_search_city (const char *str, RoadMapDictionaryCB cb,
-                                  void *data);
 
 #endif // _ROADMAP_LOCATOR__H_
 

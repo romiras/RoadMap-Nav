@@ -67,9 +67,6 @@ typedef struct {
    RoadMapLineBySquare *LineBySquare2;
    int                  LineBySquare2Count;
 
-   RoadMapLongLine     *LongLines;
-   int                  LongLinesCount;
-
 } RoadMapLineContext;
 
 static RoadMapLineContext *RoadMapLineActive = NULL;
@@ -83,7 +80,6 @@ static void *roadmap_line_map (roadmap_db *root) {
    roadmap_db *index2_table;
    roadmap_db *square1_table;
    roadmap_db *square2_table;
-   roadmap_db *long_lines_table;
 
 
    context = (RoadMapLineContext *) malloc (sizeof(RoadMapLineContext));
@@ -97,7 +93,6 @@ static void *roadmap_line_map (roadmap_db *root) {
    square1_table = roadmap_db_get_subsection (root, "bysquare1");
    square2_table = roadmap_db_get_subsection (root, "bysquare2");
    index2_table  = roadmap_db_get_subsection (root, "index2");
-   long_lines_table  = roadmap_db_get_subsection (root, "longlines");
 
    context->Line = (RoadMapLine *) roadmap_db_get_data (line_table);
    context->LineCount = roadmap_db_get_count (line_table);
@@ -134,16 +129,6 @@ static void *roadmap_line_map (roadmap_db *root) {
    if (roadmap_db_get_size (square2_table) !=
        context->LineBySquare2Count * sizeof(RoadMapLineBySquare)) {
       roadmap_log (ROADMAP_ERROR, "invalid line/bysquare2 structure");
-      goto roadmap_line_map_abort;
-   }
-
-   context->LongLines =
-      (RoadMapLongLine *) roadmap_db_get_data (long_lines_table);
-   context->LongLinesCount = roadmap_db_get_count (long_lines_table);
-
-   if (roadmap_db_get_size (long_lines_table) !=
-       context->LongLinesCount * sizeof(RoadMapLongLine)) {
-      roadmap_log (ROADMAP_ERROR, "invalid long lines structure");
       goto roadmap_line_map_abort;
    }
 
@@ -347,33 +332,6 @@ int roadmap_line_length (int line) {
 }
 
 
-int roadmap_line_shapes (int line, int *first_shape, int *last_shape) {
-
-   RoadMapPosition p1;
-
-   int square;
-   int first_shape_line;
-   int last_shape_line;
-
-   *first_shape = *last_shape = -1;
-   roadmap_point_position (RoadMapLineActive->Line[line].from, &p1);
-   square = roadmap_square_search (&p1);
-
-   if (roadmap_shape_in_square (square, &first_shape_line,
-                                        &last_shape_line) > 0) {
-
-      if (roadmap_shape_of_line (line, first_shape_line,
-                                       last_shape_line,
-                                       first_shape, last_shape) > 0) {
-
-         return 0;
-      }
-   }
-
-   return -1;
-}
-
-
 void roadmap_line_points (int line, int *from, int *to) {
 
 #ifdef DEBUG
@@ -386,15 +344,4 @@ void roadmap_line_points (int line, int *from, int *to) {
    *to = RoadMapLineActive->Line[line].to;
 }
 
-
-int roadmap_line_long (int index, int *line_id, RoadMapArea *area, int *cfcc) {
-
-   if (index >= RoadMapLineActive->LongLinesCount) return 0;
-
-   *line_id = RoadMapLineActive->LongLines[index].line;
-   *area = RoadMapLineActive->LongLines[index].area;
-   *cfcc = RoadMapLineActive->LongLines[index].cfcc;
-
-   return 1;
-}
 

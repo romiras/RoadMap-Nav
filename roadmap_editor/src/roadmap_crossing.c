@@ -161,7 +161,7 @@ static void roadmap_crossing_ok (const char *name, void *data) {
 
 
    state = roadmap_locator_get_state (state_name);
-   if (state == ROADMAP_INVALID_STRING) {
+   if (state <= 0) {
        roadmap_messagebox ("Warning", "unknown state");
        return;
    }
@@ -247,9 +247,9 @@ void roadmap_crossing_dialog (void) {
 
    if (roadmap_dialog_activate ("Intersection", NULL)) {
 
-      roadmap_dialog_new_entry ("Crossing", "Street 1:", NULL);
-      roadmap_dialog_new_entry ("Crossing", "Street 2:", NULL);
-      roadmap_dialog_new_entry ("Crossing", "State:", NULL);
+      roadmap_dialog_new_entry ("Crossing", "Street 1:");
+      roadmap_dialog_new_entry ("Crossing", "Street 2:");
+      roadmap_dialog_new_entry ("Crossing", "State:");
 
       roadmap_dialog_add_button ("Back", roadmap_crossing_before);
       roadmap_dialog_add_button ("Next", roadmap_crossing_after);

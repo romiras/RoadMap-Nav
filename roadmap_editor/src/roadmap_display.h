@@ -32,13 +32,12 @@ void roadmap_display_page (const char *name);
 
 int roadmap_display_activate
         (const char *title,
-         const PluginLine *line,
+         PluginLine *line,
          const RoadMapPosition *position,
          PluginStreet *street);
 
 void roadmap_display_text (const char *title, const char *format, ...);
 
-void roadmap_display_show (const char *title);
 void roadmap_display_hide (const char *title);
 
 void roadmap_display_signs (void);

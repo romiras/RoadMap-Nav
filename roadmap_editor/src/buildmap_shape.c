@@ -76,6 +76,7 @@ static int ShapeAddCount = 0;
 
 static int *SortedShape = NULL;
 
+
 void buildmap_shape_initialize (void) {
 
    ShapeByLine = roadmap_hash_new ("ShapeByLine", BUILDMAP_BLOCK);
@@ -125,8 +126,6 @@ int buildmap_shape_add
       }
    }
 
-   buildmap_line_test_long (line, longitude, latitude);
-      
    /* This shape was not known yet: create a new one. */
 
    block = ShapeCount / BUILDMAP_BLOCK;
@@ -179,37 +178,6 @@ int buildmap_shape_add
    }
 
    return ShapeCount++;
-}
-
-
-int buildmap_shape_get
-       (int line, int sequence, int *longitude, int *latitude) {
-
-   int index;
-   int line_exists;
-   int block;
-   int offset;
-   BuildMapShape *this_shape;
-
-   for (index = roadmap_hash_get_first (ShapeByLine, line);
-        index >= 0;
-        index = roadmap_hash_get_next (ShapeByLine, index)) {
-
-      this_shape = Shape[index / BUILDMAP_BLOCK] + (index % BUILDMAP_BLOCK);
-
-      if (this_shape->line == line) {
-
-         if (this_shape->sequence == (unsigned int)sequence) {
-
-            *longitude = this_shape->longitude;
-            *latitude = this_shape->latitude;
-
-            return 0;
-         }
-      }
-   }
-
-   return -1;
 }
 
 

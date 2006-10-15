@@ -39,8 +39,7 @@ int editor_track_util_find_street
                       RoadMapNeighbour *neighbourhood,
                       int max,
                       int *found,
-                      RoadMapFuzzy *best,
-                      RoadMapFuzzy *second_best);
+                      RoadMapFuzzy *best);
 
 int editor_track_util_create_line (int gps_first_point,
                                    int gps_last_point,

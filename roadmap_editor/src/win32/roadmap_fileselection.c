@@ -26,7 +26,7 @@
  */
 
 #include <windows.h>
-#include <commdlg.h>
+#include <Commdlg.h>
 
 #include "../roadmap.h"
 #include "../roadmap_types.h"
@@ -57,8 +57,7 @@ void roadmap_fileselection_new (const char *title,
 	if (filter != NULL) {
 		fltr = ConvertToWideChar(filter, CP_UTF8);
 		_snwprintf(strFilter, sizeof(strFilter)/sizeof(strFilter[0]),
-						TEXT("*.%s|*.%s\0"), fltr, fltr);
-      strFilter[wcslen(fltr)+2] = 0;
+						TEXT("*.%s\0*.%s\0"), fltr, fltr);
       ofn.lpstrDefExt = fltr;
 		ofn.lpstrFilter = strFilter;
 	} else {

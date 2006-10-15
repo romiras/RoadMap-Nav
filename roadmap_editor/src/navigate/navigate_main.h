@@ -26,43 +26,11 @@
 #define INCLUDE__NAVIGATE_MAIN__H
 
 #include "roadmap_canvas.h"
-#include "roadmap_plugin.h"
-#include "roadmap_screen.h"
 
-enum NavigateInstr {
-   TURN_LEFT = 0,
-   TURN_RIGHT,
-   KEEP_LEFT,
-   KEEP_RIGHT,
-   CONTINUE,
-   APPROACHING_DESTINATION,
-   LAST_DIRECTION
-};
-
-typedef struct {
-   PluginLine           line;
-   int                  line_direction;
-   PluginStreet         street;
-   RoadMapPosition      from_pos;
-   RoadMapPosition      to_pos;
-   RoadMapPosition      shape_initial_pos;
-   int                  first_shape;
-   int                  last_shape;
-   RoadMapShapeItr      shape_itr;
-   enum NavigateInstr   instruction;
-   int                  group_id;
-   int                  distance;
-   int                  cross_time;
-   
-} NavigateSegment;
- 
 int navigate_is_enabled (void);
 void navigate_main_initialize (void);
-int  navigate_main_reload_data (void);
 void navigate_main_set (int status);
-int  navigate_main_calc_route (void);
-
-void navigate_main_screen_repaint (int max_pen);
+void navigate_main_calc_route (void);
 
 int navigate_main_override_pen (int line,
                                 int cfcc,

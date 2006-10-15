@@ -25,53 +25,18 @@
  *   See editor_main.h
  */
 
-#include <stdlib.h>
 #include "../roadmap.h"
 #include "../roadmap_pointer.h"
 #include "../roadmap_plugin.h"
 #include "../roadmap_layer.h"
-#include "../roadmap_locator.h"
-#include "../roadmap_metadata.h"
-#include "../roadmap_messagebox.h"
 
 #include "editor_screen.h"
-#include "static/update_range.h"
-#include "static/notes.h"
 #include "track/editor_track_main.h"
-#include "export/editor_upload.h"
-#include "export/editor_export.h"
 #include "editor_plugin.h"
 #include "editor_main.h"
 
 int EditorEnabled = 0;
 int EditorPluginID = -1;
-
-const char *EDITOR_VERSION = "0.8.2";
-
-void editor_main_check_map (void) {
-
-   int fips;
-   time_t now_t;
-   time_t map_time_t;
-
-   fips = roadmap_locator_active ();
-
-   if (fips < 0) {
-      fips = 77001;
-   }
-
-   if (roadmap_locator_activate (fips) == -1) {
-      roadmap_messagebox ("Error.", "Can't load map data.");
-   }
-
-   now_t = time (NULL);
-   map_time_t = atoi(roadmap_metadata_get_attribute ("Version", "UnixTime"));
-
-   if ((map_time_t + 3600*24) < now_t) {
-      roadmap_messagebox
-         ("Warning", "Your map is not updated. Please synchronize.");
-   }
-}
 
 
 int editor_is_enabled (void) {
@@ -81,12 +46,9 @@ int editor_is_enabled (void) {
 
 void editor_main_initialize (void) {
 
-   editor_upload_initialize ();
-   editor_export_initialize ();
    editor_screen_initialize ();
-   editor_track_initialize  ();
-   update_range_initialize  ();
-   editor_notes_initialize  ();
+   editor_track_initialize ();
+   editor_main_set (1);
 
    EditorPluginID = editor_plugin_register ();
 
@@ -113,7 +75,4 @@ void editor_main_set (int status) {
 }
 
 
-const char *editor_main_get_version (void) {
 
-   return EDITOR_VERSION;
-}

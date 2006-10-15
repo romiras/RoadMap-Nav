@@ -74,7 +74,7 @@ void buildmap_dglib_initialize (time_t creation_time) {
                & graph ,         /* graph context to initialize */
                2 ,
                0 ,     /* node attributes size */
-               1 ,     /* edge attributes size */
+               0 ,  /* edge attributes size */
                opaqueset         /* opaque graph parameters */
                );
 
@@ -89,7 +89,6 @@ int  buildmap_dglib_add
          unsigned char to_max_speed,
          unsigned short from_cross_time,
          unsigned short to_cross_time,
-         unsigned char  layer,
          int line) {
 
    int from;
@@ -102,24 +101,19 @@ int  buildmap_dglib_add
       EgdesCount++;
 
       status = dglAddEdgeX( &graph , from , to , from_cross_time ,
-                           line , NULL , NULL , &layer, 0 );
+                           line , NULL , NULL , NULL , 0 );
       if ( status < 0 ) {
          buildmap_fatal (0, "dglAddEdge error: %s\n", dglStrerror( &graph ) );
       }
    }
 
    if (to_flags & ROUTE_CAR_ALLOWED) {
+      EgdesCount++;
 
-      if (line == 0) {
-         buildmap_error (0, "buildmap_dglib_add - can't set line as bi-directional (id = 0)");
-      } else {
-         EgdesCount++;
-
-         status = dglAddEdgeX( &graph , to , from , to_cross_time ,
-               -line , NULL , NULL , &layer, 0 );
-         if ( status < 0 ) {
-            buildmap_fatal (0, "dglAddEdge error: %s\n", dglStrerror( &graph ) );
-         }
+      status = dglAddEdgeX( &graph , to , from , to_cross_time ,
+                           -line , NULL , NULL , NULL , 0 );
+      if ( status < 0 ) {
+         buildmap_fatal (0, "dglAddEdge error: %s\n", dglStrerror( &graph ) );
       }
    }
 

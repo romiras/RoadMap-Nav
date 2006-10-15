@@ -39,14 +39,14 @@ static HANDLE serial_open(const char *name,
 	HANDLE hCommPort = INVALID_HANDLE_VALUE;
 	LPWSTR url_unicode = ConvertToWideChar(name, CP_UTF8);
 	DCB dcb;
-	COMMTIMEOUTS ct;
+   COMMTIMEOUTS ct;
 
 	hCommPort = CreateFile (url_unicode,
 		GENERIC_READ | GENERIC_WRITE,
 		0,
 		NULL,
 		OPEN_EXISTING,
-		FILE_ATTRIBUTE_NORMAL,
+		FILE_FLAG_WRITE_THROUGH,
 		NULL);
 
 	free(url_unicode);
@@ -55,57 +55,33 @@ static HANDLE serial_open(const char *name,
 		return INVALID_HANDLE_VALUE;
 	}
 
-	Sleep(50);
-
-	GetCommTimeouts(hCommPort, &ct);
-	ct.ReadIntervalTimeout = MAXDWORD;
-	ct.ReadTotalTimeoutMultiplier = MAXDWORD;
-	ct.ReadTotalTimeoutConstant = 100;
-/*	ct.WriteTotalTimeoutMultiplier = 10;
-	ct.WriteTotalTimeoutConstant = 100; */
-
-	if(!SetCommTimeouts(hCommPort, &ct)) {
-		roadmap_log (ROADMAP_ERROR, "Error setting comm timeouts. %d",
-			    GetLastError());
-		/*roadmap_serial_close(hCommPort);
-		return INVALID_HANDLE_VALUE;*/
-	}
-
-
-	memset(&dcb, 0, sizeof(DCB));
 	dcb.DCBlength = sizeof(DCB);
-
 	if(!GetCommState(hCommPort, &dcb)) {
-		roadmap_log (ROADMAP_ERROR, "Error getting comm state. %d",
-			    GetLastError());
-		/*roadmap_serial_close(hCommPort);
-		return INVALID_HANDLE_VALUE;*/
+		roadmap_serial_close(hCommPort);
+		return INVALID_HANDLE_VALUE;
 	}
-
-	dcb.fBinary = TRUE;				/* Binary mode; no EOF check */
-	dcb.fParity = FALSE;			/* Disable parity checking */
-	dcb.fOutxCtsFlow = FALSE;			/* No CTS output flow control */
-	dcb.fOutxDsrFlow = FALSE;			/* No DSR output flow control */
-	dcb.fDtrControl = DTR_CONTROL_DISABLE;	/* DTR flow control type */
-	dcb.fDsrSensitivity = FALSE;		/* DSR sensitivity */
-	dcb.fTXContinueOnXoff = FALSE;		/* XOFF continues Tx */
-	dcb.fOutX = FALSE;				/* No XON/XOFF out flow control */
-	dcb.fInX = FALSE;				/* No XON/XOFF in flow control */
-	dcb.fErrorChar = FALSE;			/* Disable error replacement */
-	dcb.fNull = FALSE;				/* Disable null stripping */
-	dcb.fRtsControl = RTS_CONTROL_DISABLE;	/* RTS flow control */
-	dcb.fAbortOnError = FALSE;			/* Do not abort reads/writes on */
-	dcb.ByteSize = 8;				/* Number of bits/byte, 4-8 */
-	dcb.Parity = NOPARITY;			/* 0-4=no,odd,even,mark,space */
-	dcb.StopBits = ONESTOPBIT;			/* 0,1,2 = 1, 1.5, 2 */
 
 	dcb.BaudRate	       = baud_rate;
+	dcb.fRtsControl        = RTS_CONTROL_DISABLE;
+	dcb.fDtrControl        = DTR_CONTROL_DISABLE;
+	dcb.ByteSize           = 8;
+	dcb.fParity             = FALSE;
+	dcb.StopBits           = ONESTOPBIT;
 
 	if(!SetCommState(hCommPort, &dcb)) {
-		roadmap_log (ROADMAP_ERROR, "Error setting comm state. %d",
-			    GetLastError());
-		/*roadmap_serial_close(hCommPort);
-		return INVALID_HANDLE_VALUE;*/
+		roadmap_serial_close(hCommPort);
+		return INVALID_HANDLE_VALUE;
+	}
+
+	ct.ReadIntervalTimeout = MAXDWORD;
+	ct.ReadTotalTimeoutMultiplier = MAXDWORD;
+	ct.ReadTotalTimeoutConstant = 10000;
+	ct.WriteTotalTimeoutMultiplier = 10;
+	ct.WriteTotalTimeoutConstant = 100;
+
+	if(!SetCommTimeouts(hCommPort, &ct)) {
+		roadmap_serial_close(hCommPort);
+		return INVALID_HANDLE_VALUE;
 	}
 
 	return hCommPort;
@@ -151,7 +127,7 @@ DWORD WINAPI SerialMonThread(LPVOID lpParam) {
       SendMessage(RoadMapMainWindow, WM_USER_READ, (WPARAM)data, (LPARAM)conn);
    }
 
-   while(data->is_valid && (conn->handle != INVALID_HANDLE_VALUE)) {
+   while(conn->handle != INVALID_HANDLE_VALUE) {
 
       if (conn->data_count == 0) {
 
@@ -195,12 +171,12 @@ DWORD WINAPI SerialMonThread(LPVOID lpParam) {
 
    if (!--conn->ref_count) {
    	free(conn);
-   }
-
-   if (data->is_valid) {
-      data->is_valid = 0;
    } else {
-      free (data);
+
+      roadmap_log
+         (ROADMAP_ERROR, "conn ref_count is not zero: %d",
+          conn->ref_count);
+      assert (0);
    }
 
 	return 0;
@@ -215,7 +191,7 @@ DWORD WINAPI SocketMonThread(LPVOID lpParam)
 	fd_set set;
 
 	FD_ZERO(&set);
-	while(data->is_valid && (io->subsystem != ROADMAP_IO_INVALID))
+	while(io->subsystem != ROADMAP_IO_INVALID)
 	{
 		FD_SET(fd, &set);
 		if(select(fd+1, &set, NULL, NULL, NULL) == SOCKET_ERROR) {
@@ -234,11 +210,7 @@ DWORD WINAPI SocketMonThread(LPVOID lpParam)
 		SendMessage(RoadMapMainWindow, WM_USER_READ, (WPARAM)data, 1);
 	}
 
-   if (data->is_valid) {
-      data->is_valid = 0;
-   } else {
-      free (data);
-   }
+	free(io);
 
 	return 0;
 }
@@ -253,17 +225,13 @@ DWORD WINAPI FileMonThread(LPVOID lpParam)
 	roadmap_main_io *data = (roadmap_main_io*)lpParam;
 	RoadMapIO *io = data->io;
 
-	while(data->is_valid && (io->subsystem != ROADMAP_IO_INVALID))
+	while(io->subsystem != ROADMAP_IO_INVALID)
 	{
 		/* Send a message to main window so it can read. */
 		SendMessage(RoadMapMainWindow, WM_USER_READ, (WPARAM)data, 1);
 	}
 
-   if (data->is_valid) {
-      data->is_valid = 0;
-   } else {
-      free (data);
-   }
+	free(io);
 
 	return 0;
 }
