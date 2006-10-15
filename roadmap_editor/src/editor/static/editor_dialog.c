@@ -39,8 +39,6 @@
 #include "roadmap_shape.h"
 #include "roadmap_square.h"
 #include "roadmap_locator.h"
-#include "roadmap_address.h"
-#include "roadmap_preferences.h"
 
 #include "../db/editor_db.h"
 #include "../db/editor_line.h"
@@ -60,10 +58,8 @@ typedef struct dialog_selected_lines {
    int           count;
 } DialogSelectedLines;
 
-static const char *def_values[2] = {"", ""};
 
 /* NOTE: This function modifies the street_range parameter */
-#if 0
 static void decode_range (char *street_range,
                           int *from1,
                           int *to1,
@@ -81,7 +77,7 @@ static void decode_range (char *street_range,
       if (i>max) break;
 
       ranges[num_ranges++] = street_range+i;
-      if (num_ranges == (sizeof(ranges) / sizeof(ranges[0]) - 1)) break;
+      if (num_ranges == (sizeof(ranges) / sizeof(ranges[0]))) break;
 
       while (isdigit (street_range[i]) && (i <= max)) i++;
 
@@ -113,7 +109,6 @@ static void decode_range (char *street_range,
       }
    }
 }
-#endif
 
 
 static const char *editor_segments_find_city
@@ -188,28 +183,6 @@ static const char *editor_segments_find_city
 }
 
 
-static void editor_dialog_city_result (const char *result, void *data) {
-
-   roadmap_dialog_activate ("Segment Properties", data);
-
-   if ((result == NULL) || !strlen (result)) return;
-
-   roadmap_dialog_set_data ("General", "City", result);
-}
-
-
-static void editor_dialog_city_cb (const char *name, void *context) {
-
-   if (!strcmp(roadmap_dialog_get_data ("General", "City"), def_values[1])) {
-
-      roadmap_dialog_set_data ("General", "City", def_values[0]);
-
-      roadmap_address_search_dialog
-         (NULL, editor_dialog_city_result, context);
-   }
-}
-
-
 static void editor_segments_cancel (const char *name, void *context) {
 
    free (context);
@@ -237,8 +210,8 @@ static void editor_segments_apply (const char *name, void *context) {
    char *t2s =
       (char *) roadmap_dialog_get_data ("General", "Text to Speech");
    
-/*   char *street_range =
-      (char *) roadmap_dialog_get_data ("General", "Street range"); */
+   char *street_range =
+      (char *) roadmap_dialog_get_data ("General", "Street range");
 
    char *city = (char *) roadmap_dialog_get_data ("General", "City");
    char *zip = (char *) roadmap_dialog_get_data ("General", "Zip code");
@@ -257,7 +230,7 @@ static void editor_segments_apply (const char *name, void *context) {
 
    l_from = l_to = r_from = r_to = -1;
 
-   //decode_range (street_range, &l_from, &l_to, &r_from, &r_to);
+   decode_range (street_range, &l_from, &l_to, &r_from, &r_to);
    speed_limit = (LineRouteMax) atoi (speed_limit_str);
 
    for (i=0; i<selected_lines->count; i++) {
@@ -687,60 +660,46 @@ void editor_segments_properties (SelectedLine *lines, int lines_count) {
       int count = ROADMAP_ROAD_LAST - ROADMAP_ROAD_FIRST + 1;
       int i;
       char **categories;
-      static const char *lang_categories[ROADMAP_ROAD_LAST - ROADMAP_ROAD_FIRST + 1];
-
-      if (!def_values[1][0]) {
-         def_values[1] = roadmap_lang_get ("Search");
-      }
-
-      /*
       char *direction_txts[] =
          { "Unknown", "With road", "Against road", "Both directions"};
       int direction_values[] = {0, 1, 2, 3};
-      */
       
       roadmap_dialog_new_label ("Info", "Length");
       roadmap_dialog_new_label ("Info", "Time");
 
-#if 0      
-      roadmap_dialog_new_entry ("Right", "Street range", NULL);
-      roadmap_dialog_new_entry ("Right", "City", NULL);
-      roadmap_dialog_new_entry ("Right", "Zip code", NULL);
+      roadmap_dialog_new_entry ("Right", "Street range");
+      roadmap_dialog_new_entry ("Right", "City");
+      roadmap_dialog_new_entry ("Right", "Zip code");
 
-      roadmap_dialog_new_entry ("Left", "Street range", NULL);
-      roadmap_dialog_new_entry ("Left", "City", NULL);
-      roadmap_dialog_new_entry ("Left", "Zip code", NULL);
-#endif
+      roadmap_dialog_new_entry ("Left", "Street range");
+      roadmap_dialog_new_entry ("Left", "City");
+      roadmap_dialog_new_entry ("Left", "Zip code");
+
       roadmap_layer_get_categories_names (&categories, &i);
       values = malloc ((count+1) * sizeof (int));
 
       for (i=0; i<count; i++) {
          values[i] = i;
-         lang_categories[i] = roadmap_lang_get (categories[i]);
       }
 
-      roadmap_dialog_new_choice ("General", "Road type", count,
-                                 (const char **)lang_categories,
+      roadmap_dialog_new_choice ("General", "Road type", count, categories,
                                  (void**)values, NULL);
       free (values);
 
-/*      roadmap_dialog_new_entry ("General", "Street type", NULL); */
-      roadmap_dialog_new_entry ("General", "Name", NULL);
-      roadmap_dialog_new_entry ("General", "Text to Speech", NULL);
-/*      roadmap_dialog_new_entry ("General", "Street range", NULL); */
-      roadmap_dialog_new_choice ("General", "City",
-         sizeof(def_values) / sizeof(char **),
-         def_values, (void **)def_values, editor_dialog_city_cb);
-
-/*      roadmap_dialog_new_choice ("General", "Direction", 4, direction_txts,
+      roadmap_dialog_new_entry ("General", "Street type");
+      roadmap_dialog_new_entry ("General", "Name");
+      roadmap_dialog_new_entry ("General", "Text to Speech");
+      roadmap_dialog_new_entry ("General", "Street range");
+      roadmap_dialog_new_entry ("General", "City");
+      roadmap_dialog_new_choice ("General", "Direction", 4, direction_txts,
                                  (void**)direction_values, NULL);
-      roadmap_dialog_new_entry ("General", "Zip code", NULL);
-      roadmap_dialog_new_entry ("General", "Speed Limit", NULL); */
+      roadmap_dialog_new_entry ("General", "Zip code");
+      roadmap_dialog_new_entry ("General", "Speed Limit");
 
       roadmap_dialog_add_button ("Cancel", editor_segments_cancel);
-      roadmap_dialog_add_button ("Ok", editor_segments_apply);
+      roadmap_dialog_add_button ("OK", editor_segments_apply);
 
-      roadmap_dialog_complete (roadmap_preferences_use_keyboard ());
+      roadmap_dialog_complete (0); /* No need for a keyboard. */
    }
 
    editor_segments_fill_dialog (lines, lines_count);
@@ -785,12 +744,10 @@ void editor_segments_properties (SelectedLine *lines, int lines_count) {
       total_length += line_length;
    }
 
-   snprintf (str, sizeof(str), "%d %s",
-             total_length, roadmap_lang_get("meters"));
+   snprintf (str, sizeof(str), "%d meters", total_length);
    roadmap_dialog_set_data ("Info", "Length", str);
 
-   snprintf (str, sizeof(str), "%d %s",
-             total_time, roadmap_lang_get("seconds"));
+   snprintf (str, sizeof(str), "%d seconds", total_time);
    roadmap_dialog_set_data ("Info", "Time", str);
 }
 

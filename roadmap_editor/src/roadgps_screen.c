@@ -165,11 +165,11 @@ static void roadgps_screen_draw_satellite_position
 
    if (strength > 0) {
       roadmap_canvas_select_pen (RoadGpsForeground);
-      roadmap_canvas_draw_multiple_polygons (1, &count, points, !!reverse, 0);
+      roadmap_canvas_draw_multiple_polygons (1, &count, points, !!reverse);
    }
 
    roadmap_canvas_select_pen (reverse?RoadGpsEraser:RoadGpsForeground);
-   roadmap_canvas_draw_multiple_polygons (1, &count, points, 0, 0);
+   roadmap_canvas_draw_multiple_polygons (1, &count, points, 0);
 
    roadmap_canvas_draw_string
       (&position, ROADMAP_CANVAS_CENTER, satellite->label);
@@ -214,7 +214,7 @@ static void roadgps_screen_draw_satellite_signal (int satellite, int filled) {
        points);
 
    count = 4;
-   roadmap_canvas_draw_multiple_polygons (1, &count, points, filled, 0);
+   roadmap_canvas_draw_multiple_polygons (1, &count, points, filled);
 }
 
 
@@ -223,10 +223,10 @@ static void roadgps_screen_draw_frame (void) {
    roadmap_canvas_select_pen (RoadGpsFramePen);
 
    roadmap_canvas_draw_multiple_circles
-      (3, RoadGpsFrame.centers, RoadGpsFrame.radius, 0, 0);
+      (3, RoadGpsFrame.centers, RoadGpsFrame.radius, 0);
 
    roadmap_canvas_draw_multiple_lines
-      (5, RoadGpsFrame.scale_line_counts, RoadGpsFrame.scale_line_points, 0);
+      (5, RoadGpsFrame.scale_line_counts, RoadGpsFrame.scale_line_points);
 }
 
 
@@ -336,7 +336,7 @@ static void roadgps_screen_format_frame (void) {
    canvas_height = roadmap_canvas_height();
 
    roadmap_canvas_get_text_extents
-       ("09", -1, &text_width, &text_ascent, &text_descent, NULL);
+       ("09", &text_width, &text_ascent, &text_descent);
 
    text_height = text_ascent + text_descent + 2;
 
@@ -431,8 +431,3 @@ void roadgps_screen_initialize (void) {
    roadmap_canvas_register_configure_handler (&roadgps_screen_configure);
 }
 
-void dbg_time_start(int type) {
-}
-
-void dbg_time_end(int type) {
-}

@@ -40,7 +40,6 @@
 #include "roadmap_point.h"
 #include "roadmap_square.h"
 #include "roadmap_shape.h"
-#include "roadmap_turns.h"
 #include "roadmap_line.h"
 #include "roadmap_line_route.h"
 #include "roadmap_street.h"
@@ -63,7 +62,7 @@ static struct roadmap_cache_entry *RoadMapCountyCache = NULL;
 
 static int RoadMapCountyCacheSize = 0;
 
-static int RoadMapActiveCounty = -2;
+static int RoadMapActiveCounty;
 
 static int RoadMapUsdirActive = 0;
 
@@ -101,9 +100,6 @@ static void roadmap_locator_configure (void) {
       RoadMapCountyModel =
          roadmap_db_register
             (RoadMapCountyModel, "shape", &RoadMapShapeHandler);
-      RoadMapCountyModel =
-         roadmap_db_register
-            (RoadMapCountyModel, "turns", &RoadMapTurnsHandler);
       RoadMapCountyModel =
          roadmap_db_register
             (RoadMapCountyModel, "line", &RoadMapLineHandler);
@@ -318,7 +314,7 @@ int roadmap_locator_by_state (const char *state_symbol, int **fips) {
    count = roadmap_locator_allocate (fips);
 
    state = roadmap_dictionary_locate (RoadMapUsStateDictionary, state_symbol);
-   if (state == ROADMAP_INVALID_STRING) {
+   if (state <= 0) {
        return 0;
    }
    return roadmap_county_by_state (state, *fips, count);
@@ -333,7 +329,7 @@ int roadmap_locator_by_city (const char *city_name, const char *state_symbol) {
    roadmap_locator_configure();
 
    state = roadmap_dictionary_locate (RoadMapUsStateDictionary, state_symbol);
-   if (state == ROADMAP_INVALID_STRING) {
+   if (state <= 0) {
       return ROADMAP_US_NOSTATE;
    }
 
@@ -342,7 +338,7 @@ int roadmap_locator_by_city (const char *city_name, const char *state_symbol) {
       while (city_name[0] == ' ') ++city_name;
    }
    city = roadmap_dictionary_locate (RoadMapUsCityDictionary, city_name);
-   if (city == ROADMAP_INVALID_STRING) {
+   if (city <= 0) {
       return ROADMAP_US_NOCITY;
    }
 
@@ -370,13 +366,5 @@ int roadmap_locator_active (void) {
 RoadMapString roadmap_locator_get_state (const char *state) {
 
    return roadmap_dictionary_locate (RoadMapUsStateDictionary, state);
-}
-
-
-void roadmap_locator_search_city (const char *str, RoadMapDictionaryCB cb,
-                                  void *data) {
-
-   roadmap_dictionary_search_all
-            (RoadMapUsCityDictionary, str, cb, data);
 }
 

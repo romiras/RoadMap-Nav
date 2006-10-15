@@ -27,12 +27,6 @@
 #include <time.h>
 #include "roadmap_io.h"
 
-enum {GPS_RECEPTION_NA = 0,
-      GPS_RECEPTION_NONE,
-      GPS_RECEPTION_POOR,
-      GPS_RECEPTION_GOOD
-};
-
 
 void roadmap_gps_initialize (void);
 
@@ -132,8 +126,6 @@ int  roadmap_gps_speed_accuracy  (void);
 int  roadmap_gps_is_nmea (void);
 
 void roadmap_gps_shutdown (void);
-
-void roadmap_gps_detect_receiver (void);
 
 #endif // INCLUDE__ROADMAP_GPS__H
 

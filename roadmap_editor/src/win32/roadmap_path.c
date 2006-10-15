@@ -49,7 +49,6 @@ static RoadMapPathList RoadMapPaths = NULL;
 /* The hardcoded path for configuration files (the "config" path).
 */ 
 static const char *RoadMapPathConfig[] = {
-   "&",
 	"\\Program Files\\roadmap",
 	"\\Storage Card\\roadmap",
 	NULL
@@ -485,11 +484,7 @@ const char *roadmap_path_search_icon (const char *name)
 
 int roadmap_path_is_full_path (const char *name)
 {
-#ifdef UNDER_CE
    return name[0] == '\\';
-#else
-   return name[1] == ':';
-#endif
 }
 
 

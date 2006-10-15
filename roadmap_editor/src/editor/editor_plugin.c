@@ -42,15 +42,11 @@
 #include "editor_plugin.h"
 
 
-static int EditorPluginOverrideStatus = 1;
-
 static int editor_plugin_override_line (int line, int cfcc, int fips) {
 
    if (editor_db_activate (fips) == -1) {
       return 0;
    }
-
-   if (!EditorPluginOverrideStatus) return 0;
 
    if (editor_override_line_get_flags (line) & ED_LINE_DELETED) {
       return 1;
@@ -121,8 +117,6 @@ static void editor_plugin_street_properties
    props->street_t2s = editor_street_get_street_t2s (&properties);
    props->city =
       editor_street_get_street_city (&properties, ED_STREET_LEFT_SIDE);
-   props->plugin_street.plugin_id = line->plugin_id;
-   props->plugin_street.street_id = properties.street;
 }
 
 
@@ -171,11 +165,5 @@ int editor_plugin_register (void) {
 void editor_plugin_unregister (int plugin_id) {
 
    roadmap_plugin_unregister (plugin_id);
-}
-
-
-void editor_plugin_set_override (int status) {
-
-   EditorPluginOverrideStatus = status;
 }
 

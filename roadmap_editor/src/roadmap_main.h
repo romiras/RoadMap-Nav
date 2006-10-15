@@ -30,11 +30,6 @@
 #include "roadmap_io.h"
 #include "roadmap_spawn.h"
 
-#define ROADMAP_CURSOR_NORMAL 1
-#define ROADMAP_CURSOR_WAIT   2
-
-struct RoadMapFactoryKeyMap;
-
 typedef void (* RoadMapKeyInput) (char *key);
 typedef void (* RoadMapInput)    (RoadMapIO *io);
 
@@ -42,8 +37,7 @@ typedef void *RoadMapMenu;
 
 void roadmap_main_new (const char *title, int width, int height);
 
-void roadmap_main_set_keyboard (struct RoadMapFactoryKeyMap *bindings,
-                                RoadMapKeyInput callback);
+void roadmap_main_set_keyboard   (RoadMapKeyInput callback);
 
 RoadMapMenu roadmap_main_new_menu (void);
 void roadmap_main_free_menu       (RoadMapMenu menu);
@@ -79,8 +73,6 @@ void roadmap_main_toggle_full_screen (void);
 void roadmap_main_flush (void);
 
 void roadmap_main_exit (void);
-
-void roadmap_main_set_cursor (int cursor);
 
 #endif /* INCLUDE__ROADMAP_MAIN__H */
 

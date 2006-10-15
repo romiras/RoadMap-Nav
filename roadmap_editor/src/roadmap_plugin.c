@@ -32,9 +32,6 @@
 #include "roadmap_line_route.h"
 #include "roadmap_locator.h"
 #include "roadmap_street.h"
-#include "roadmap_screen.h"
-#include "roadmap_math.h"
-#include "roadmap_shape.h"
 
 #include "roadmap_plugin.h"
 
@@ -201,50 +198,6 @@ int roadmap_plugin_get_distance
 }
       
 
-void roadmap_plugin_get_line_points (const PluginLine *line,
-                                     RoadMapPosition  *from_pos,
-                                     RoadMapPosition  *to_pos,
-                                     int              *first_shape,
-                                     int              *last_shape,
-                                     RoadMapShapeItr  *shape_itr) {
-
-   roadmap_plugin_line_from (line, from_pos);
-   roadmap_plugin_line_to (line, to_pos);
-
-   if (line->plugin_id == ROADMAP_PLUGIN_ID) {
-
-      roadmap_line_shapes (line->line_id, first_shape, last_shape);
-      *shape_itr = roadmap_shape_get_position;
-   } else {
-      RoadMapPluginHooks *hooks = get_hooks (line->plugin_id);
-      
-      if (hooks == NULL) {
-         roadmap_log (ROADMAP_ERROR, "plugin id:%d is missing.",
-               line->plugin_id);
-
-         *first_shape = *last_shape = -1;
-         *shape_itr   = NULL;
-         return;
-      }
-
-      //FIXME implement for plugins
-#if 0
-      if (hooks->line_shapes != NULL) {
-         (*hooks->line_shapes) (line, first_shape, last_shape, shape_itr);
-
-      } else {
-#else
-         {
-#endif   
-         *first_shape = *last_shape = -1;
-         *shape_itr   = NULL;
-      }
-
-      return;
-   }
-}
-
-
 void roadmap_plugin_line_from (const PluginLine *line, RoadMapPosition *pos) {
 
    if (line->plugin_id == ROADMAP_PLUGIN_ID) {
@@ -395,7 +348,7 @@ void roadmap_plugin_get_street (const PluginLine *line, PluginStreet *street) {
 }
 
 
-const char *roadmap_plugin_street_full_name (const PluginLine *line) {
+const char *roadmap_plugin_street_full_name (PluginLine *line) {
 
    if (line->plugin_id == ROADMAP_PLUGIN_ID) {
 
@@ -423,7 +376,7 @@ const char *roadmap_plugin_street_full_name (const PluginLine *line) {
 }
 
 
-void roadmap_plugin_get_street_properties (const PluginLine *line,
+void roadmap_plugin_get_street_properties (PluginLine *line,
                                            PluginStreetProperties *props) {
    
    if (line->plugin_id == ROADMAP_PLUGIN_ID) {
@@ -435,8 +388,6 @@ void roadmap_plugin_get_street_properties (const PluginLine *line,
       props->street = roadmap_street_get_street_name (&rm_properties);
       props->street_t2s = roadmap_street_get_street_t2s (&rm_properties);
       props->city = roadmap_street_get_city_name (&rm_properties);
-      props->plugin_street.plugin_id = ROADMAP_PLUGIN_ID;
-      props->plugin_street.street_id = rm_properties.street;
       return;
 
    } else {
@@ -549,75 +500,6 @@ int roadmap_plugin_get_direction (PluginLine *line, int who) {
 }
 
 
-int roadmap_plugin_calc_length (const RoadMapPosition *position,
-                                const PluginLine *line,
-                                int *total_length) {
-
-   RoadMapPosition line_from_pos;
-   RoadMapPosition line_to_pos;
-   int first_shape;
-   int last_shape;
-   RoadMapShapeItr shape_itr;
-   RoadMapPosition from;
-   RoadMapPosition to;
-   RoadMapPosition intersection;
-   int current_length = 0;
-   int length_result = 0;
-   int smallest_distance = 0x7fffffff;
-   int distance;
-   int i;
-
-   roadmap_plugin_get_line_points (line, &line_from_pos, &line_to_pos,
-                                  &first_shape, &last_shape, &shape_itr);
-                                    
-   if (first_shape <= -1) {
-      
-      from = line_from_pos;
-      to = line_to_pos;
-   } else {
-
-      from = line_from_pos;
-      to   = line_from_pos;
-
-      for (i = first_shape; i <= last_shape; i++) {
-
-         shape_itr (i, &to);
-
-         distance =
-            roadmap_math_get_distance_from_segment
-            (position, &from, &to, &intersection, NULL);
-
-         if (distance < smallest_distance) {
-            smallest_distance = distance;
-            length_result = current_length +
-               roadmap_math_distance (&from, &intersection);
-         }
-
-         current_length += roadmap_math_distance (&from, &to);
-         from = to;
-      }
-
-      to = line_to_pos;
-   }
-
-   distance =
-      roadmap_math_get_distance_from_segment
-      (position, &from, &to, &intersection, NULL);
-
-   if (distance < smallest_distance) {
-
-      length_result = current_length +
-                        roadmap_math_distance (&from, &intersection);
-   }
-
-   current_length += roadmap_math_distance (&from, &to);
-
-   if (total_length) *total_length = current_length;
-
-   return length_result;
-}
-
-
 void roadmap_plugin_shutdown (void) {
 
    int i;
@@ -633,4 +515,5 @@ void roadmap_plugin_shutdown (void) {
       }
    }
 }
+
 

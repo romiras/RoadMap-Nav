@@ -26,9 +26,7 @@
 #define INCLUDE__ROADMAP_PLUGIN__H
 
 #include "roadmap_canvas.h"
-#include "roadmap_screen.h"
 
-#define INVALID_PLUGIN_ID -1
 #define ROADMAP_PLUGIN_ID 0
 
 #define PLUGIN_MAKE_LINE(plugin_id, line_id, cfcc, fips) \
@@ -56,7 +54,6 @@ typedef struct {
    const char *street;
    const char *street_t2s;
    const char *city;
-   PluginStreet plugin_street;
 } PluginStreetProperties;
 
 #define PLUGIN_LINE_NULL {-1, -1, -1, -1}
@@ -74,13 +71,6 @@ void roadmap_plugin_get_street (const PluginLine *line, PluginStreet *street);
 void roadmap_plugin_line_from (const PluginLine *line, RoadMapPosition *pos);
 
 void roadmap_plugin_line_to (const PluginLine *line, RoadMapPosition *pos);
-
-void roadmap_plugin_get_line_points (const PluginLine *line,
-                                     RoadMapPosition  *from_pos,
-                                     RoadMapPosition  *to_pos,
-                                     int              *first_shape,
-                                     int              *last_shape,
-                                     RoadMapShapeItr  *shape_itr);
 
 int roadmap_plugin_get_id (const PluginLine *line);
 
@@ -191,9 +181,9 @@ int roadmap_plugin_override_pen (int line,
 
 void roadmap_plugin_screen_repaint (int max_pen);
 
-const char *roadmap_plugin_street_full_name (const PluginLine *line);
+const char *roadmap_plugin_street_full_name (PluginLine *line);
 
-void roadmap_plugin_get_street_properties (const PluginLine *line,
+void roadmap_plugin_get_street_properties (PluginLine *line,
                                            PluginStreetProperties *props);
 
 int roadmap_plugin_find_connected_lines (RoadMapPosition *crossing,
@@ -211,10 +201,6 @@ int roadmap_plugin_get_closest
         int max);
 
 int roadmap_plugin_get_direction (PluginLine *line, int who);
-
-int roadmap_plugin_calc_length (const RoadMapPosition *position,
-                                const PluginLine *line,
-                                int *total_length);
 
 void roadmap_plugin_shutdown (void);
 

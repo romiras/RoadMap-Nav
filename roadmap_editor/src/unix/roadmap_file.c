@@ -328,16 +328,6 @@ int roadmap_file_size (RoadMapFileContext file){
 }
 
 
-int roadmap_file_sync (RoadMapFileContext file) {
-
-   if (file->base != NULL) {
-      return msync (file->base, file->size, MS_SYNC);
-   }
-
-   return -1;
-}
-
-
 void roadmap_file_unmap (RoadMapFileContext *file) {
 
    RoadMapFileContext context = *file;
@@ -361,14 +351,14 @@ RoadMapFile roadmap_file_open  (const char *name, const char *mode) {
    if (strcmp(mode, "r") == 0) {
       unix_mode = O_RDONLY;
    } else if (strchr (mode, 'w') != NULL) {
-      unix_mode = O_RDWR|O_CREAT;
+      unix_mode = O_RDWR;
    } else {
       roadmap_log (ROADMAP_ERROR,
                    "%s: invalid file access mode %s", name, mode);
       return -1;
    }
 
-   return (RoadMapFile) open (name, unix_mode, 0644);
+   return (RoadMapFile) open (name, unix_mode);
 }
 
 
@@ -382,9 +372,5 @@ int roadmap_file_write (RoadMapFile file, const void *data, int length) {
 
 void  roadmap_file_close (RoadMapFile file) {
    close ((int)file);
-}
-
-int roadmap_file_free_space (const char *path) {
-   return -1;
 }
 

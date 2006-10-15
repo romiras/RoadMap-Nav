@@ -44,7 +44,7 @@
 
 static char *RoadMapSpawnPath = NULL;
 
-static RoadMapList RoadMapSpawnActive;
+static RoadMapList RoadMapSpawnActive = ROADMAP_LIST_EMPTY;
 
 /* The GPE environment on the iPAQ does not seem to setup
  * the process group right, and waitpid() does not work as
@@ -107,8 +107,7 @@ end_of_string:
 static void roadmap_spawn_cleanup (void) {
 
     int pid;
-    RoadMapListItem *item, *tmp;
-    RoadMapFeedback *feedback;
+    RoadMapFeedback *item;
 
 
     pid = waitpid (-1, NULL, WNOHANG);
@@ -117,15 +116,15 @@ static void roadmap_spawn_cleanup (void) {
 
        roadmap_log (ROADMAP_DEBUG, "child %d exited", pid);
 
-       ROADMAP_LIST_FOR_EACH (&RoadMapSpawnActive, item, tmp) {
+       for (item = (RoadMapFeedback *)RoadMapSpawnActive.first;
+            item != NULL;
+            item = (RoadMapFeedback *)item->link.next) {
 
-          feedback = (RoadMapFeedback *)item;
+          if (pid == item->child) {
 
-          if (pid == feedback->child) {
+             roadmap_list_remove (&RoadMapSpawnActive, &item->link);
 
-             roadmap_list_remove (&feedback->link);
-
-             feedback->handler (feedback->data);
+             item->handler (item->data);
              break;
           }
        }
@@ -133,7 +132,7 @@ static void roadmap_spawn_cleanup (void) {
        pid = waitpid (-1, NULL, WNOHANG);
     }
 
-    if ((pid < 0) && ! ROADMAP_LIST_EMPTY(&RoadMapSpawnActive)) {
+    if ((pid < 0) && (RoadMapSpawnActive.first != NULL)) {
 
        /* We have at least one child, but waitpid() does not
         * agree. Is waitpid() wrong ?
@@ -273,8 +272,6 @@ void roadmap_spawn_initialize (const char *argv0) {
        last_slash = strrchr (RoadMapSpawnPath, '/');
        last_slash[1] = 0; /* remove the current's program name. */
    }
-
-   ROADMAP_LIST_INIT(&RoadMapSpawnActive);
 }
 
 
@@ -312,8 +309,7 @@ int  roadmap_spawn_with_pipe
 
 void roadmap_spawn_check (void) {
 
-    RoadMapListItem *item, *tmp;
-    RoadMapFeedback *feedback;
+    RoadMapFeedback *item;
 
 
 #ifndef ROADMAP_USES_SIGCHLD
@@ -322,15 +318,15 @@ void roadmap_spawn_check (void) {
 
     if (RoadMapSpawnDubiousWait) {
 
-       ROADMAP_LIST_FOR_EACH (&RoadMapSpawnActive, item, tmp) {
+       for (item = (RoadMapFeedback *)RoadMapSpawnActive.first;
+            item != NULL;
+            item = (RoadMapFeedback *)item->link.next) {
 
-          feedback = (RoadMapFeedback *)item;
+          if (kill (item->child, 0) < 0) {
 
-          if (kill (feedback->child, 0) < 0) {
+             roadmap_list_remove (&RoadMapSpawnActive, &item->link);
 
-             roadmap_list_remove (&feedback->link);
-
-             feedback->handler (feedback->data);
+             item->handler (item->data);
           }
        }
 
@@ -346,13 +342,13 @@ void roadmap_spawn_command (const char *command) {
 
 int roadmap_spawn_write_pipe (RoadMapPipe pipe, const void *data, int length) {
 
-   return write ((int)pipe, data, (size_t)length);
+   return write ((int)pipe, data, length);
 }
 
 
 int roadmap_spawn_read_pipe (RoadMapPipe pipe, void *data, int size) {
 
-   return read ((int)pipe, data, (size_t)size);
+   return read ((int)pipe, data, size);
 }
 
 

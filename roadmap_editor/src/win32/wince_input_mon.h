@@ -8,7 +8,6 @@
 typedef struct roadmap_main_io {
    RoadMapIO *io;
    RoadMapInput callback;
-   int is_valid;
 } roadmap_main_io;
 
 DWORD WINAPI SerialMonThread(LPVOID lpParam);

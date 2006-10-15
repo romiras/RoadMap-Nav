@@ -60,7 +60,7 @@ static char *BuildPlaceDSGStrings[BUILDPLACE_MAX_DSG] = {NULL};
 static int   BuildPlaceDSGcfcc[BUILDPLACE_MAX_DSG];
 static int   BuildPlaceDSGCount = 0;
 
-/* static BuildMapDictionary DictionaryName; */
+static BuildMapDictionary DictionaryName;
 
 static int   BuildPlaceFormatFamily = 0;
 
@@ -109,7 +109,6 @@ static struct poptOption BuildPlaceOptionTable [] = {
 };
 
 
-/*
 static RoadMapString
 str2dict (BuildMapDictionary d, const char *string) {
 
@@ -119,7 +118,7 @@ str2dict (BuildMapDictionary d, const char *string) {
 
     return buildmap_dictionary_add (d, (char *) string, strlen(string));
 }
-*/
+
 
 static void  buildplace_select_format (poptContext decoder) {
 
@@ -208,7 +207,6 @@ static void buildplace_dsg_initialize (void) {
 }
 
 
-/*
 static int dsg2cfcc (const char *dsg) {
     ENTRY e, *ep;
 
@@ -216,7 +214,7 @@ static int dsg2cfcc (const char *dsg) {
     ep = hsearch(e, FIND);
     return ep ? BuildPlaceDSGcfcc[(int)ep->data] : 0;
 }
-*/
+
 
 static void buildplace_dsg_add (const char *dsg, int cfcc) {
     ENTRY e, *ep;

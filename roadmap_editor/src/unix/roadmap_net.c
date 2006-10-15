@@ -29,7 +29,6 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <errno.h>
-#include <time.h>
 
 #include <unistd.h>
 
@@ -42,7 +41,6 @@
 #include <arpa/inet.h>
 
 #include "roadmap.h"
-#include "md5.h"
 #include "roadmap_net.h"
 
 
@@ -153,49 +151,15 @@ connection_failure:
 }
 
 
-int roadmap_net_send (RoadMapSocket s, const void *data, int length, int wait) {
+int roadmap_net_send (RoadMapSocket s, const void *data, int length) {
 
-   int total = length;
-   fd_set fds;
-   struct timeval recv_timeout = {0, 0};
+   int sent = write ((int)s, data, length);
 
-   FD_ZERO(&fds);
-   FD_SET(s, &fds);
-
-   if (wait) {
-      recv_timeout.tv_sec = 60;
+   if (sent != length) {
+      return -1;
    }
 
-   while (length > 0) {
-      int res;
-
-      res = select(s+1, NULL, &fds, NULL, &recv_timeout);
-
-      if(!res) {
-         roadmap_log (ROADMAP_ERROR,
-               "Timeout waiting for select in roadmap_net_send");
-         if (!wait) return 0;
-         else return -1;
-      }
-
-      if(res < 0) {
-         roadmap_log (ROADMAP_ERROR,
-               "Error waiting on select in roadmap_net_send");
-         return -1;
-      }
-
-      res = send(s, data, length, 0);
-
-      if (res < 0) {
-         roadmap_log (ROADMAP_ERROR, "Error sending data");
-         return -1;
-      }
-
-      length -= res;
-      data = (char *)data + res;
-   }
-
-   return total;
+   return sent;
 }
 
 
@@ -226,23 +190,4 @@ RoadMapSocket roadmap_net_accept(RoadMapSocket server_socket) {
 void roadmap_net_close (RoadMapSocket s) {
    close ((int)s);
 }
-
-
-int roadmap_net_unique_id (unsigned char *buffer, unsigned int size) {
-   struct MD5Context context;
-   unsigned char digest[16];
-   time_t tm;
-
-   time(&tm);
-      
-   MD5Init (&context);
-   MD5Update (&context, (unsigned char *)&tm, sizeof(tm));
-   MD5Final (digest, &context);
-
-   if (size > sizeof(digest)) size = sizeof(digest);
-   memcpy(buffer, digest, size);
-
-   return size;
-}
-
 

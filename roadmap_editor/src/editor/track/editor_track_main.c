@@ -46,7 +46,6 @@
 #include "../db/editor_db.h"
 #include "../db/editor_point.h"
 #include "../db/editor_route.h"
-#include "../db/editor_line.h"
 #include "../editor_log.h"
 #include "editor_track_filter.h"
 #include "editor_track_util.h"
@@ -57,7 +56,6 @@
 
 #define GPS_POINTS_DISTANCE "10m"
 #define MAX_POINTS_IN_SEGMENT 10000
-#define GPS_TIME_GAP 4 /* 4 seconds */
 
 typedef struct {
 
@@ -206,89 +204,6 @@ static int create_new_line (int gps_first_point,
 }
 
 
-static int add_road_connection (int point_id,
-                                RoadMapTracking *new_street,
-                                RoadMapNeighbour *new_line) {
-
-   int from_point;
-   int end_point;
-   int line_id;
-   NodeNeighbour end_node = NODE_NEIGHBOUR_NULL;
-   int road_type = 0;
-
-   editor_log_push ("add_road_connection");
-
-   from_point =
-      editor_track_util_new_road_start
-      (&TrackConfirmedLine,
-       track_point_pos (point_id),
-       point_id,
-       TrackConfirmedStreet.line_direction,
-       &cur_node);
-
-   assert (from_point != -1);
-
-   if (from_point == -1) {
-      return -1;
-   }
-
-   if (editor_track_known_end_segment
-         (&TrackPreviousLine.line, from_point,
-          &TrackConfirmedLine.line, is_new_track)) {
-
-      is_new_track = 0;
-   }
-
-   track_reset_points (from_point);
-   
-   /*FIXME the whole previous line thing is not used and broken */
-   TrackPreviousLine = TrackConfirmedLine;
-
-   TrackConfirmedLine = *new_line;
-   TrackConfirmedStreet = *new_street;
-
-   end_point =
-      editor_track_util_new_road_end
-      (&TrackConfirmedLine,
-       track_point_pos (points_count - 1),
-       points_count - 1,
-       TrackConfirmedStreet.line_direction,
-       &end_node);
-
-   if ((cur_node.plugin_id == ROADMAP_PLUGIN_ID) &&
-       (end_node.plugin_id == ROADMAP_PLUGIN_ID)) {
-
-      /* This a known connection road */
-      road_type = 0;
-   } else {
-      road_type = ED_LINE_CONNECTION;
-   }
-
-   if (end_node.plugin_id == ROADMAP_PLUGIN_ID) {
-      end_node.id = editor_point_roadmap_to_editor (end_node.id);
-      end_node.plugin_id = EditorPluginID;
-   }
-
-   line_id = create_new_line (0, end_point, -1, end_node.id, 4);
-
-   if (road_type == ED_LINE_CONNECTION) {
-
-      if (line_id != -1) {
-         int cfcc;
-         int flags;
-
-         editor_line_get (line_id, NULL, NULL, NULL, &cfcc, &flags);
-         editor_line_modify_properties
-            (line_id, cfcc, flags | ED_LINE_CONNECTION);
-      }
-
-      track_reset_points (end_point);
-   }
-
-   return 0;
-}
-
-
 static void end_known_segment (int point_id,
                                RoadMapTracking *new_street,
                                RoadMapNeighbour *new_line) {
@@ -323,39 +238,17 @@ static void end_known_segment (int point_id,
       int split_point = editor_track_util_connect_roads
                            (&TrackConfirmedLine.line,
                             &new_line->line,
-                            TrackConfirmedStreet.line_direction,
-                            new_street->line_direction,
+                            TrackConfirmedStreet.opposite_street_direction,
+                            new_street->opposite_street_direction,
                             track_point_gps (point_id),
-                            point_id);
+                            points_count - 1);
 
-      if (split_point != -1) {
-         
-         if (editor_track_known_end_segment
-               (&TrackPreviousLine.line, split_point,
-                &TrackConfirmedLine.line, is_new_track)) {
-
-            is_new_track = 0;
-            
-            /*FIXME the whole previous line thing is not used and broken */
-            TrackPreviousLine = TrackConfirmedLine;
-         }
-
-      } else {
-
-         /* We can't just connect the two roads.
-          * We need to create a new road in between.
-          */
-         
-         if (add_road_connection (point_id, new_street, new_line) == -1) {
-            TrackConfirmedLine = *new_line;
-            TrackConfirmedStreet = *new_street;
-            track_reset_points (-1);
-            return;
-         }
+      if (editor_track_known_end_segment
+            (&TrackPreviousLine.line, split_point,
+             &TrackConfirmedLine.line, is_new_track)) {
 
          is_new_track = 0;
          TrackPreviousLine = TrackConfirmedLine;
-         return;
       }
 
       track_reset_points (split_point);
@@ -381,7 +274,7 @@ static void end_known_segment (int point_id,
                      (&TrackConfirmedLine,
                       track_point_pos (point_id),
                       point_id,
-                      TrackConfirmedStreet.line_direction,
+                      TrackConfirmedStreet.opposite_street_direction,
                       &cur_node);
 
       if (split_point != -1) {
@@ -481,7 +374,7 @@ static void end_unknown_segments (TrackNewSegment *new_segments, int count) {
                      (&TrackConfirmedLine,
                       track_point_pos (end_point),
                       end_point,
-                      TrackConfirmedStreet.line_direction,
+                      TrackConfirmedStreet.opposite_street_direction,
                       &end_node);
 
          if (end_node.plugin_id == ROADMAP_PLUGIN_ID) {
@@ -493,16 +386,7 @@ static void end_unknown_segments (TrackNewSegment *new_segments, int count) {
       }
 
       if ((i < (count -1)) || (start_point != (end_point -1))) {
-         int line_id =
-            create_new_line (start_point, end_point, -1, end_node_id, 4);
-         if ((line_id != -1) && (type == TRACK_ROAD_CONNECTION)) {
-            int cfcc;
-            int flags;
-
-            editor_line_get (line_id, NULL, NULL, NULL, &cfcc, &flags);
-            editor_line_modify_properties
-               (line_id, cfcc, flags | ED_LINE_CONNECTION);
-         }
+         create_new_line (start_point, end_point, -1, end_node_id, 4);
       }
 
       start_point = end_point;
@@ -512,13 +396,13 @@ static void end_unknown_segments (TrackNewSegment *new_segments, int count) {
 }
 
 
-static void track_rec_locate_point(int point_id, int point_type) {
+static void track_rec_locate_point(int point_id, int force_unknown) {
 
    int i;
    int count;
    TrackNewSegment new_segments[10];
 
-   assert (!(point_type & POINT_UNKNOWN) || cur_active_line);
+   assert (!force_unknown || cur_active_line);
 
    if (!cur_active_line) {
 
@@ -534,7 +418,7 @@ static void track_rec_locate_point(int point_id, int point_type) {
                 &new_line);
 
       if (count) {
-         end_known_segment (count, &new_street, &new_line);
+         end_known_segment (point_id, &new_street, &new_line);
 
          if (!new_street.valid) {
             /* the current point does not belong to a known street */
@@ -543,7 +427,7 @@ static void track_rec_locate_point(int point_id, int point_type) {
 
             for (i=0; i<points_count; i++) {
 
-               track_rec_locate_point (i, POINT_UNKNOWN|point_type);
+               track_rec_locate_point (i, 1);
             }
          }
       }
@@ -557,7 +441,7 @@ static void track_rec_locate_point(int point_id, int point_type) {
                 &TrackConfirmedLine,
                 new_segments,
                 sizeof(new_segments) / sizeof(new_segments[0]),
-                point_type);
+                force_unknown);
 
       if (count) {
 
@@ -581,7 +465,7 @@ static void track_rec_locate_point(int point_id, int point_type) {
 
          for (i=0; i<points_count; i++) {
 
-            track_rec_locate_point (i, point_type);
+            track_rec_locate_point (i, 0);
          }
       }
    }
@@ -593,23 +477,19 @@ static void track_rec_locate(time_t gps_time,
                              const RoadMapGpsPosition* gps_position) {
 
    static struct GPSFilter *filter;
-   static time_t last_gps_time;
    const RoadMapGpsPosition *filtered_gps_point;
    RoadMapPosition context_save_pos;
    int context_save_zoom;
    int point_id;
-   int point_type = 0;
    int res;
    
    if (filter == NULL) {
 
       filter = editor_track_filter_new 
          (roadmap_math_distance_convert ("1000m", NULL),
-          60, /* 1 minute */
+          600, /* 10 minutes */
           roadmap_math_distance_convert ("10m", NULL));
    }
-
-   if (points_count == 0) last_gps_time = 0;
 
    roadmap_math_get_context (&context_save_pos, &context_save_zoom);
    roadmap_math_set_context ((RoadMapPosition *)gps_position, 20);
@@ -628,24 +508,6 @@ static void track_rec_locate(time_t gps_time,
       goto restore;
    }
 
-   if (last_gps_time && (last_gps_time + GPS_TIME_GAP < gps_time)) {
-      if (cur_active_line) {
-         if (points_count > 2) {
-            TrackNewSegment segment;
-            segment.point_id = points_count - 1;
-            segment.type = TRACK_ROAD_REG;
-            end_unknown_segments (&segment, 1);
-         } else {
-            editor_track_end ();
-         }
-      }
-      point_type = POINT_GAP;
-   } else {
-      point_type = 0;
-   }
-
-   last_gps_time = gps_time;
-
    while ((filtered_gps_point = editor_track_filter_get (filter)) != NULL) {
 
       TrackLastPosition = *filtered_gps_point;
@@ -659,17 +521,9 @@ static void track_rec_locate(time_t gps_time,
 
       roadmap_fuzzy_set_cycle_params (40, 150);
       
-      track_rec_locate_point (point_id, point_type);
+      track_rec_locate_point (point_id, 0);
    }
 
-   if ((point_type == POINT_GAP) && cur_active_line) {
-      TrackNewSegment segment;
-
-      segment.point_id = points_count - 1;
-      segment.type = TRACK_ROAD_CONNECTION;
-
-      end_unknown_segments (&segment, 1);
-   }
 restore:
    editor_track_util_release_focus ();
    roadmap_math_set_context (&context_save_pos, context_save_zoom);
@@ -739,15 +593,6 @@ void editor_track_end (void) {
 }
 
 
-void editor_track_reset (void) {
-
-   TrackConfirmedStreet.valid = 0;
-   track_reset_points (points_count);
-   cur_node.id = -1;
-   is_new_track = 1;
-}
-
-
 static void editor_track_shape_position (int shape, RoadMapPosition *position) {
 
    assert (shape < points_count);
@@ -779,7 +624,7 @@ int editor_track_draw_current (RoadMapPen pen) {
 
    roadmap_screen_draw_one_line
                (from, to, 0, from, first_shape, last_shape,
-                editor_track_shape_position, pen, 0, 0 ,0);
+                editor_track_shape_position, pen);
 
    return 1;
 }

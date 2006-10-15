@@ -44,8 +44,6 @@ RoadMapFuzzy roadmap_fuzzy_distance  (int distance);
 RoadMapFuzzy roadmap_fuzzy_connected
                  (const RoadMapNeighbour *street,
                   const RoadMapNeighbour *reference,
-                        int               prev_direction,
-                        int               direction,
                         RoadMapPosition  *connection);
 
 RoadMapFuzzy roadmap_fuzzy_and (RoadMapFuzzy a, RoadMapFuzzy b);
