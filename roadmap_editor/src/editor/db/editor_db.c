@@ -44,7 +44,6 @@
 
 #include "editor_db.h"
 #include "editor_point.h"
-#include "editor_marker.h"
 #include "editor_shape.h"
 #include "editor_line.h"
 #include "editor_square.h"
@@ -60,7 +59,6 @@
 /* TODO create a generic cache system - this was copied from roadmap_locator */
 
 #define EDITOR_CACHE_SIZE 10
-#define FLUSH_SIZE 300
 
 struct editor_cache_entry {
 
@@ -107,10 +105,6 @@ static void editor_header_activate (void *context) {
    }
 }
 
-static void editor_header_unmap (void *context) {
-   if (ActiveDBHeader == context) ActiveDBHeader = NULL;
-}
-
 static void editor_blocks_activate (void *context) {
    ActiveBlocks = (char *) context;
 }
@@ -119,7 +113,7 @@ roadmap_db_handler EditorHeaderHandler = {
    "header",
    editor_map,
    editor_header_activate,
-   editor_header_unmap
+   editor_unmap
 };
 
 roadmap_db_handler EditorBlocksHandler = {
@@ -167,9 +161,6 @@ static void editor_db_configure (void) {
       EditorDBModel =
          roadmap_db_register
             (EditorDBModel, "points", &EditorPointsHandler);
-      EditorDBModel =
-         roadmap_db_register
-            (EditorDBModel, "markers", &EditorMarkersHandler);
       EditorDBModel =
          roadmap_db_register
             (EditorDBModel, "header", &EditorHeaderHandler);
@@ -228,16 +219,9 @@ static unsigned int editor_db_new_access (void) {
 static int editor_db_allocate_new_block
                      (editor_db_section *section, int block_id) {
    
-   if (section->max_blocks == block_id) {
-      editor_log (ROADMAP_ERROR,
-                  "editor_db_allocate_new_block - reached max section blocks.");
-      return -1;
-   }
-
+   if (section->max_blocks == block_id) return -1;
 
    if (ActiveDBHeader->num_used_blocks == ActiveDBHeader->num_total_blocks) {
-      editor_log (ROADMAP_ERROR,
-                  "editor_db_allocate_new_block - no free blocks, need to grow.");
       return -1;
    }
 
@@ -340,12 +324,6 @@ int editor_db_create (int fips) {
    
    roadmap_path_create (path);
 
-   if (roadmap_file_exists (path, name)) {
-      editor_log (ROADMAP_ERROR, "Trying to create a new database which already exists! '%s/%s'", path, name);
-      editor_log_pop ();
-      return -1;
-   }
-      
    if (buildmap_db_open (path, name) == -1) {
       editor_log (ROADMAP_ERROR, "Can't create new database: %s/%s",
             path, name);
@@ -380,8 +358,6 @@ int editor_db_create (int fips) {
 
    add_db_section
       (NULL, "points", NULL, 0, sizeof(editor_db_point), EDITOR_MAX_POINTS);
-   add_db_section
-      (NULL, "markers", NULL, 0, sizeof(editor_db_marker), EDITOR_MAX_STREETS);
    add_db_section
       (NULL, "points_del", NULL, 0,
        sizeof(editor_db_del_point), EDITOR_MAX_POINTS);
@@ -419,7 +395,6 @@ int editor_db_create (int fips) {
    add_db_string_section (root, "types");
    add_db_string_section (root, "zips");
    add_db_string_section (root, "t2s");
-   add_db_string_section (root, "notes");
 
    root = buildmap_db_add_section (NULL, "data_blocks");
 
@@ -498,23 +473,6 @@ static int editor_db_open (int fips) {
 }
 
 
-void editor_db_sync (int fips) {
-
-   int i;
-
-   for (i = EditorCacheSize-1; i >= 0; --i) {
-
-      if (EditorCache[i].fips == fips) {
-         char map_name[64];
-
-         snprintf (map_name, sizeof(map_name),
-               "edt%05d", EditorCache[i].fips);
-         roadmap_db_sync (map_name);
-      }
-   }
-}
-
-
 int editor_db_activate (int fips) {
 
    int res;
@@ -568,26 +526,6 @@ void editor_db_delete (int fips) {
    
    if (roadmap_file_exists (path, name)) {
 
-      char **files;
-      char **cursor;
-      char *directory;
-
-      /* Delete notes wav files */
-      /* FIXME this is broken for multiple counties */
-      directory = roadmap_path_join (roadmap_path_user (), "markers");
-      files = roadmap_path_list (directory, ".wav");
-
-      for (cursor = files; *cursor != NULL; ++cursor) {
-
-         char *full_name = roadmap_path_join (directory, *cursor);
-         roadmap_file_remove (NULL, full_name);
-
-         free (full_name);
-      }
-
-      free (directory);
-
-      /* Remove the actual editor file */
       roadmap_file_remove (path, name);
    }
 }
@@ -610,7 +548,6 @@ int editor_db_add_item (editor_db_section *section, void *data) {
    int block = section->num_items / section->items_per_block;
    int block_offset = section->num_items % section->items_per_block;
    char *item_addr;
-   static int flush_count;
 
    if ((section->num_items == 0) ||
          ((section->num_items % section->items_per_block) == 0)) {
@@ -625,11 +562,6 @@ int editor_db_add_item (editor_db_section *section, void *data) {
          block_offset * section->item_size;
 
       memcpy (item_addr, data, section->item_size);
-   }
-
-   if (++flush_count == FLUSH_SIZE) {
-      flush_count = 0;
-      editor_db_sync (ActiveDBHeader->fips);
    }
 
    return section->num_items++;
@@ -775,10 +707,6 @@ int editor_db_grow (void) {
    char map_name[255];
    char path[100];
 
-   editor_log (ROADMAP_ERROR, "editor_db_grow - total:%d used:%d.",
-        ActiveDBHeader->num_total_blocks,
-   	ActiveDBHeader->num_used_blocks);
-
    /* NOTE that after the call to editor_db_remove(),
     * ActiveDBHeader pointer becomes invalid.
     */
@@ -839,10 +767,7 @@ int editor_db_locator(const RoadMapPosition *position) {
 
    if (count) return fips[0];
 
-   /* FIXME this is a hack until I figure out why we get some -1 fips */
-   editor_log (ROADMAP_ERROR, "editor_db_locator - can't find fips.");
-   return 77001;
-   //return -1;
+   return -1;
 }
 
 

@@ -32,7 +32,6 @@
 #define ROADMAP_CONFIG_STRING   0
 #define ROADMAP_CONFIG_ENUM     1
 #define ROADMAP_CONFIG_COLOR    2
-#define ROADMAP_CONFIG_PASSWORD 3
 
 
 struct RoadMapConfigItemRecord;
@@ -57,26 +56,15 @@ void roadmap_config_declare
         (const char *file,
          RoadMapConfigDescriptor *descriptor, const char *default_value);
 
-void roadmap_config_declare_password
-        (const char *file,
-         RoadMapConfigDescriptor *descriptor, const char *default_value);
-
-RoadMapConfigItem *roadmap_config_declare_enumeration
+void roadmap_config_declare_enumeration
         (const char *file,
          RoadMapConfigDescriptor *descriptor, const char *enumeration_value, ...);
-
-void roadmap_config_add_enumeration_value (RoadMapConfigItem *item,
-                                           const char *value);
 
 void roadmap_config_declare_color
         (const char *file,
          RoadMapConfigDescriptor *descriptor, const char *default_value);
 
  
-char *roadmap_config_skip_until (char *p, char c);
-
-char *roadmap_config_skip_spaces (char *p);
-
 char *roadmap_config_extract_data (char *line, int size);
 
 

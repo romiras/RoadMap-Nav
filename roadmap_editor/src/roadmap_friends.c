@@ -122,17 +122,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
-
-#ifdef _WIN32
-#include <windows.h>
-#else
 #include <unistd.h>
+
 #include <sys/select.h>
-#endif
 
 #include "roadmap.h"
-#include "roadmap_net.h"
 
 
 static char *friends_local_name = NULL;
@@ -209,7 +203,7 @@ static void send_position_to_friends (char *sentence, int socket) {
       }
    }
 
-   snprintf (buffer, sizeof(buffer), "POS: %s %s %.6f %.6f %ld %d %d",
+   snprintf (buffer, sizeof(buffer), "POS: %s %s %.6f %.6f %d %d %d",
              friends_local_name, friends_local_name,
              coordinate_to_friends (argv[3], argv[4]),
              coordinate_to_friends (argv[5], argv[6]),
@@ -217,7 +211,7 @@ static void send_position_to_friends (char *sentence, int socket) {
              atoi(argv[7]),
              atoi(argv[8]));
 
-   roadmap_net_send (socket,  buffer, strlen(buffer), 1);
+   roadmap_net_send (socket,  buffer, strlen(buffer));
 }
 
 
@@ -240,6 +234,7 @@ static void forward_position_from_friends (char *friend_position) {
 
    char id[30];
    char name[40];
+   char lat[40];
    double latitude;
    double longitude;
    int latitude_ddmm;
@@ -263,7 +258,7 @@ static void forward_position_from_friends (char *friend_position) {
 
    if (strcmp (name, friends_local_name) != 0) {
 
-      int i = friends_count;
+      int i;
       int available = -1;
 
       if (friends_names != NULL) {
@@ -493,7 +488,7 @@ int main(int argc, char *argv[]) {
                p[1] = 0;
             }
             buffer[0] = 'A'; buffer[1] = 'C'; buffer[2] = 'K';
-            roadmap_net_send (socket,  buffer, strlen(buffer), 1);
+            roadmap_net_send (socket,  buffer, strlen(buffer));
 
          } else if (strncmp (buffer, "POS: ", 5) == 0 ||
                     strncmp (buffer, "SRV: ", 5) == 0) {

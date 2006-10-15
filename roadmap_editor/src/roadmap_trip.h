@@ -28,11 +28,8 @@
 #include "roadmap_list.h"
 #include "roadmap_gps.h"
 
-enum { TRIP_FOCUS_GPS = -1,
-       TRIP_FOCUS_NO_GPS = 0};
 
-void  roadmap_trip_set_point (const char *name,
-                              const RoadMapPosition *position);
+void  roadmap_trip_set_point (const char *name, RoadMapPosition *position);
 
 void  roadmap_trip_set_mobile (const char *name,
                                const RoadMapGpsPosition *gps_position);
@@ -55,7 +52,6 @@ int   roadmap_trip_get_orientation (void);
 const char *roadmap_trip_get_focus_name (void);
 
 const RoadMapPosition *roadmap_trip_get_focus_position (void);
-const RoadMapPosition *roadmap_trip_get_position (const char *name);
 
 
 void  roadmap_trip_start   (void);
@@ -63,6 +59,7 @@ void  roadmap_trip_resume  (void);
 void  roadmap_trip_stop    (void);
 void  roadmap_trip_reverse (void);
 
+void  roadmap_trip_format_messages (void);
 void  roadmap_trip_display (void);
 
 void  roadmap_trip_new (void);

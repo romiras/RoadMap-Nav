@@ -26,11 +26,9 @@
  */
 
 #include <assert.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
-#include <zlib.h>
+#include "stdlib.h"
 #include "time.h"
+#include "string.h"
 
 #include "roadmap.h"
 #include "roadmap_file.h"
@@ -41,9 +39,6 @@
 #include "roadmap_locator.h"
 #include "roadmap_line_route.h"
 #include "roadmap_fileselection.h"
-#include "roadmap_messagebox.h"
-#include "roadmap_download.h"
-#include "roadmap_config.h"
 
 #include "../editor_log.h"
 #include "../editor_main.h"
@@ -56,170 +51,88 @@
 #include "../db/editor_street.h"
 #include "../db/editor_override.h"
 #include "../db/editor_route.h"
-#include "../db/editor_marker.h"
 
 #include "../track/editor_track_main.h"
-#include "editor_upload.h"
-#include "editor_sync.h"
 #include "editor_export.h"
 
 #define NO_ELEVATION 1000000
 
-enum StreamType {NULL_STREAM, FILE_STREAM, ZLIB_STREAM};
-
-typedef struct {
-   enum StreamType type;
-   void *stream;
-} ExportStream;
-
-static RoadMapConfigDescriptor RoadMapConfigAutoUpload =
-                  ROADMAP_CONFIG_ITEM("FreeMap", "Upload file after export");
-
-static void editor_export_upload(const char *filename) {
-
-   if (roadmap_config_match(&RoadMapConfigAutoUpload, "yes")) {
-      editor_upload_file (filename);
-   }
-}
-
-
-static void export_write(ExportStream *stream, char *format, ...) {
-
-   char buf[1024];
-   va_list ap;
-
-   va_start(ap, format);
-   vsnprintf (buf, sizeof(buf), format, ap);
-   va_end(ap);
-
-   switch (stream->type) {
-   case FILE_STREAM:
-      fwrite (buf, sizeof(char), strlen(buf), (FILE *)stream->stream);
-      break;
-   case ZLIB_STREAM:
-      gzwrite ((gzFile)stream->stream, buf, strlen(buf));
-      break;
-   default:
-      break;
-   }
-
-   return;
-}
-
-
-static void add_timestamp(ExportStream *stream, time_t time) {
+static void add_timestamp(FILE *file, time_t time) {
    
    struct tm *tms = gmtime (&time);
    
-   export_write (stream, "<time>%04d-%02d-%02dT%02d:%02d:%02dZ</time>\n",
+   fprintf (file, "<time>%04d-%02d-%02dT%02d:%02d:%02dZ</time>\n",
          tms->tm_year+1900, tms->tm_mon+1, tms->tm_mday,
          tms->tm_hour, tms->tm_min, tms->tm_sec);
 }
 
 
-static void add_trkpt(ExportStream *stream, int lon, int lat, int ele,
-                      time_t time) {
+static void add_trkpt(FILE *file, int lon, int lat, int ele, time_t time) {
    
-   export_write (stream, "<trkpt lat=\"%d.%06d\" lon=\"%d.%06d\">\n",
+   fprintf (file, "<trkpt lat=\"%d.%06d\" lon=\"%d.%06d\">\n",
             lat / 1000000, lat % 1000000, lon / 1000000, lon % 1000000);
 
    if (ele != NO_ELEVATION) {
-      export_write (stream, "<ele>%d</ele>\n", ele);
+      fprintf (file, "<ele>%d</ele>\n", ele);
    }
    
    if (time != (time_t) -1) {
-      add_timestamp (stream, time);
+      add_timestamp (file, time);
    }
 
-   export_write (stream, "</trkpt>\n");
+   fprintf (file, "</trkpt>\n");
 }
 
 
-static void open_trk(ExportStream *stream) {
+static void open_trk(FILE *file) {
    
-   export_write (stream, "<trk>\n");
+   fprintf (file, "<trk>\n");
 }
 
 
-static void close_trk(ExportStream *stream) {
+static void close_trk(FILE *file) {
    
-   export_write (stream, "</trk>\n");
+   fprintf (file, "</trk>\n");
 }
 
 
-static void open_trkseg(ExportStream *stream) {
+static void open_trkseg(FILE *file) {
    
-   export_write (stream, "<trkseg>\n");
+   fprintf (file, "<trkseg>\n");
 }
 
 
-static void close_trkseg(ExportStream *stream) {
+static void close_trkseg(FILE *file) {
    
-   export_write (stream, "</trkseg>\n");
+   fprintf (file, "</trkseg>\n");
 }
 
 
-static int create_export_stream(ExportStream *stream, const char *name) {
+static FILE *create_export_file(const char *name) {
 
-   FILE *file;
-   gzFile gz_file;
-  
-   if ((strlen(name) < 3) || strcmp(name + strlen(name) - 3, ".gz")) {
-      file = roadmap_file_fopen (NULL, name, "w");
+   FILE *file = roadmap_file_fopen (NULL, name, "w");
+   if (file == NULL) return NULL;
+   
+   fprintf (file, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+   fprintf (file, "<gpx\nversion=\"1.1\"\ncreator=\"RoadMap Editor - http://roadmap.digitalomaha.net/editor.html\"\n");
+   fprintf (file, "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n");
+   fprintf (file, "xmlns=\"http://www.topografix.com/GPX/1/1\"\n");
+   fprintf (file, "xsi:schemaLocation=\"http://www.topografix.com/GPX/1/0 http://www.topografix.com/GPX/1/0/gpx.xsd\">\n");
 
-      if (file == NULL) {
-         editor_log (ROADMAP_ERROR, "Can't create file: %s", name);
-         roadmap_messagebox ("Export Error", "Can't create file.");
-         return -1;
-      }
-
-      stream->type = FILE_STREAM;
-      stream->stream = file;
-   } else {
-
-      gz_file = gzopen(name, "wb");
-      if (gz_file == NULL) {
-         editor_log (ROADMAP_ERROR, "Can't create file: %s", name);
-         roadmap_messagebox ("Export Error", "Can't create file.");
-         return -1;
-      }
-
-      stream->type = ZLIB_STREAM;
-      stream->stream = gz_file;
-   }
-
-   export_write (stream, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-   export_write (stream, "<gpx\nversion=\"1.1\"\ncreator=\"RoadMap Editor (%s) - http://roadmap.digitalomaha.net/editor.html\"\n", editor_main_get_version ());
-   export_write (stream, "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n");
-   export_write (stream, "xmlns:freemap=\"http://www.freemap.co.il/xmlns/freemap\"\n");
-   export_write (stream, "xmlns=\"http://www.topografix.com/GPX/1/1\"\n");
-   export_write (stream, "xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd\">\n");
-   export_write (stream, "<metadata>\n");
-   add_timestamp (stream, time(NULL));
-   export_write (stream, "</metadata>\n");
-
-   return 0;
+   add_timestamp (file, time(NULL));
+   return file;
 }
 
 
-static void close_export_stream(ExportStream *stream) {
+static void close_export_file(FILE *file) {
 
-   export_write (stream, "</gpx>\n");
-
-   switch (stream->type) {
-   case FILE_STREAM:
-      fclose ((FILE *)stream->stream);
-      break;
-   case ZLIB_STREAM:
-      gzclose ((gzFile)stream->stream);
-      break;
-   default:
-      break;
-   }
+   fprintf (file, "</gpx>\n");
+   fclose (file);
 }
 
 
-static void add_trkpts(ExportStream *stream, int trkseg) {
+static void add_trkpts (FILE *file,
+                        int trkseg) {
 
    RoadMapPosition trkseg_pos;
    int from_point;
@@ -247,14 +160,14 @@ static void add_trkpts(ExportStream *stream, int trkseg) {
          }
 
          add_trkpt
-            (stream, trkseg_pos.longitude, trkseg_pos.latitude,
+            (file, trkseg_pos.longitude, trkseg_pos.latitude,
              NO_ELEVATION, start_time);
       }
    }
 }
 
 
-static const char *cfcc2type(int cfcc) {
+static const char *cfcc2type (int cfcc) {
 
    char **categories;
    int count;
@@ -265,163 +178,22 @@ static const char *cfcc2type(int cfcc) {
 }
 
 
-static void add_attribute(ExportStream *stream,
-                          const char *ns,
-                          const char *name,
-                          const char *value) {
+static void add_attribute (FILE *file, const char *name, const char *value) {
 
-   char str[500];
-   char *itr = str;
-
-   while (*value) {
-
-      if ((itr - str) > 450) break;
-
-      switch (*value) {
-      case '"':
-         strcpy (itr, "&quot;");
-         itr += 6;
-         break;
-      case '\'':
-         strcpy (itr, "&apos;");
-         itr += 6;
-         break;
-      case '&':
-         strcpy (itr, "&amp;");
-         itr += 5;
-         break;
-      case '<':
-         strcpy (itr, "&lt;");
-         itr += 4;
-         break;
-      case '>':
-         strcpy (itr, "&qt;");
-         itr += 4;
-         break;
-
-      default:
-         *itr = *value;
-         itr++;
-         break;
-      }
-
-      value++;
-   }
-   
-   *itr = 0;
-
-   if (ns) {
-      export_write (stream, "<%s:%s>%s</%s:%s>\n", ns, name, str, ns, name);
-   } else {
-      export_write (stream, "<%s>%s</%s>\n", name, str, name);
-   }
+   fprintf (file, "<%s>%s</%s>\n", name, value, name);
 }
 
 
-static void open_waypoint(ExportStream *stream, int lon, int lat, int ele,
-                          int steering, time_t time, const char *type,
-                          const char *note) {
-   
-   if (!note) note = "";
-
-   export_write (stream, "<wpt lat=\"%d.%06d\" lon=\"%d.%06d\">\n",
-            lat / 1000000, lat % 1000000, lon / 1000000, lon % 1000000);
-
-   if (ele != NO_ELEVATION) {
-      export_write (stream, "<ele>%d</ele>\n", ele);
-   }
-   
-   add_timestamp (stream, time);
-
-   while (steering < 0) steering += 360;
-   while (steering > 360) steering -= 360;
-   export_write (stream, "<magvar>%d</magvar>\n", steering);
-
-   add_attribute (stream, NULL, "desc", note);
-   export_write (stream, "<type>%s</type>\n", type);
-}
-
-
-static void close_waypoint(ExportStream *stream) {
-
-   export_write (stream, "</wpt>\n");
-}
-
-
-static int export_markers(ExportStream *stream, const char *name) {
-
-   int count = editor_marker_count();
-   int exported = 0;
-   int i;
-
-   for (i=0; i<count; i++) {
-      int flags = editor_marker_flags (i);
-      RoadMapPosition pos;
-      time_t marker_time;
-      int steering;
-      const char *description;
-      const char *keys[MAX_ATTR];
-      char       *values[MAX_ATTR];
-      int attr_count;
-
-      if (!(flags & ED_MARKER_DIRTY) || !(flags & ED_MARKER_UPLOAD)) continue;
-
-      if (editor_marker_export
-            (i, &description, keys, values, &attr_count) == -1) {
-         continue;
-      }
-
-      if (stream->type == NULL_STREAM) {
-         
-         if (create_export_stream (stream, name) != 0) {
-            return 0;
-         }
-      }
-
-      editor_marker_position (i, &pos, &steering);
-      marker_time = editor_marker_time (i);
-      
-      open_waypoint (stream, pos.longitude, pos.latitude, NO_ELEVATION,
-                     steering, marker_time,
-                     editor_marker_type (i),
-                     description);
-
-      if (attr_count > 0) {
-         int j;
-
-         export_write (stream, "<extensions>\n");
-
-         for (j=0; j<attr_count; j++) {
-   
-            add_attribute (stream, "freemap", keys[j], values[j]);
-
-            free(values[j]);
-         }
-
-         export_write (stream, "</extensions>\n");
-      }
-
-      close_waypoint (stream);
-
-      editor_marker_update (i, flags & ~ED_MARKER_DIRTY,
-                            editor_marker_note (i));
-      exported++;
-   }
-
-   return exported;
-}
-      
-
-static void add_line_data(ExportStream *stream,
-                          int line_id,
-                          int plugin_id,
-                          int cfcc,
-                          int flags,
-                          int trkseg_flags,
-                          RoadMapPosition *line_from,
-                          RoadMapPosition *line_to,
-                          time_t start_time,
-                          time_t end_time) {
+static void add_line_data (FILE *file,
+                           int line_id,
+                           int plugin_id,
+                           int cfcc,
+                           int flags,
+                           int trkseg_flags,
+                           RoadMapPosition *line_from,
+                           RoadMapPosition *line_to,
+                           time_t start_time,
+                           time_t end_time) {
 
    EditorStreetProperties properties;
    char *trk_type;
@@ -430,13 +202,13 @@ static void add_line_data(ExportStream *stream,
    int roadmap_from_id;
    int roadmap_to_id;
    int route_id;
-   /* LineRouteMax speed_limit; */
+   LineRouteMax speed_limit;
 
-   export_write (stream, "<extensions>\n");
+   fprintf (file, "<extensions>\n");
    
    if (flags & ED_LINE_DELETED) {
       
-      export_write (stream, "<freemap:action trk_type=\"fake\">Delete</freemap:action>\n");
+      fprintf (file, "<action trk_type=\"fake\">Delete</action>\n");
    } else {
 
       if (trkseg_flags & ED_TRKSEG_FAKE) {
@@ -447,7 +219,7 @@ static void add_line_data(ExportStream *stream,
          trk_type = "valid";
       }
 
-      export_write (stream, "<freemap:action trk_type=\"%s\">Update</freemap:action>\n", trk_type);
+      fprintf (file, "<action trk_type=\"%s\">Update</action>\n", trk_type);
    }
 
    if (plugin_id == EditorPluginID) {
@@ -472,40 +244,39 @@ static void add_line_data(ExportStream *stream,
       roadmap_to_id = roadmap_point_db_id (roadmap_to_id);
    }
 
-   export_write (stream, "<freemap:line from_id=\"%d\" to_id=\"%d\">\n",
+   fprintf (file, "<line from_id=\"%d\" to_id=\"%d\">\n",
          roadmap_from_id, roadmap_to_id);
 
    add_trkpt
-      (stream, line_from->longitude, line_from->latitude,
+      (file, line_from->longitude, line_from->latitude,
        NO_ELEVATION, start_time);
 
    add_trkpt
-      (stream, line_to->longitude, line_to->latitude,
+      (file, line_to->longitude, line_to->latitude,
        NO_ELEVATION, end_time);
 
-   export_write (stream, "</freemap:line>\n");
+   fprintf (file, "</line>\n");
 
    if ((plugin_id == EditorPluginID) && (flags & ED_LINE_DIRTY)) {
 
-      export_write (stream, "<freemap:attributes>\n");
+      fprintf (file, "<attributes>\n");
 
       editor_street_get_properties (line_id, &properties);
 
-      add_attribute (stream, NULL, "road_type", cfcc2type (cfcc));
+      add_attribute (file, "road_type", cfcc2type (cfcc));
    
-      add_attribute (stream, NULL, "street_name",
+      add_attribute (file, "street_name",
          editor_street_get_street_fename (&properties));
    
-      add_attribute (stream, NULL, "text2speech",
+      add_attribute (file, "text2speech",
          editor_street_get_street_t2s (&properties));
 
-      add_attribute (stream, NULL, "city_name",
+      add_attribute (file, "city_name",
          editor_street_get_street_city
             (&properties, ED_STREET_LEFT_SIDE));
 
       route_id = editor_line_get_route (line_id);
 
-#if 0
       if (route_id != -1) {
 
          editor_route_segment_get
@@ -514,21 +285,21 @@ static void add_line_data(ExportStream *stream,
          if (speed_limit) {
             char str[100];
             snprintf (str, sizeof(str), "%d", speed_limit);
-            add_attribute (stream, "speed_limit", str);
+            add_attribute (file, "speed_limit", str);
          }
       }
-#endif
-      export_write (stream, "</freemap:attributes>\n");
+
+      fprintf (file, "</attributes>\n");
 
       editor_line_modify_properties
          (line_id, cfcc, flags & ~ED_LINE_DIRTY);
    }
  
-   export_write (stream, "</extensions>\n");
+   fprintf (file, "</extensions>\n");
 }
 
 
-static int export_dirty_lines(ExportStream *stream, const char *name) {
+static int export_dirty_lines(FILE *file) {
 
    int num_lines = editor_line_get_count();
    int current_trk_open = 0;
@@ -551,41 +322,34 @@ static int export_dirty_lines(ExportStream *stream, const char *name) {
 
       if (!(flags & ED_LINE_DIRTY)) continue;
 
-      if (stream->type == NULL_STREAM) {
-         
-         if (create_export_stream (stream, name) != 0) {
-            return 0;
-         }
-      }
-
       if (!(flags & ED_LINE_DELETED)) {
 
          if (!current_trk_open) {
 
-            open_trk (stream);
+            open_trk (file);
             current_trk_open = 1;
          }
 
-         open_trkseg (stream);
+         open_trkseg (file);
 
          editor_line_get_trksegs (i, &trkseg, &last_trkseg);
 
-         add_trkpts (stream, trkseg);
+         add_trkpts (file, trkseg);
 
          editor_trkseg_get_time (trkseg, &start_time, &end_time);
          editor_trkseg_get (trkseg, NULL, NULL, NULL, &trkseg_flags);
 
          if (trkseg_flags & ED_TRKSEG_OPPOSITE_DIR) {
          
-            add_line_data (stream, i, EditorPluginID, cfcc, flags, trkseg_flags,
+            add_line_data (file, i, EditorPluginID, cfcc, flags, trkseg_flags,
                            &to, &from, start_time, end_time);
          } else {
          
-            add_line_data (stream, i, EditorPluginID, cfcc, flags, trkseg_flags,
+            add_line_data (file, i, EditorPluginID, cfcc, flags, trkseg_flags,
                            &from, &to, start_time, end_time);
          }
       
-         close_trkseg (stream);
+         close_trkseg (file);
 
          found++;
       }
@@ -595,45 +359,37 @@ static int export_dirty_lines(ExportStream *stream, const char *name) {
    }
 
    if (current_trk_open) {
-      close_trk (stream);
+      close_trk (file);
    }
 
    return found;
 }
  
 
-int editor_export_data(const char *name, RoadMapDownloadCallbacks *callbacks) {
+static int editor_export_data(const char *name) {
    
-   ExportStream stream;
+   FILE *file = create_export_file (name);
    int trkseg;
    int line_id;
    int plugin_id;
    int current_trk_open = 0;
    int fips;
-   int exported;
-   int estimated_exports;
 
-   stream.type = NULL_STREAM;
+   if (file == NULL) {
+      editor_log (ROADMAP_ERROR, "Can't create file: %s", name);
+      return -1;
+   }
 
    fips = roadmap_locator_active ();
 
-   if (callbacks) (*callbacks->size) (100);
-
    if (fips < 0) {
-      if (callbacks) {
-         fips = 77001;
-      } else {
-         editor_log (ROADMAP_ERROR, "Can't locate current fips");
-         roadmap_messagebox ("Export Error", "Can't locate fips.");
-         return -1;
-      }
+      editor_log (ROADMAP_ERROR, "Can't locate current fips");
+      return -1;
    }
 
    if (editor_db_activate (fips) == -1) {
-      if (!callbacks) {
-         roadmap_messagebox ("Export Error", "No editor data to export.");
-      }
-      return 0;
+      editor_log (ROADMAP_ERROR, "Can't load editor db");
+      return -1;
    }
 
    editor_track_end ();
@@ -642,46 +398,13 @@ int editor_export_data(const char *name, RoadMapDownloadCallbacks *callbacks) {
 
    if (trkseg == -1) {
 
-      int exported = 0;
-
-      if (callbacks) (*callbacks->progress) (50);
-
-      exported  = export_markers (&stream, name);
-      exported += export_dirty_lines (&stream, name);
-
-      if (!exported) {
-
-         if (callbacks) {
-            (*callbacks->progress) (100);
-         } else {
-            editor_log (ROADMAP_INFO, "No data is available for export.");
-            roadmap_messagebox ("Export Error", "No new data to export.");
-         }
-
-         if (stream.type != NULL_STREAM) {
-            close_export_stream (&stream);
-            roadmap_file_remove (NULL, name);
-         }
-         return 0;
+      if (!export_dirty_lines (file)) {
+         editor_log (ROADMAP_INFO, "No trksegs are available for export.");
       }
-
-      if (callbacks) (*callbacks->progress) (100);
-      close_export_stream (&stream);
-      
-      if (!callbacks) {
-         editor_export_upload (name);
-      }
-      return 1;
+      close_export_file (file);
+      return 0;
    }
 
-   if (create_export_stream (&stream, name) != 0) {
-      return -1;
-   }
-
-   export_markers (&stream, name);
-
-   estimated_exports = editor_trkseg_get_count ();
-   exported = 0;
    while (trkseg != -1) {
       
       RoadMapPosition from;
@@ -704,7 +427,7 @@ int editor_export_data(const char *name, RoadMapDownloadCallbacks *callbacks) {
 
          editor_line_get (line_id, &from, &to, NULL, &cfcc, &flags);
 
-         if (flags & (ED_LINE_DELETED|ED_LINE_CONNECTION)) {
+         if (flags & ED_LINE_DELETED) {
 
             editor_line_modify_properties
                (line_id, cfcc, flags & ~ED_LINE_DIRTY);
@@ -731,34 +454,34 @@ int editor_export_data(const char *name, RoadMapDownloadCallbacks *callbacks) {
       if (trkseg_flags & ED_TRKSEG_NEW_TRACK) {
 
          if (current_trk_open) {
-            close_trk (&stream);
+            close_trk (file);
             current_trk_open = 0;
          }
       }
 
       if (!current_trk_open) {
 
-         open_trk (&stream);
+         open_trk (file);
          current_trk_open = 1;
       }
 
-      open_trkseg (&stream);
+      open_trkseg (file);
 
-      add_trkpts (&stream, trkseg);
+      add_trkpts (file, trkseg);
 
       editor_trkseg_get_time (trkseg, &start_time, &end_time);
 
       if (trkseg_flags & ED_TRKSEG_OPPOSITE_DIR) {
          
-         add_line_data (&stream, line_id, plugin_id, cfcc, flags, trkseg_flags,
+         add_line_data (file, line_id, plugin_id, cfcc, flags, trkseg_flags,
                         &to, &from, start_time, end_time);
       } else {
          
-         add_line_data (&stream, line_id, plugin_id, cfcc, flags, trkseg_flags,
+         add_line_data (file, line_id, plugin_id, cfcc, flags, trkseg_flags,
                         &from, &to, start_time, end_time);
       }
       
-      close_trkseg (&stream);
+      close_trkseg (file);
 
       if (!(trkseg_flags & ED_TRKSEG_END_TRACK)) {
 
@@ -767,58 +490,31 @@ int editor_export_data(const char *name, RoadMapDownloadCallbacks *callbacks) {
 
 close_trk:
       if (current_trk_open) {
-         close_trk (&stream);
+         close_trk (file);
          current_trk_open = 0;
       }
 
 next_trkseg:
-      if (exported < estimated_exports) exported++;
-      if (callbacks) (*callbacks->progress) (85 * exported / estimated_exports);
       trkseg = editor_trkseg_next_in_global (trkseg);
    }
 
    if (current_trk_open) {
-      close_trk (&stream);
+      close_trk (file);
    }
 
-   export_dirty_lines (&stream, name);
-
-   if (callbacks) (*callbacks->progress) (100);
-   close_export_stream (&stream);
+   export_dirty_lines (file);
+   close_export_file (file);
 
    editor_trkseg_reset_next_export ();
 
-   if (!callbacks) {
-      editor_export_upload (name);
-   }
-
-   return 1;
+   return 0;
 }
 
 
-void editor_export_reset_dirty(void) {
+void editor_export_reset_dirty () {
    
    int count;
    int i;
-
-   count = editor_trkseg_get_current_trkseg ();
-
-   for (i=0; i<count; i++) {
-      int trkseg_flags;
-
-      editor_trkseg_get
-         (i, NULL, NULL, NULL, &trkseg_flags);
-
-      if (!(trkseg_flags & ED_TRKSEG_FAKE)) {
-         editor_trkseg_set_next_export (i);
-         break;
-      }
-   }
-
-   if (i == count) {
-      roadmap_messagebox ("Error", "Can't find first trkseg to export.");
-      return;
-   }
 
    count = editor_line_get_count ();
 
@@ -828,29 +524,28 @@ void editor_export_reset_dirty(void) {
       int cfcc;
 
       editor_line_get (i, NULL, NULL, NULL, &cfcc, &flags);
-      /* editor_line_modify_properties (i, cfcc, flags | ED_LINE_DIRTY); */
+      editor_line_modify_properties (i, cfcc, flags | ED_LINE_DIRTY);
    }
-
 }
 
 
-static void editor_export_file_dialog_ok(const char *filename,
-                                         const char *mode) {
+static void editor_export_file_dialog_ok
+                           (const char *filename, const char *mode) {
 
-   editor_export_data (filename, NULL);
+   editor_export_data (filename);
 }
 
 
-void editor_export_gpx(void) {
+void editor_export_gpx (void) {
                                 
    roadmap_fileselection_new ("Export data",
-                              "gpx.gz",
+                              NULL, /* no filter. */
                               roadmap_path_user (),
                               "w",
                               editor_export_file_dialog_ok);
 }
 
-int editor_export_empty(int fips) {
+int editor_export_empty (int fips) {
    
    int trkseg;
    int num_lines;
@@ -882,12 +577,4 @@ int editor_export_empty(int fips) {
 
    return 1;
 }
-
-
-void editor_export_initialize(void) {
-
-   roadmap_config_declare_enumeration
-       ("preferences", &RoadMapConfigAutoUpload, "no", "yes", NULL);
-}
-
 

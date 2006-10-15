@@ -155,7 +155,7 @@ static void roadmap_preferences_new_dialog
    const char *value;
 
    int   count;
-   const char *values[256];
+   char *values[256];
 
 
    while (cursor->reference != NULL) {
@@ -167,7 +167,7 @@ static void roadmap_preferences_new_dialog
 
       case ROADMAP_CONFIG_ENUM:
 
-         count = 0;
+         count = 1;
          values[0] = (char *)value; /* Always make the original value appear first. */
 
          for (enumeration = roadmap_config_get_enumeration (cursor);
@@ -176,7 +176,7 @@ static void roadmap_preferences_new_dialog
 
             values[count] = roadmap_config_get_enumeration_value (enumeration);
 
-            //if (strcmp (values[count], value) != 0) {
+            if (strcmp (values[count], value) != 0) {
 
                if (count >= 256) {
                   roadmap_log (ROADMAP_FATAL,
@@ -184,7 +184,7 @@ static void roadmap_preferences_new_dialog
                                cursor->category, cursor->name);
                }
                count += 1;
-            //}
+            }
          }
          roadmap_dialog_new_choice
             (cursor->category, cursor->name, count, values, (void **)values, NULL);
@@ -193,12 +193,7 @@ static void roadmap_preferences_new_dialog
       case ROADMAP_CONFIG_COLOR:
       case ROADMAP_CONFIG_STRING:
 
-         roadmap_dialog_new_entry (cursor->category, cursor->name, NULL);
-         break;
-
-      case ROADMAP_CONFIG_PASSWORD:
-
-         roadmap_dialog_new_password (cursor->category, cursor->name);
+         roadmap_dialog_new_entry (cursor->category, cursor->name);
          break;
 
       default:

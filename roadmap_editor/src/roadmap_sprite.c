@@ -397,7 +397,7 @@ void roadmap_sprite_draw
 
          roadmap_canvas_draw_multiple_polygons
             (plane->polygons.object_count,
-             plane->polygons.objects, RoadMapSpritePoints, 1, 0);
+             plane->polygons.objects, RoadMapSpritePoints, 1);
       }
 
       if (plane->disks.object_count > 0) {
@@ -406,7 +406,7 @@ void roadmap_sprite_draw
 
          roadmap_canvas_draw_multiple_circles
             (plane->disks.object_count,
-             RoadMapSpritePoints, plane->disks.objects, 1, 0);
+             RoadMapSpritePoints, plane->disks.objects, 1);
       }
 
       if (plane->lines.object_count > 0) {
@@ -415,7 +415,7 @@ void roadmap_sprite_draw
 
          roadmap_canvas_draw_multiple_lines
             (plane->lines.object_count,
-             plane->lines.objects, RoadMapSpritePoints, 0);
+             plane->lines.objects, RoadMapSpritePoints);
       }
 
       if (plane->circles.object_count > 0) {
@@ -424,7 +424,7 @@ void roadmap_sprite_draw
 
          roadmap_canvas_draw_multiple_circles
             (plane->circles.object_count,
-             RoadMapSpritePoints, plane->circles.objects, 0, 0);
+             RoadMapSpritePoints, plane->circles.objects, 0);
       }
    }
 }

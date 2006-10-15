@@ -34,7 +34,7 @@ ifeq ($(MODE),PROFILE)
    MODECFLAGS=-g $(WARNFLAGS) -pg -fprofile-arcs -g
    MODELDFLAGS=-pg
 else
-   MODECFLAGS=-O2 -ffast-math -fomit-frame-pointer -DNDEBUG=1 $(WARNFLAGS) $(OPTIONS)
+   MODECFLAGS=-O2 -ffast-math -fomit-frame-pointer $(WARNFLAGS) $(OPTIONS)
    MODELDFLAGS=
 endif
 endif
@@ -87,11 +87,11 @@ else
 endif
 
 
-CFLAGS=$(MODECFLAGS) $(SQLCFLAGS) $(ROADMAP_USE_SHAPEFILES) -I/usr/local/include -I$(PWD) -I./dglib -DROADMAP_USE_POSTGRES
-LDFLAGS=$(MODELDFLAGS) $(SQLLDFLAGS) $(SHAPELDFLAGS) -lpq -L ./dglib
+CFLAGS=$(MODECFLAGS) $(SQLCFLAGS) $(ROADMAP_USE_SHAPEFILES) -I/usr/local/include -I$(PWD) -DROADMAP_USE_POSTGRES
+LDFLAGS=$(MODELDFLAGS) $(SQLLDFLAGS) $(SHAPELDFLAGS) -lpq
 
 RDMLIBS=libroadmap.a unix/libosroadmap.a
-LIBS=$(RDMLIBS) -lpopt -lm -ldgl
+LIBS=$(RDMLIBS) -lpopt -lm
 
 
 # --- RoadMap sources & targets --------------------------------------------
@@ -115,7 +115,6 @@ RMLIBSRCS=roadmap_log.c \
           roadmap_line.c \
           roadmap_line_route.c \
           roadmap_shape.c \
-          roadmap_turns.c \
           roadmap_place.c \
           roadmap_polygon.c \
           roadmap_street.c \
@@ -128,10 +127,8 @@ RMLIBSRCS=roadmap_log.c \
           roadmap_io.c \
           roadmap_gps.c \
           roadmap_object.c \
-          roadmap_state.c \
           roadmap_driver.c \
           roadmap_adjust.c \
-          roadmap_lang.c \
           roadmap_sunrise.c
 
 RMLIBOBJS=$(RMLIBSRCS:.c=.o)
@@ -139,7 +136,6 @@ RMLIBOBJS=$(RMLIBSRCS:.c=.o)
 
 RMGUISRCS=roadmap_sprite.c \
           roadmap_object.c \
-          roadmap_screen_obj.c \
           roadmap_trip.c \
           roadmap_layer.c \
           roadmap_fuzzy.c \
@@ -154,7 +150,6 @@ RMGUISRCS=roadmap_sprite.c \
           roadmap_coord.c \
           roadmap_download.c \
           roadmap_help.c \
-          roadmap_label.c \
           roadmap_start.c
 
 RMGUIOBJS=$(RMGUISRCS:.c=.o)
@@ -175,37 +170,25 @@ RMPLUGINSRCS=roadmap_copy.c \
              editor/editor_plugin.c \
              editor/editor_screen.c \
              editor/static/editor_dialog.c \
-             editor/static/update_range.c \
-             editor/static/edit_marker.c \
-             editor/static/notes.c \
              editor/db/editor_street.c \
              editor/db/editor_point.c \
              editor/db/editor_shape.c \
              editor/db/editor_line.c \
              editor/db/editor_square.c \
              editor/db/editor_route.c \
-             editor/db/editor_marker.c \
              editor/db/editor_dictionary.c \
-				 buildmap_dbwrite.c \
+             buildmap_dbwrite.c \
 				 buildmap_metadata.c \
-				 buildmap_messages.c \
-				 editor/db/editor_override.c \
-				 editor/export/editor_export.c \
-             editor/export/editor_download.c \
-             editor/export/editor_upload.c \
-             editor/export/editor_sync.c \
+             buildmap_messages.c \
+             editor/db/editor_override.c \
+             editor/export/editor_export.c \
              editor/db/editor_trkseg.c \
              editor/track/editor_track_filter.c \
              editor/track/editor_track_util.c \
              editor/track/editor_track_main.c \
              editor/track/editor_track_unknown.c \
              editor/track/editor_track_known.c \
-				 editor/db/editor_db.c \
-				 navigate/navigate_main.c \
-				 navigate/navigate_instr.c \
-				 navigate/navigate_bar.c \
-				 navigate/navigate_plugin.c \
-				 navigate/navigate_dglib.c \
+             editor/db/editor_db.c
 
 RMPLUGINOBJS=$(RMPLUGINSRCS:.c=.o)
 
@@ -226,9 +209,7 @@ BMSRCS=buildmap_messages.c \
        buildmap_area.c \
        buildmap_line.c \
        buildmap_line_route.c \
-       buildmap_dglib.c \
        buildmap_shape.c \
-       buildmap_turn_restrictions.c \
        buildmap_polygon.c \
        buildmap_range.c \
        buildmap_zip.c \
@@ -291,9 +272,6 @@ clean: cleanone
 		fi ; \
 	done
 	if [ -d unix ] ; then $(MAKE) -C unix cleanone ; fi
-	find editor -name \*.o -exec rm {} \;
-	find navigate -name \*.o -exec rm {} \;
-	find agg -name \*.o -exec rm {} \;
 
 cleanone:
 	rm -f *.o *.a *.da $(BUILD) $(TOOLS) $(DRIVERS)

@@ -40,7 +40,6 @@
 #include "roadmap_point.h"
 #include "roadmap_square.h"
 #include "roadmap_shape.h"
-#include "roadmap_turns.h"
 #include "roadmap_line.h"
 #include "roadmap_line_route.h"
 #include "roadmap_street.h"
@@ -63,9 +62,8 @@ static struct roadmap_cache_entry *RoadMapCountyCache = NULL;
 
 static int RoadMapCountyCacheSize = 0;
 
-static int RoadMapActiveCounty = -2;
+static int RoadMapActiveCounty;
 
-static int RoadMapUsdirActive = 0;
 
 static roadmap_db_model *RoadMapUsModel;
 static roadmap_db_model *RoadMapCountyModel;
@@ -103,9 +101,6 @@ static void roadmap_locator_configure (void) {
             (RoadMapCountyModel, "shape", &RoadMapShapeHandler);
       RoadMapCountyModel =
          roadmap_db_register
-            (RoadMapCountyModel, "turns", &RoadMapTurnsHandler);
-      RoadMapCountyModel =
-         roadmap_db_register
             (RoadMapCountyModel, "line", &RoadMapLineHandler);
       RoadMapCountyModel =
          roadmap_db_register
@@ -127,6 +122,14 @@ static void roadmap_locator_configure (void) {
          roadmap_db_register
             (RoadMapUsModel, "string", &RoadMapDictionaryHandler);
 
+      if (! roadmap_db_open ("usdir", RoadMapUsModel, "r")) {
+         roadmap_log (ROADMAP_FATAL, "cannot open directory database (usdir)");
+      }
+
+      RoadMapUsCityDictionary   = roadmap_dictionary_open ("city");
+      RoadMapUsStateDictionary  = roadmap_dictionary_open ("state");
+
+
       RoadMapCountyCacheSize = roadmap_option_cache ();
       if (RoadMapCountyCacheSize < ROADMAP_CACHE_SIZE) {
          RoadMapCountyCacheSize = ROADMAP_CACHE_SIZE;
@@ -135,18 +138,6 @@ static void roadmap_locator_configure (void) {
          calloc (RoadMapCountyCacheSize, sizeof(struct roadmap_cache_entry));
       roadmap_check_allocated (RoadMapCountyCache);
    }
-
-   if (!RoadMapUsdirActive) {
-      if (! roadmap_db_open ("usdir", RoadMapUsModel, "r")) {
-         roadmap_log (ROADMAP_FATAL, "cannot open directory database (usdir)");
-      }
-
-      RoadMapUsCityDictionary   = roadmap_dictionary_open ("city");
-      RoadMapUsStateDictionary  = roadmap_dictionary_open ("state");
-
-      RoadMapUsdirActive = 1;
-   }
-
 }
 
 
@@ -264,15 +255,6 @@ void roadmap_locator_close (int fips) {
 }
 
 
-void roadmap_locator_close_dir (void) {
-
-   if (RoadMapUsdirActive) {
-      roadmap_db_close ("usdir");
-      RoadMapUsdirActive = 0;
-   }
-}
-
-
 static int roadmap_locator_allocate (int **fips) {
 
    int count;
@@ -318,7 +300,7 @@ int roadmap_locator_by_state (const char *state_symbol, int **fips) {
    count = roadmap_locator_allocate (fips);
 
    state = roadmap_dictionary_locate (RoadMapUsStateDictionary, state_symbol);
-   if (state == ROADMAP_INVALID_STRING) {
+   if (state <= 0) {
        return 0;
    }
    return roadmap_county_by_state (state, *fips, count);
@@ -333,7 +315,7 @@ int roadmap_locator_by_city (const char *city_name, const char *state_symbol) {
    roadmap_locator_configure();
 
    state = roadmap_dictionary_locate (RoadMapUsStateDictionary, state_symbol);
-   if (state == ROADMAP_INVALID_STRING) {
+   if (state <= 0) {
       return ROADMAP_US_NOSTATE;
    }
 
@@ -342,7 +324,7 @@ int roadmap_locator_by_city (const char *city_name, const char *state_symbol) {
       while (city_name[0] == ' ') ++city_name;
    }
    city = roadmap_dictionary_locate (RoadMapUsCityDictionary, city_name);
-   if (city == ROADMAP_INVALID_STRING) {
+   if (city <= 0) {
       return ROADMAP_US_NOCITY;
    }
 
@@ -370,13 +352,5 @@ int roadmap_locator_active (void) {
 RoadMapString roadmap_locator_get_state (const char *state) {
 
    return roadmap_dictionary_locate (RoadMapUsStateDictionary, state);
-}
-
-
-void roadmap_locator_search_city (const char *str, RoadMapDictionaryCB cb,
-                                  void *data) {
-
-   roadmap_dictionary_search_all
-            (RoadMapUsCityDictionary, str, cb, data);
 }
 
