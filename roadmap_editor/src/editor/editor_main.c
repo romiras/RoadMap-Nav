@@ -46,7 +46,7 @@
 int EditorEnabled = 0;
 int EditorPluginID = -1;
 
-const char *EDITOR_VERSION = "0.8.2";
+const char *EDITOR_VERSION = "0.8.0 pre7";
 
 void editor_main_check_map (void) {
 
@@ -87,6 +87,7 @@ void editor_main_initialize (void) {
    editor_track_initialize  ();
    update_range_initialize  ();
    editor_notes_initialize  ();
+   editor_main_set (1);
 
    EditorPluginID = editor_plugin_register ();
 

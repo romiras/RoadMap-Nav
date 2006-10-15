@@ -44,7 +44,6 @@
 #include "roadmap_fileselection.h"
 #include "md5.h"
 
-#include "../editor_main.h"
 #include "editor_upload.h"
 
 #define ROADMAP_HTTP_MAX_CHUNK 4096
@@ -157,7 +156,7 @@ static int editor_http_send (RoadMapSocket socket,
    va_end(ap);
 
    length = strlen(buffer);
-   if (roadmap_net_send (socket, buffer, length, 1) != length) {
+   if (roadmap_net_send (socket, buffer, length) != length) {
       error ("send error on: %s", buffer);
       return -1;
    }
@@ -256,9 +255,6 @@ static RoadMapSocket editor_http_send_header (const char *target,
       if (editor_http_send (fd, error, "Host: %s\r\n", host) == -1)
          goto send_error;
       
-      if (editor_http_send (fd, error, "User-Agent: FreeMap/%s\r\n",
-            editor_main_get_version() ) == -1) goto send_error;
-
       send_auth (user, pw, fd, error);
 
       if (editor_http_send (fd, error,
@@ -339,7 +335,7 @@ static int editor_http_decode_response (RoadMapSocket fd,
 
          if (received <= 0) {
             error ("Receive error");
-            return -1;
+            return 0;
          }
          total += received;
          buffer[total] = 0;
@@ -360,8 +356,8 @@ static int editor_http_decode_response (RoadMapSocket fd,
 
             if (next != buffer) {
                if (strstr (buffer, " 200 ") == NULL) {
-                  error ("Received bad status: %s", buffer);
-                  return -1;
+                  error ("received bad status: %s", buffer);
+                  return 0;
                }
                received_status = 1;
             }
@@ -381,20 +377,20 @@ static int editor_http_decode_response (RoadMapSocket fd,
                return size;
             }
 
-            if (strncasecmp (buffer,
+            if (strncmp (buffer,
                         "Content-Length", sizeof("Content-Length")-1) == 0) {
 
                p = strchr (buffer, ':');
                if (p == NULL) {
                   error ("bad formed header: %s", buffer);
-                  return -1;
+                  return 0;
                }
 
                while (*(++p) == ' ') ;
                size = atoi(p);
-               if (size < 0) {
+               if (size <= 0) {
                   error ("bad formed header: %s", buffer);
-                  return -1;
+                  return 0;
                }
             }
          }
@@ -410,7 +406,7 @@ static int editor_http_decode_response (RoadMapSocket fd,
    }
 
    error ("No valid header received");
-   return -1;
+   return 0;
 }
 
 
@@ -418,21 +414,15 @@ static int editor_post_file (const char *target,
                              const char *file_name,
                              const char *user_name,
                              const char *password,
-                             RoadMapDownloadCallbacks *callbacks,
-                             char **message) {
+                             RoadMapDownloadCallbacks *callbacks) {
 
    RoadMapSocket fd;
    int size;
    int loaded;
    int uploaded;
    char buffer[ROADMAP_HTTP_MAX_CHUNK];
-   char user_digest_hex[100];
-   char pw_digest_hex[100];
+   char digest_hex[100];
    RoadMapFile file;
-
-   if (message != NULL) {
-      *message = NULL;
-   }
 
    if (!callbacks) callbacks = &EditorUploadCallbackFunctions;
 
@@ -452,24 +442,16 @@ static int editor_post_file (const char *target,
    RoadMapUploadCurrentName = file_name;
 
    if (!user_name[0]) {
-      struct MD5Context context;
       unsigned char digest[16];
       if (roadmap_net_unique_id (digest, sizeof(digest)) != sizeof(digest)) {
          roadmap_file_close (file);
          return -1;
       }
-      
-      strcpy(user_digest_hex, "anon_");
-      MD5Hex (digest, user_digest_hex + strlen(user_digest_hex));
 
-      user_name = user_digest_hex;
+      MD5Hex (digest, digest_hex);
 
-      MD5Init (&context);
-      MD5Update (&context, (unsigned char *)user_name, strlen(user_name));
-      MD5Final (digest, &context);
-      MD5Hex (digest, pw_digest_hex);
-
-      password = pw_digest_hex;
+      user_name = "anonymous";
+      password = digest_hex;
    }
 
    fd = editor_http_send_header
@@ -487,10 +469,10 @@ static int editor_post_file (const char *target,
    while (loaded < size) {
 
       uploaded = roadmap_file_read (file, buffer, sizeof(buffer));
-      uploaded = roadmap_net_send (fd, buffer, uploaded, 1);
+      uploaded = roadmap_net_send (fd, buffer, uploaded);
 
       if (uploaded <= 0) {
-         (*callbacks->error) ("Send error after %d data bytes", loaded);
+         (*callbacks->error) ("Receive error after %d data bytes", loaded);
          goto cancel_upload;
       }
       loaded += uploaded;
@@ -501,34 +483,19 @@ static int editor_post_file (const char *target,
    editor_http_send (fd, callbacks->error, "\r\n-----------------------------10424402741337131014341297293--\r\n");
 
    loaded = sizeof(buffer);
-   size = editor_http_decode_response
-             (fd, buffer, &loaded, callbacks->error);
-             
-   if (size < 0) {
+   if (!editor_http_decode_response
+             (fd, buffer, &loaded, callbacks->error)) {
       goto cancel_upload;
-   }
-
-   if ((message != NULL) && (size > 1)) {
-      *message = malloc(size+1);
-      memcpy (*message, buffer, loaded);
-
-      while (loaded < size) {
-         int r;
-         r = roadmap_net_receive (fd, *message + loaded, size - loaded);
-
-         if (r <= 0) break;
-
-         loaded += r;
-      }
-
-      (*message)[loaded] = '\0';
-
    }
 
    roadmap_net_close (fd);
    roadmap_file_close (file);
    roadmap_dialog_hide ("Uploading");
    buffer[loaded] = 0;
+
+   if (callbacks == &EditorUploadCallbackFunctions) {
+      roadmap_messagebox ("Upload done.", buffer);
+   }
    return 0;
 
 cancel_upload:
@@ -547,7 +514,6 @@ static void editor_upload_ok (const char *name, void *context) {
    const char *target;
    const char *username;
    const char *password;
-   char *message;
 
    filename = roadmap_dialog_get_data (".file", "Name");
 
@@ -562,10 +528,7 @@ static void editor_upload_ok (const char *name, void *context) {
 
    roadmap_dialog_hide (name);
 
-   editor_post_file (target, filename, username, password, NULL, &message);
-   if (message != NULL) {
-      roadmap_messagebox ("Info", message);
-   }
+   editor_post_file (target, filename, username, password, NULL);
 }
 
 
@@ -636,15 +599,13 @@ void editor_upload_initialize (void) {
 
 
 int editor_upload_auto (const char *filename,
-                        RoadMapDownloadCallbacks *callbacks,
-                        char **message) {
+                        RoadMapDownloadCallbacks *callbacks) {
 
    return editor_post_file (
             roadmap_config_get (&RoadMapConfigTarget),
             filename, 
             roadmap_config_get (&RoadMapConfigUser),
             roadmap_config_get (&RoadMapConfigPassword),
-            callbacks,
-            message);
+            callbacks);
 }
 

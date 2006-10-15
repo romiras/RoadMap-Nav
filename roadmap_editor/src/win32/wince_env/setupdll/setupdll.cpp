@@ -12,27 +12,9 @@
 codeINSTALL_INIT Install_Init(HWND hwndparent,
   BOOL ffirstcall,BOOL fpreviouslyinstalled,LPCTSTR pszinstalldir)
 {
-   if (!ffirstcall || !fpreviouslyinstalled) return codeINSTALL_INIT_CONTINUE;
-
-   const int NUM_FILES = 2;
-   const WCHAR *FILES[] = {
-         L"edt77001.rdm",
-         L"usc77001.dgl"
-   };
-
-   
-   WCHAR maps_dir[255];
-   wcscpy(maps_dir, pszinstalldir);
-   wcscat(maps_dir, L"\\maps");
-
-   for (int i=0; i<NUM_FILES; i++) {
-      WCHAR file[300];
-
-      _sntprintf(file, sizeof(file), L"%s\\%s", maps_dir, FILES[i]);
-      DeleteFile(file);
-   }
-    
-   return codeINSTALL_INIT_CONTINUE;
+    //do nothing
+    //return value
+    return codeINSTALL_INIT_CONTINUE;
 }
 
 ///////////////////////////////////////////////////////////
@@ -46,7 +28,7 @@ codeINSTALL_EXIT Install_Exit(
 {
    WCHAR roadmap_exe[255];
    wcscpy(roadmap_exe, pszinstalldir);
-   wcscat(roadmap_exe, L"\\FreeMap.exe");
+   wcscat(roadmap_exe, L"\\Roadmap.exe");
 
    BOOL res = CeRunAppAtEvent(roadmap_exe, NOTIFICATION_EVENT_NONE);
    res = CeRunAppAtEvent(roadmap_exe, NOTIFICATION_EVENT_RS232_DETECTED);
@@ -82,11 +64,10 @@ codeUNINSTALL_INIT Uninstall_Init(
  
     WCHAR roadmap_exe[255];
     wcscpy(roadmap_exe, pszinstalldir);
-    wcscat(roadmap_exe, L"\\FreeMap.exe");
+    wcscat(roadmap_exe, L"\\Roadmap.exe");
 
     BOOL res = CeRunAppAtEvent(roadmap_exe, NOTIFICATION_EVENT_NONE);
 
-/*
     //initialize character array
     memset(pszfilepath,0,sizeof(pszfilepath));
 
@@ -106,7 +87,6 @@ codeUNINSTALL_INIT Uninstall_Init(
         DeleteFile(pszfilepath);
     }
 
-*/
     //return value
     return codeUNINSTALL_INIT_CONTINUE;
 }
@@ -121,4 +101,5 @@ codeUNINSTALL_EXIT Uninstall_Exit(HWND hwndparent)
     //return value
     return codeUNINSTALL_EXIT_DONE;
 }
+
 

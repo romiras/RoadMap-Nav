@@ -734,14 +734,19 @@ static char const *RoadMapStartLongClickMenu[] = {
 static char const *RoadMapStartQuickMenu[] = {
 
    "address",
+   "updaterange",
+   "addeditnote",
+   "viewmarkers",
+   RoadMapFactorySeparator,
+   "sync",
    RoadMapFactorySeparator,
    "detectreceiver",
    "preferences",
    "about",
-   "quit",
 
    NULL,
 };
+
 
 #ifndef UNDER_CE
 static char const *RoadMapStartKeyBinding[] = {
@@ -1166,7 +1171,6 @@ void roadmap_start (int argc, char **argv) {
    roadmap_lang_initialize     ();
    roadmap_sound_initialize    ();
 
-   roadmap_start_set_title (roadmap_lang_get ("RoadMap"));
    roadmap_gps_register_listener (&roadmap_gps_update);
 
    RoadMapStartGpsID = roadmap_string_new("GPS");
@@ -1207,6 +1211,7 @@ void roadmap_start (int argc, char **argv) {
       roadmap_screen_subscribe_after_refresh (roadmap_start_after_refresh);
 
    editor_main_initialize ();
+   editor_main_check_map ();
    navigate_main_initialize ();
 
    roadmap_trip_restore_focus ();
@@ -1246,10 +1251,5 @@ const RoadMapAction *roadmap_start_find_action (const char *name) {
    }
 
    return NULL;
-}
-
-
-void roadmap_start_set_title (const char *title) {
-   RoadMapMainTitle = title;
 }
 

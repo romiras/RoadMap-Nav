@@ -384,7 +384,3 @@ void  roadmap_file_close (RoadMapFile file) {
    close ((int)file);
 }
 
-int roadmap_file_free_space (const char *path) {
-   return -1;
-}
-

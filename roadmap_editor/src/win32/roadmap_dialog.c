@@ -301,10 +301,7 @@ int roadmap_dialog_activate (const char *name, void *context)
 		RoadMapDialogCurrent = dialog;
 
 		ShowWindow(dialog->w, SW_SHOW);
-
-      if (dialog->use_keyboard) {
-         show_sip_button (dialog->w);
-      }
+      show_sip_button (dialog->w);
 
 #ifdef UNDER_CE		
       if (dialog->use_keyboard) {
@@ -597,9 +594,7 @@ void roadmap_dialog_complete (int use_keyboard)
 	SetWindowText(dialog->w, str);
 	free(str);
 
-   if (use_keyboard) {
-      show_sip_button (dialog->w);
-   }
+   show_sip_button (dialog->w);
 
    if (count == 1) {
 #ifdef UNDER_CE
@@ -836,26 +831,23 @@ static HWND create_item(RoadMapDialogItem item, HWND parent)
 
 	const char *name = item->name;
 
+	if (name[0] == '.') {
+		name++;
+	}
+
 	length = strlen(name);
 	title = (char*)malloc (length + 6);
 
 	if (title != NULL) {
 
 		title[0] = ' ';
-
-      if (name[0] == '.') {
-         length--;
-         name++;
-		   strcpy (title+1, name);
-      } else {
-   		strcpy (title+1, name);
-	   	if (name[length-1] != ':') {
-		   	title[++length] = ':';
-   		}
-      }
-
+		strcpy (title+1, name);
+		if (name[length-1] != ':') {
+			title[++length] = ':';
+		}
 		title[++length] = ' ';
 		title[++length] = 0;
+
 	}
 
 	switch (item->widget_type) {
@@ -1149,8 +1141,9 @@ static void MoveControlls (HWND hDlg, RoadMapDialogItem frame, int width, int he
    
    if (frame == NULL) return;
    
-   GetClientRect(frame->w, &rc);
-   dc = GetDC(frame->w);
+   GetWindowRect(hDlg, &rc);
+
+   dc = GetDC(hDlg);
    for (item = frame->children; item != NULL; item = item->next) {
       LPWSTR name;
       SIZE text_size;
@@ -1384,10 +1377,6 @@ INT_PTR CALLBACK DialogFunc(HWND hDlg, UINT message, WPARAM wParam,
 			SHInitDialog(&shidi);
 
 	      return (INT_PTR)TRUE;
-#else
-		 if (num_containers < 3) {
-			SetWindowPos(hDlg, HWND_TOP, 10, 30, 300, min_height+100, SWP_NOMOVE|SWP_DRAWFRAME);
-		 }
 #endif
 
 		}
@@ -1396,7 +1385,7 @@ INT_PTR CALLBACK DialogFunc(HWND hDlg, UINT message, WPARAM wParam,
 		{
 				RECT rc;
 
-				GetClientRect(hDlg, &rc);
+				GetWindowRect(hDlg, &rc);
 		    	lParam = MAKELPARAM(rc.right-rc.left, rc.bottom-rc.top);
 		}
 	
@@ -1419,7 +1408,6 @@ INT_PTR CALLBACK DialogFunc(HWND hDlg, UINT message, WPARAM wParam,
 				int column_separator = 5;
 				int curr_x;
 				int num_buttons = 0;
-				unsigned int cur_button_width = BUTTON_WIDTH;
 
 				for (frame = dialog->children; frame != NULL;
 								frame = frame->next) {
@@ -1428,13 +1416,12 @@ INT_PTR CALLBACK DialogFunc(HWND hDlg, UINT message, WPARAM wParam,
 					}
 				}
 
-            if (num_buttons <= 2) cur_button_width = (int)(BUTTON_WIDTH * 1.5);
-				if (((cur_button_width + column_separator) * num_buttons) >=
+				if (((BUTTON_WIDTH + column_separator) * num_buttons) >=
 								(unsigned)width) {
-					curr_x = width - cur_button_width - 1;
+					curr_x = width - BUTTON_WIDTH - 1;
 				} else {
-					curr_x = width - cur_button_width -
-						(width - (cur_button_width + column_separator) *
+					curr_x = width - BUTTON_WIDTH -
+						(width - (BUTTON_WIDTH + column_separator) *
 						 num_buttons) / 2;
 				}
 
@@ -1442,8 +1429,8 @@ INT_PTR CALLBACK DialogFunc(HWND hDlg, UINT message, WPARAM wParam,
 								frame = frame->next) {
 					if (frame->widget_type != ROADMAP_WIDGET_CONTAINER) {
 						MoveWindow(frame->w,
-							curr_x, curr_y, cur_button_width, row_height, TRUE);
-						curr_x -= cur_button_width + column_separator;
+							curr_x, curr_y, BUTTON_WIDTH, row_height, TRUE);
+						curr_x -= BUTTON_WIDTH + column_separator;
                } else {
                   num_containers++;
                   child_frame = frame;
@@ -1616,10 +1603,6 @@ INT_PTR CALLBACK TabDialogFunc(HWND hDlg, UINT message, WPARAM wParam,
          GetClientRect(GetParent(GetParent(hDlg)), &tab);
          width = tab.right - tab.left;
          height = tab.bottom - tab.top - MAX_ROW_HEIGHT;
-#ifndef UNDER_CE
-         width -= 10;
-         height -= 20;
-#endif
 
          MoveControlls (hDlg, frame, width, height-MAX_ROW_HEIGHT);
 		}

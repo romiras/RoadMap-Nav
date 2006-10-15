@@ -21,49 +21,14 @@ Package=<4>
 
 ###############################################################################
 
-Project: "FreeMap"=.\FreeMap\FreeMap.vcp - Package Owner=<4>
-
-Package=<5>
-{{{
-}}}
-
-Package=<4>
-{{{
-    Begin Project Dependency
-    Project_Dep_Name agg
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name fribidi
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name libdgl
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name libft
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name libguiroadmap
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name libosroadmap
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name libroadmap
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name libwinceguiroadmap
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name zlib
-    End Project Dependency
-}}}
-
-###############################################################################
-
 Project: "RoadGPS"=.\RoadGPS\RoadGPS.vcp - Package Owner=<4>
 
 Package=<5>
 {{{
+    begin source code control
+    RoadGPS
+    ..\..
+    end source code control
 }}}
 
 Package=<4>
@@ -97,6 +62,10 @@ Project: "Roadmap"=.\Roadmap\Roadmap.vcp - Package Owner=<4>
 
 Package=<5>
 {{{
+    begin source code control
+    Roadmap
+    ..\..
+    end source code control
 }}}
 
 Package=<4>
@@ -202,6 +171,10 @@ Project: "libguiroadgps"=.\libguiroadgps\libguiroadgps.vcp - Package Owner=<4>
 
 Package=<5>
 {{{
+    begin source code control
+    libguiroadgps
+    ..\..
+    end source code control
 }}}
 
 Package=<4>
@@ -214,6 +187,10 @@ Project: "libguiroadmap"=.\libguiroadmap\libguiroadmap.vcp - Package Owner=<4>
 
 Package=<5>
 {{{
+    begin source code control
+    libguiroadmap
+    ..\..
+    end source code control
 }}}
 
 Package=<4>
@@ -226,6 +203,10 @@ Project: "libosroadmap"=.\libosroadmap\libosroadmap.vcp - Package Owner=<4>
 
 Package=<5>
 {{{
+    begin source code control
+    libosroadmap
+    ..\..
+    end source code control
 }}}
 
 Package=<4>
@@ -238,6 +219,10 @@ Project: "libroadmap"=.\libroadmap\libroadmap.vcp - Package Owner=<4>
 
 Package=<5>
 {{{
+    begin source code control
+    libroadmap
+    ..\..
+    end source code control
 }}}
 
 Package=<4>
@@ -250,6 +235,10 @@ Project: "libwinceguiroadmap"=.\libwinceguiroadmap\libwinceguiroadmap.vcp - Pack
 
 Package=<5>
 {{{
+    begin source code control
+    libwinceguiroadmap
+    ..\..
+    end source code control
 }}}
 
 Package=<4>
@@ -277,6 +266,10 @@ Project: "rdmghost"=.\rdmghost\rdmghost.vcp - Package Owner=<4>
 
 Package=<5>
 {{{
+    begin source code control
+    rdmghost
+    ..\..\..
+    end source code control
 }}}
 
 Package=<4>
