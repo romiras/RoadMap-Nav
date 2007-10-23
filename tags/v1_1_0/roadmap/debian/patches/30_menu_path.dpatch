@@ -1,0 +1,67 @@
+#! /bin/sh /usr/share/dpatch/dpatch-run
+## 30_menu_path.dpatch by Petter Reinholdtsen <pere@hungry.com>
+##
+## All lines beginning with `## DP:' are a description of the patch.
+##
+## DP: Correct path to program in menu entry.
+## DP: Debian meny entries need to use XPM icons to be compatible with
+## DP: all window managers in debian.  Changes menu icon to get an
+## DP: icon within 32x32 pixels.
+
+@DPATCH@
+Index: roadmap/src/Makefile
+===================================================================
+RCS file: /cvsroot/roadmap/roadmap/src/Makefile,v
+retrieving revision 1.66
+diff -u -3 -p -r1.66 Makefile
+--- roadmap/src/Makefile	5 Nov 2005 08:49:41 -0000	1.66
++++ roadmap/src/Makefile	13 Nov 2005 13:02:44 -0000
+@@ -267,6 +267,7 @@ strip:
+ 
+ clean:
+ 	rm -f *.o *.a *.da $(BUILD) $(TOOLS) $(DRIVERS)
++	rm -f roadmap-32.xpm roadmap.xpm
+ 	# Clean up CVS backup files as well.
+ 	$(RM) .#*
+ 	for module in icons $(RDMODULES) ; \
+@@ -294,6 +295,9 @@ install:
+ 	mkdir -p $(DESTDIR)$(ICONDIR)
+ 	cd icons && $(MAKE) ICONDIR="$(DESTDIR)$(ICONDIR)" install
+ 	cp -f roadmap*.png $(DESTDIR)$(ICONDIR)/.
++	convert roadmap.png roadmap.xpm
++	convert roadmap-32.png roadmap-32.xpm
++	cp -f roadmap.xpm roadmap-32.xpm $(DESTDIR)$(ICONDIR)/.
+ 	mkdir -p $(DESTDIR)$(desktopdir)
+ 	cp -f roadmap.desktop $(DESTDIR)$(desktopdir)/.
+ 	mkdir -p $(DESTDIR)$(man1dir)
+Index: roadmap/src/roadmap.menu
+===================================================================
+RCS file: /cvsroot/roadmap/roadmap/src/roadmap.menu,v
+retrieving revision 1.2
+diff -u -3 -p -r1.2 roadmap.menu
+--- roadmap/src/roadmap.menu	23 Nov 2004 08:34:58 -0000	1.2
++++ roadmap/src/roadmap.menu	13 Nov 2005 13:02:44 -0000
+@@ -3,5 +3,5 @@
+   section="Apps/Tools"\
+   title="RoadMap"\
+   hints="Street navigation system"\
+-  command="/usr/local/bin/roadmap"\
+-  icon="/usr/share/pixmaps/gnome-globe.png"
++  command="/usr/bin/roadmap"\
++  icon="/usr/share/pixmaps/roadmap-32.xpm"
+Index: roadmap/src/roadmap.desktop
+===================================================================
+RCS file: /cvsroot/roadmap/roadmap/src/roadmap.desktop,v
+retrieving revision 1.1
+diff -u -3 -p -r1.1 roadmap.desktop
+--- roadmap/src/roadmap.desktop	26 Oct 2003 18:55:39 -0000	1.1
++++ roadmap/src/roadmap.desktop	13 Nov 2005 13:02:44 -0000
+@@ -2,7 +2,7 @@
+ Comment=RoadMap
+ Comment=Car Navigation System
+ Exec=roadmap
+-Icon=roadmap.png
++Icon=roadmap.xpm
+ Type=Application
+ Name=RoadMap
+ GenericName=Map Viewer

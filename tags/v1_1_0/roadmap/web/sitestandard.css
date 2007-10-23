@@ -1,0 +1,101 @@
+
+
+body.roadmap {
+	font-family:Times;
+	background-image: url('background2.jpg');
+	margin-left:    250px;    /* leave room for navigation bar */
+	margin-right:    50px;
+}
+
+/* same as above, but use plain background for pages with lots of reading */
+body.roadmap-doc {
+	font-family:Times;
+	background-color: #48fbc4; /* matched to background2.jpg */
+	margin-left:    250px;
+	margin-right:    50px;
+}
+
+
+div.navigation-bar {
+
+  left:           5px;         /* wide left margin  */
+  position:       fixed;       /* prevent scrolling */
+
+  padding:        10px;
+  background-image: url('background2.jpg');
+  border-left:    1px solid black;
+  border-right:   2px solid black;
+  border-top:     3px solid black;
+  border-bottom:  1px solid black;
+}
+
+
+/* make vertical bars that appear between menu items on non-CSS browsers
+ * invisible on CSS browsers.
+ */
+.invisible {
+  display:        none;
+}
+
+a.navitem:link { text-decoration: none }
+a.navitem:visited { text-decoration: none }
+a.navitem:active { text-decoration: none }
+
+.navitem {
+  display:        block;         /* forces line breaks between items       */
+  margin-bottom:  0px;
+  padding:        0px;
+  font-size:      14.0pt; 
+  font-family:    Times;
+  text-align:     left;
+}
+
+a.navitem2:link { text-decoration: none }
+a.navitem2:visited { text-decoration: none }
+a.navitem2:active { text-decoration: none }
+
+.navitem2
+{
+  display:        block;         /* forces line breaks between items       */
+  margin-bottom:  0px;
+  margin-left:    15px;
+  padding:        0px;
+  font-size:      10.0pt; 
+  font-family:    Times;
+  text-align:     left;
+}
+
+
+/*
+ *  This adds some spacing between the logo and the first navbar item.
+ *
+ *   add 'id="first-navitem"' to the first item's <a tag to use.
+ */
+
+#first-navitem {
+
+  /* not important */
+  margin-top:     15px;
+}
+
+
+/*
+ *  This inserts the logo into the navigation bar.
+ *
+ */
+
+span.navbar-image:after {
+
+  /* important */
+  content: url(roadmap-right.png); /* inserts image after dummy SPAN element */
+}
+
+
+
+
+/*  ---  Content styles  ----------------------------------------  */
+p {
+  /* not important */
+  text-align:     left;
+  color:          #000000;
+}
