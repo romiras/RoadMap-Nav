@@ -1,8 +1,0 @@
-[Desktop Entry]
-Comment=Car Navigation System
-Exec=roadmap
-Icon=roadmap
-Type=Application
-Name=RoadMap
-GenericName=Map Viewer
-Categories=VectorGraphics;Graphics;Viewer;GTK;
