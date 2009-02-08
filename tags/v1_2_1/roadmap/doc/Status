@@ -1,0 +1,52 @@
+RoadMap Project Status
+Paul Fox, current RoadMap maintainer
+January 2009
+
+= New Release 1.2.0 =
+
+    RoadMap has another new release.  It's been well over a year
+    since 1.1.0 was released.  Lots of work has been done since
+    then, both in terms of features, and platform support.
+
+    Major new developments in 1.2.0 include;
+
+        - Support for OpenStreetMap maps, both geographically-based
+          (i.e., arbitrary rectangular tiles) and political (i.e.,
+          country-based).  The ability to use OSM maps moves RoadMap
+          from being a highly US-centric program to one which can
+          be useful worldwide.
+
+        - Resurrection of the Windows CE port.  Since the port is
+          supported via cross-compilation with ming32w, maintenance
+          is much easier for the developers.
+
+        - Initial support of the iPhone.
+
+    There's more detail in the changelog.
+
+
+= Two Branches =
+
+    Not much progress has been made in merging code from the forked
+    "roadmap_editor" branch, but some work has been ongoing.
+    (Managed by Ehud Shabtai "roadmap_editor" has
+    added the ability to create and edit maps, and to upload the
+    results to a central postgres database.  Since the maps as
+    created can contain the meta-data needed for successful
+    auto-navigation, that feature has been added to the
+    roadmap_editor branch as well.  This codebase is being used
+    very successfully in the FreeMap Israel project.
+    
+        http://www.freemap.co.il
+
+    (Sadly for many of us, google doesn't yet translate Hebrew.)
+
+
+= Help Wanted! =
+
+    If you know something about GIS and want to help with the
+    conversion of new map sources, or are just a good coder who
+    wants better open-source mapping capabilities, please join
+    the list and we'll figure out how you can help!
+
+

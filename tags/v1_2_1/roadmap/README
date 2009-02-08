@@ -1,0 +1,117 @@
+RoadMap User Manual and README
+
+February 2009
+
+
+= Introduction =
+
+   RoadMap is an open source program that displays street maps.
+   When a GPS receiver is available RoadMap can track the current location
+   of the vehicle on the screen, continuously adjusting the position of the
+   map; with appropriate map data, it can also identify the name of the
+   current street as well as the name of the next intersection.  RoadMap
+   can be used without a GPS receiver, as a static map viewer and address
+   finder.
+
+   RoadMap runs on various UNIX and Linux systems, but it's also ported to
+   Windows CE, and other efforts are underway.
+
+   RoadMap is released under the GPL (see the COPYING file).
+
+   RoadMap currently support map data from several sources:
+
+     - US Census Bureau (TIGER data)
+
+       The census bureau TIGER data only covers the US and its territories.
+
+     - OpenStreetMap
+
+       An external tool (buildmap_osm) can be used to fetch maps from
+       the OpenStreetMap (OSM) project.  More information about this
+       user-supported project can be found at http://www.openstreetmap.org
+
+     - Canadian RNF (Road Network File) maps
+
+       The RNF files contain road data, but currently no water
+       features or municipality information.
+
+     - Digital Charts of the Words
+
+       DCW is a set of world-wide maps produced by the US Department
+       of Defense.  The DCW contains only major highways and freeways, for
+       some parts of the world (mostly Europe and Japan) and their accuracy
+       does not allow reliable car navigation.  These maps are also quite
+       old.
+
+   RoadMap uses a binary file format for representing maps that is
+   compact enough to allow the storage of many maps on a Compact Flash or
+   MultiMedia card. The map of Los Angeles county takes a little more than
+   10 Mbytes of flash space. RoadMap comes with a set of tools to convert
+   the US Census bureau data into its own map format.
+
+   RoadMap has been designed to be usable on both desktop or laptop
+   computers, and on much smaller PDA and embedded devices, like
+   the Sharp Zaurus, the iPAQ, or the Pocket PC. 
+
+   In its current version, RoadMap can work with any of the GTK+ 1.2,
+   GTK 2.0, GPE, QT/X11 or QT/QPE graphic environments. The QT environment
+   (particularly the QT/QPE version) is mostly used for the Zaurus port (but
+   could probably be used with OPIE).  QT3 and QT4 are both supported.  The
+   most stable environment is the GTK 2.0 one (this is the one used for
+   most development).  The GPE support is and optional extension of the
+   GTK 2.0 environment and is very experimental (i.e. untested).
+   GTK 1.2 is still interesting because it's quite a bit more efficient
+   when running on limited hardware than is GTK 2.0.
+
+   RoadMap is also available on Windows CE (i.e. Pocket PC), built using the
+   mingw32ce cross-compiler.  As gpsd does not exist on Windows, the
+   Windows CE version directly listens to the GPS serial port.
+
+   RoadMap can currently display the map around a specified street address,
+   track a GPS position, and identify the current street and the next
+   intersection.  Trip support is provided (waypoints, route following, and
+   general landmarks).  Large sets of "Point of Interest" features also can
+   be displayed on the map.
+
+   The plan for the future is to implement some navigation features similar
+   to those found in commercial car navigation systems, and to port RoadMap
+   to as many environment as possible.
+
+
+= Authors =
+
+   This document, as well as RoadMap as a whole, is primarily the work
+   of Pascal Martin.  Other major contributors include Steve Woodbridge,
+   Ehud Shabtai, Paul Fox, and Danny Backx.  The RoadMap "forked road"
+   icon was designed by fmiser from the RoadMap mailing list.
+
+
+= About this Documentation =
+
+   This documentation was written using vi (what else? :-) in the format
+   supported by txt2tags. The txt2tags tool was used to produce the HTML
+   version of this manual (file web/manual.html). The HTML file can be
+   regenerated using the following command:
+
+```
+      txt2tags --toc -t html -o web/manual.html -i README
+```
+
+   The txt2tags tool is available at
+        http://txt2tags.sourceforge.net/
+
+
+
+% -- CUT HERE --
+@@ runtime-help-link Quickstart
+%!include: Quickstart
+@@ runtime-help-link Installation
+%!include: Installation
+@@ runtime-help-link UsingRoadMap
+%!include: Usage
+@@ runtime-help-link Configuration
+%!include: Configuration
+@@ runtime-help-link OpenStreetMap
+%!include: OpenStreetMap
+%!include: Map-Building
+
