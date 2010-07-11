@@ -192,9 +192,8 @@ int roadmap_navigate_retrieve_line (const RoadMapArea *focus,
                                     int *distance) {
 
     RoadMapNeighbour closest;
-    int navigation_mode = roadmap_navigate_get_mode();
 
-    if (roadmap_navigate_get_neighbours (focus, position, &closest, 1, navigation_mode) <= 0) {
+    if (roadmap_navigate_get_neighbours (focus, position, &closest, 1, -1) <= 0) {
 
        return -1;
     }
