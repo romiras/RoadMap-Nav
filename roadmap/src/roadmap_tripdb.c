@@ -30,6 +30,9 @@
  * between them) of the current route, .. .
  */
 
+
+/// PLEASE!   don't add roadmap_trip_XXXX  functions in this file.
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -55,15 +58,15 @@ static int RoadMapTripCurrentSegment = 0;		/**< where we are from the start */
 
 static RoadMapPosition	RoadMapTripLastPos;
 
-RoadMapList	RoadMapTripWaypointHead;
-RoadMapList	RoadMapTripRouteHead;
-RoadMapList	RoadMapTripTrackHead;
+// RoadMapList	RoadMapTripWaypointHead;
+// RoadMapList	RoadMapTripRouteHead;
+// RoadMapList	RoadMapTripTrackHead;
 
 /* route following flags */
-route_head *RoadMapCurrentRoute = NULL;
+// route_head *RoadMapCurrentRoute = NULL;
 
 /* These point at waypoints in the current route. */
-waypoint *RoadMapTripDest = NULL;
+// waypoint *RoadMapTripDest = NULL;
 
 /**
  * @brief
@@ -200,8 +203,6 @@ void roadmap_tripdb_waypoint_iter (const waypoint *waypointp)
  */
 void roadmap_tripdb_initialize (void)
 {
-    ROADMAP_LIST_INIT(&RoadMapTripWaypointHead);
-    ROADMAP_LIST_INIT(&RoadMapTripRouteHead);
 }
 
 /**
@@ -248,19 +249,3 @@ void roadmap_tripdb_remove_point (const char *name)
 #endif
 }
 
-/**
- *  * @brief clear the current trip
- *   */
-void roadmap_tripdb_clear (void)
-{
-	waypt_flush_queue (&RoadMapTripWaypointHead);
-	route_flush_queue (&RoadMapTripRouteHead);
-	route_flush_queue (&RoadMapTripTrackHead);
-
-	roadmap_trip_set_modified(1);
-
-	RoadMapCurrentRoute = NULL;
-	roadmap_trip_unset_route_focii ();
-
-	roadmap_trip_refresh_needed();
-}
