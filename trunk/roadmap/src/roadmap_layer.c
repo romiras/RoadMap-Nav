@@ -261,7 +261,7 @@ unsigned int roadmap_layer_max_pen(void) {
 int roadmap_layer_navigable (int mode, int *layers, int size)
 {
     int i;
-    int mask = 1 << mode;
+    int mask = (mode == -1) ? ~0 : (1 << mode);
     int count = 0;
 
     RoadMapLayer *layer;
@@ -273,7 +273,7 @@ int roadmap_layer_navigable (int mode, int *layers, int size)
 
         layer = RoadMapLayerCurrentClass->layers + i - 1;
 
-        if (layer->navigation_modes & mask) {
+        if (mode == -1 || layer->navigation_modes & mask) {
 
            if (roadmap_layer_is_visible (layer)) {
               if (count >= size) break;
