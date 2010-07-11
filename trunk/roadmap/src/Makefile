@@ -57,7 +57,6 @@ RMLIBOBJS = $(RMLIBSRC:.c=.o)
 RMGUISRC = roadmap_sprite.c \
 	roadmap_object.c \
 	roadmap_trip.c \
-	roadmap_tripdb.c \
 	roadmap_track.c \
 	roadmap_landmark.c \
 	roadmap_features.c \
@@ -300,7 +299,6 @@ RMHEADERS = \
 	roadmap_track.h \
 	roadmap_trigonometry.h \
 	roadmap_trip.h \
-	roadmap_tripdb.h \
 	roadmap_turns.h \
 	roadmap_types.h \
 	roadmap_vii.h \
@@ -406,6 +404,7 @@ endif
 
 ifeq ($(USE_NAVIGATE_PLUGIN),yes)
 NAVIGATE_PLUGINSRC = \
+	roadmap_tripdb.c \
 	navigate/navigate.c \
 	navigate/navigate_bar.c \
 	navigate/navigate_plugin.c \
@@ -415,6 +414,7 @@ NAVIGATE_PLUGINSRC = \
 	navigate/navigate_route.c
 
 NAVIGATE_PLUGIN_HDR = \
+	roadmap_tripdb.h \
 	navigate/navigate_bar.h \
 	navigate/navigate_cost.h \
 	navigate/navigate.h \

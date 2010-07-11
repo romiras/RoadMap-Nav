@@ -1581,7 +1581,9 @@ void roadmap_start (int argc, char **argv) {
    roadmap_option_initialize   ();
    roadmap_math_initialize     ();
    roadmap_trip_initialize     ();
+#ifdef HAVE_NAVIGATE_PLUGIN
    roadmap_tripdb_initialize   ();
+#endif
    roadmap_track_initialize    ();
    roadmap_landmark_initialize ();
    roadmap_features_initialize ();
