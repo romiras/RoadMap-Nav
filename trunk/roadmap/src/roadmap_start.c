@@ -1,7 +1,7 @@
 /*
  * LICENSE:
  *
- *   (c) Copyright 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+ *   (c) Copyright 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
  *	 Pascal F. Martin, Paul Fox, Ehud Shabtai, Danny Backx,
  *	 and others.
  *
@@ -1243,13 +1243,7 @@ static void roadmap_start_gps_listen
 
          roadmap_object_move (RoadMapStartGpsID, gps_position);
 
-#ifdef HAVE_TRIP_PLUGIN
-	 /* Here Danny FIX ME FIXME */
-         trip_set_gps (gps_time, gps_position);
          roadmap_trip_set_gps (gps_time, gps_position);
-#else
-         roadmap_trip_set_gps (gps_time, gps_position);
-#endif
          roadmap_gps_set_messages(gps_position);
 
          roadmap_log_reset_stack ();
@@ -1710,6 +1704,7 @@ void roadmap_start (int argc, char **argv) {
  */
 void roadmap_start_exit (void)
 {
+    roadmap_main_remove_periodic (roadmap_start_periodic);
     roadmap_main_set_cursor (ROADMAP_CURSOR_WAIT);
     roadmap_driver_shutdown ();
     roadmap_history_save();
@@ -1724,6 +1719,7 @@ void roadmap_start_exit (void)
     roadmap_trip_preserve_focus();
 #endif
     roadmap_config_save (0);
+    roadmap_display_shutdown ();
     roadmap_gps_shutdown ();
     roadmap_log (ROADMAP_WARNING, "RoadMap exiting, time %s", roadmap_start_now());
 }
