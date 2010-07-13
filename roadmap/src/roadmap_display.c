@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright (c) 2009, Danny Backx
+ *   Copyright (c) 2009, 2010, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -834,4 +834,12 @@ void roadmap_display_initialize (void) {
         ("preferences", &RoadMapConfigDisplayFontSize, "20");
 
     roadmap_main_set_periodic (3000, roadmap_display_periodic);
+}
+
+/**
+ * @brief clean up periodic call
+ */
+void roadmap_display_shutdown (void)
+{
+    roadmap_main_remove_periodic (roadmap_display_periodic);
 }
