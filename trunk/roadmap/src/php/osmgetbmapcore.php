@@ -918,7 +918,9 @@ function downloadToXml($serverhost,$serverpath,$query) {
 			    ":" . $_SERVER['PHP_AUTH_PW']) . "\r\n");
 		}
 		fwrite($fp, "User-Agent: OSMtoCSV/1.0\r\n");
-		fwrite($fp, "Accept-encoding: gzip\r\n");
+		//
+		// Don't accept gzip until we get this to work
+		// fwrite($fp, "Accept-encoding: gzip\r\n");
 		fwrite($fp, "Connection: Close\r\n");
 		fwrite($fp, "\r\n");
 		//doLog("wrote to socket");
