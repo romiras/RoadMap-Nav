@@ -33,6 +33,22 @@ DESKTOP = GTK2
 # DESKTOP = QPE4
 # DESKTOP = WINCE
 # DESKTOP = IPHONE
+# DESKTOP = ANDROID
+
+# Support for Android
+# You'll need the NDK for this.
+# NDK is the Native Development Kit - what you need to link Android
+# apps with other programming languages than java.
+#
+# Don't use -O -mthumb together in the Android 2.1 NDK - this triggers a bug in the compiler.
+#
+# NDK = /home/danny/src/android/android-ndk-r4
+# CROSS=arm-eabi-
+# CFLAGS += -I$(NDK)/build/platforms/android-5/arch-arm/usr/include \
+# 	  -I$(NDK)/apps/ndk_demo/project/jni \
+# 	  -DANDROID \
+# 	  -fno-short-enums -g
+# LIBS +=
 
 # Support for WINCE is still a work in progress.
 # If you select WINCE for your WinCE device, you'll need the
