@@ -32,6 +32,8 @@ import android.content.res.AssetManager;
 import android.content.pm.PackageManager;
 import android.content.pm.ApplicationInfo;
 
+import android.os.PowerManager;
+
 public class RoadMap extends Activity
 {
 	private LocationManager mgr = null;
@@ -40,7 +42,9 @@ public class RoadMap extends Activity
 	Panel	p;
 	Menu	myMenu = null;
 
-	AssetManager	asm;
+	AssetManager		asm;
+	PowerManager		power;
+	PowerManager.WakeLock	wl;
 
 	/*
 	 * References to native functions
@@ -82,6 +86,13 @@ public class RoadMap extends Activity
 		mgr = (LocationManager)getSystemService(LOCATION_SERVICE);
 
 		/*
+		 * Keep on the screen, possibly dimmed.
+		 */
+		power = (PowerManager)getSystemService(POWER_SERVICE);
+		wl = power.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "RoadMap");
+		wl.acquire();
+
+		/*
 		 * Some experimental code - not really used yet - to try and
 		 * figure out stuff about Android packaging, bitmaps, ..
 		 *
@@ -114,6 +125,19 @@ public class RoadMap extends Activity
 		// RoadMapStart();
 	}
 
+	@Override
+	public void onPause()
+	{
+		super.onPause();
+		wl.release();
+	}
+
+	@Override
+	public void onRestart()
+	{
+		super.onRestart();
+		wl.acquire();
+	}
 
 	private void displayFiles (AssetManager mgr, String path) {
 		try {
