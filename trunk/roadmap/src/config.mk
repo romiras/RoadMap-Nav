@@ -113,6 +113,11 @@ DESKTOP = GTK2
 EXPAT = YES
 # EXPAT = NO
 
+# Experimental code
+# Use the new libgps
+CFLAGS += -DROADMAP_USE_LIBGPS
+LIBS += -lgps
+
 # RoadMap users in the USA will probably use the Tiger maps from
 # the US Census bureau.  These maps do not requre "shapefile"
 # support when building the rdm format of the maps.  Users in
