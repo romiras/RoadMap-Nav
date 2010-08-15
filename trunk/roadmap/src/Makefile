@@ -93,7 +93,10 @@ RGGUIOBJS = $(RGGUISRC:.c=.o)
 RMPLUGINSRC = \
 	roadmap_copy.c \
 	roadmap_httpcopy.c \
-	$(EDITOR_PLUGINSRC) $(TRIP_PLUGINSRC) $(NAVIGATE_PLUGINSRC)
+	$(EDITOR_PLUGINSRC) \
+	$(TRIP_PLUGINSRC) \
+	$(NAVIGATE_PLUGINSRC) \
+	$(POI_PLUGINSRC)
 
 RMPLUGINOBJS=$(RMPLUGINSRC:.c=.o)
 
@@ -343,20 +346,22 @@ FONT = LiberationSans-Bold.ttf
 # different than that built in the web subdirectory.)
 MANUAL = usermanual.html
 
+RUNTIME = $(RDMLIBS) libguiroadmap.a
+
 # more products
 ifeq ($(DESKTOP),WINCE)
 BUILD = # buildus
 else
+ifeq ($(DESKTOP),ANDROID)
+BUILD = # buildus
+else
 BUILD = buildmap buildmap_osm buildus buildplace dumpmap
-# rdmindex -- removed from default build.  it's unfinished s/w, and
-# its presence is confusing.
-endif
-
-RUNTIME = $(RDMLIBS) libguiroadmap.a
-ifneq ($(DESKTOP),WINCE)
 RUNTIME += libguiroadgps.a
 DRIVERS = rdmkismet rdmghost rdmfriends rdmtrace rdmxchange
 TOOLS = sunrise
+# rdmindex -- removed from default build.  it's unfinished s/w, and
+# its presence is confusing.
+endif
 endif
 
 # the "ALL_..." variables are important in that they drive the
@@ -398,6 +403,23 @@ ALL_SUBDIRS +=
 
 else
 TRIP_PLUGINSRC =
+endif
+
+# --- Additions for POI plugin -------------------------------
+
+ifeq ($(USE_POI_PLUGIN),yes)
+POI_PLUGINSRC = \
+		poi/poi_plugin.c \
+		poi/poi.c
+
+POC_PLUGIN_HDR = \
+		 poi/poi.h \
+		 poi/poi_plugin.h
+
+CFLAGS += -DHAVE_POI_PLUGIN
+PLUGIN_CLEAN += ${POI_PLUGINSRC:.c=.o}
+else
+POI_PLUGINSRC =
 endif
 
 # --- Additions for Navigate plugin -------------------------------
