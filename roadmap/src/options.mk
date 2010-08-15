@@ -96,7 +96,11 @@ else
 ifeq ($(DESKTOP),IPHONE)
 	RDMODULES=iphone
 else
+ifeq ($(DESKTOP),ANDROID)
+	RDMODULES=android
+else
 	RDMODULES=$(ALL_RDMODULES)
+endif
 endif
 endif
 endif
@@ -255,9 +259,15 @@ ifeq ($(DESKTOP),WINCE)
 		-D_TXT=\".txt\" -D_EXE=\".exe\"
 	LIBS := $(LIBS) -lm
 else
-	CFLAGS += -I$(TOP) -I/usr/local/include \
-		  -D_TXT=\"\" -D_EXE=\"\"
-	LIBS := -L/usr/local/lib $(LIBS) -lm
+	ifeq ($(DESKTOP),ANDROID)
+		CFLAGS += -I$(TOP) -I/opt/android/include \
+			  -D_TXT=\"\" -D_EXE=\"\"
+		LIBS := -L/opt/android/lib $(LIBS) -lm
+	else
+		CFLAGS += -I$(TOP) -I/usr/local/include \
+			  -D_TXT=\"\" -D_EXE=\"\"
+		LIBS := -L/usr/local/lib $(LIBS) -lm
+	endif
 endif
 
 CXXFLAGS = $(CFLAGS)
