@@ -1,8 +1,8 @@
-/* roadmap.h - general definitions use by the RoadMap program.
- *
+/*
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
+ *   Copyright 2010 Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -21,12 +21,20 @@
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+/**
+ * @file
+ * @brief roadmap.h - general definitions use by the RoadMap program.
+ */
+
 #ifndef INCLUDE__ROADMAP__H
 #define INCLUDE__ROADMAP__H
 
 #include "roadmap_types.h"
 #ifdef _WIN32
 #include "win32/roadmap_win32.h"
+#endif
+#ifdef ANDROID
+#include <android/log.h>
 #endif
 
 
