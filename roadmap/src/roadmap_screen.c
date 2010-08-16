@@ -2,6 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
+ *   Copyright 2010 Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -182,7 +183,9 @@ static struct roadmap_screen_point_buffer Points;
 static RoadMapPen RoadMapBackground = NULL;
 static RoadMapPen RoadMapPenEdges = NULL;
 
-
+/**
+ * @brief
+ */
 static void roadmap_screen_setfont(void) {
 
    const char *p;
@@ -211,6 +214,9 @@ static void roadmap_screen_setfont(void) {
    }
 }
 
+/**
+ * @brief
+ */
 static void roadmap_screen_start_progress () {
 
     RoadMapScreenProgressDelay =
@@ -227,6 +233,10 @@ static void roadmap_screen_start_progress () {
     }
 }
 
+/**
+ * @brief
+ * @param newcursor
+ */
 void roadmap_screen_set_cursor (RoadMapCursor newcursor) {
    static RoadMapCursor lastcursor;
 
@@ -250,7 +260,12 @@ void roadmap_screen_set_cursor (RoadMapCursor newcursor) {
    lastcursor = newcursor;
 }
 
-
+/**
+ * @brief
+ * @param total
+ * @param completed
+ * @return
+ */
 int roadmap_screen_busy_check(int total, int completed) {
 
    static int last_completed;
@@ -286,6 +301,11 @@ int roadmap_screen_busy_check(int total, int completed) {
    return ret;
 }
 
+/**
+ * @brief
+ * @param pb
+ * @param size
+ */
 static void roadmap_screen_pb_init
             (struct roadmap_screen_point_buffer *pb, int size) {
 
@@ -305,7 +325,9 @@ static void roadmap_screen_pb_init
     pb->end = pb->data + pb->size;
 }
 
-
+/**
+ * @brief
+ */
 static void roadmap_screen_flush_points (void) {
 
    if (Points.cursor == Points.data) return;
@@ -319,7 +341,9 @@ static void roadmap_screen_flush_points (void) {
    Points.cursor  = Points.data;
 }
 
-
+/**
+ * @brief
+ */
 static void roadmap_screen_flush_lines (void) {
 
    int count = RoadMapScreenObjects.cursor - RoadMapScreenObjects.data;
@@ -592,6 +616,9 @@ static void roadmap_screen_draw_line (const RoadMapPosition *from,
    dbg_time_end(DBG_TIME_DRAW_ONE_LINE);
 }
 
+/**
+ * @brief
+ */
 static int roadmap_screen_flush_polygons (void) {
 
    int count = RoadMapScreenObjects.cursor - RoadMapScreenObjects.data;
@@ -612,7 +639,9 @@ static int roadmap_screen_flush_polygons (void) {
    return 1;
 }
 
-
+/**
+ * @brief
+ */
 static int roadmap_screen_draw_polygons (void) {
 
    static RoadMapGuiPoint null_point = {0, 0};
@@ -651,6 +680,7 @@ static int roadmap_screen_draw_polygons (void) {
    if (! roadmap_is_visible (ROADMAP_SHOW_AREA)) return 0;
 
    polycount = roadmap_polygon_count();
+   roadmap_log(ROADMAP_DEBUG, "roadmap_screen_draw_polygons : %d polygons", polycount);
    if (polycount == 0) return 0;
 
    /* for every polygon... */
@@ -854,7 +884,9 @@ static int roadmap_screen_draw_polygons (void) {
    return drew + roadmap_screen_flush_polygons ();
 }
 
-
+/**
+ * @brief
+ */
 static void roadmap_screen_draw_square_edges (int square) {
 
    int count;
@@ -993,7 +1025,6 @@ static int roadmap_screen_draw_square
    RoadMapPen layer_pen;
    int fips;
    int drawn = 0;
-
 
    roadmap_log_push ("roadmap_screen_draw_square");
 
@@ -1399,6 +1430,9 @@ static int roadmap_screen_repaint_leave(int total, int progress) {
     return 0;
 }
 
+/**
+ * @brief
+ */
 void roadmap_screen_repaint (void) {
 
     static int *fipslist = NULL;
@@ -1877,6 +1911,7 @@ void roadmap_screen_refresh (void) {
     int force_refresh = 0;
 
     roadmap_log_push ("roadmap_screen_refresh");
+    roadmap_log(ROADMAP_DEBUG, "roadmap_screen_refresh");
 
     if (roadmap_trip_is_focus_changed()) {
 
@@ -2149,6 +2184,16 @@ void roadmap_screen_text_angle
     }
 }
 
+/**
+ * @brief initialize
+ * @param id
+ * @param text
+ * @param size
+ * @param width
+ * @param ascent
+ * @param descent
+ * @param can_tilt
+ */
 void roadmap_screen_text_extents 
         (int id, const char *text, int size,
          int *width, int *ascent, int *descent, int *can_tilt) {
@@ -2161,10 +2206,16 @@ void roadmap_screen_text_extents
     }
 }
 
+/**
+ * @brief initialize
+ */
 void roadmap_screen_state_refresh(void) {
     roadmap_start_request_repaint_map(REPAINT_MAYBE);
 }
 
+/**
+ * @brief initialize
+ */
 void roadmap_screen_initialize (void) {
 
    roadmap_config_declare
@@ -2242,7 +2293,52 @@ void roadmap_screen_initialize (void) {
 
 }
 
+/**
+ * @brief cleanup
+ */
+void roadmap_screen_shutdown (void)
+{
+	RoadMapScreenInitialized = 0;
+	RoadMapScreenFrozen = 0;
+	RoadMapScreenDragging = 0;
 
+	RoadMapScreenViewMode = VIEW_MODE_2D;
+	RoadMapScreenOrientationDynamic = 1;
+	RoadMapScreen3dHorizon = 0;
+	RoadMapScreenLabels = 0;
+	RoadMapScreenRotation = 0;
+	RoadMapScreenWidth = 0;
+	RoadMapScreenHeight = 0;
+
+	RoadMapLineFontSelect = 0;
+
+	RoadMapScreenDeltaX = 0;
+	RoadMapScreenDeltaY = 0;
+
+	SquareOnScreen = NULL;
+	SquareOnScreenCount = 0;
+
+	RoadMapScreenLastPen = NULL;
+
+	RoadMapScreenBusyStart = 0;
+	RoadMapScreenBusyDelay = 0;
+	RoadMapScreenProgressStart = 0;
+	RoadMapScreenProgressDelay = 0;
+	RoadmapScreenProgressBar = 0;
+
+	RoadMapScreenChordingEvent = 0;
+	// static RoadMapGuiPoint RoadMapScreenChordingAnchors[MAX_CHORDING_POINTS];
+
+	// LinePoints = NULL;
+	// Points = NULL;
+
+	RoadMapBackground = NULL;
+	RoadMapPenEdges = NULL;
+}
+
+/**
+ * @brief
+ */
 void roadmap_screen_set_initial_position (void) {
 
     RoadMapScreenInitialized = 1;
