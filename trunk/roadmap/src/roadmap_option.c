@@ -118,13 +118,19 @@ char *roadmap_icon_path (void) {
    return roadmap_option_icons;
 }
 
-
+/**
+ * @brief return the default verbosity
+ * @return the default verbosity
+ */
 int roadmap_verbosity (void) {
 
    return roadmap_option_verbose;
 }
 
-
+/**
+ * @brief return the current debug level
+ * @return the current debug level
+ */
 char **roadmap_debug (void) {
 
    return roadmap_option_debug;
