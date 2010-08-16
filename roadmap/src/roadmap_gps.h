@@ -1,5 +1,4 @@
-/* roadmap_gps.h - GPS interface for the RoadMap application.
- *
+/*
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
@@ -19,6 +18,11 @@
  *   You should have received a copy of the GNU General Public License
  *   along with RoadMap; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+/**
+ * @file
+ * @brief roadmap_gps.h - GPS interface for the RoadMap application.
  */
 
 #ifndef INCLUDED__ROADMAP_GPS__H
