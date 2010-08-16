@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright (c) 2008, Danny Backx.
+ *   Copyright (c) 2008, 2010, Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -1037,4 +1037,25 @@ void roadmap_config_reload(const char *name)
 		}
 		return;
 	}
+}
+
+/*
+ * @brief recursive helper function for cleanup
+ * @param p pointer to chain to be cleaned up
+ */
+static void roadmap_config_recursive_cleanup (RoadMapConfig *p)
+{
+   if (p == 0)
+      return;
+   roadmap_config_recursive_cleanup(p->next);
+   free(p);
+}
+
+/**
+ * @brief cleanup
+ */
+void roadmap_config_shutdown (void)
+{
+   roadmap_config_recursive_cleanup(RoadMapConfigFiles);
+   RoadMapConfigFiles = NULL;
 }

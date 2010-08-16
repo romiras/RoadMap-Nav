@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2003 Pascal F. Martin
- *   Copyright (c) 2008, 2009, Danny Backx.
+ *   Copyright (c) 2008, 2009, 2010, Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -229,10 +229,11 @@ static RoadMapClass *roadmap_layer_find_class(RoadMapClass *list,
 }
 
 
-static int roadmap_layer_is_visible (RoadMapLayer *layer) {
-    
-    return roadmap_math_declutter
-                (roadmap_config_get_integer (&layer->declutter));
+static int roadmap_layer_is_visible (RoadMapLayer *layer)
+{
+   int	d = roadmap_config_get_integer (&layer->declutter),
+        r = roadmap_math_declutter (d);
+   return r;
 }
 
 
@@ -312,7 +313,9 @@ done:
     return count;
 }
 
-
+/**
+ * @brief
+ */
 void roadmap_layer_adjust (void) {
     
     int i;
@@ -320,7 +323,6 @@ void roadmap_layer_adjust (void) {
     int future_thickness;
     unsigned int pen_index;
     RoadMapLayer *layer;
-
 
     if (RoadMapLayerCurrentClass == NULL) return;
 
@@ -737,7 +739,11 @@ static void roadmap_layer_load_file (const char *class_file) {
        roadmap_log (ROADMAP_WARNING,
                     "class %s (set %s) redefined in %s",
                     class_name, set->name, class_file);
-       return;
+       /*
+	* Removed the return statement to cope with multiple passes.
+	* 
+	* return;
+	*/
     }
 
 
@@ -1122,4 +1128,13 @@ int roadmap_layer_speed(int layer)
 
 	TheLayer = RoadMapLayerCurrentClass->layers + layer - 1;
 	return roadmap_config_get_integer (&TheLayer->speed);
+}
+
+void roadmap_layer_shutdown (void)
+{
+   RoadMapNavigationModeCount = 0;
+   RoadMapLayerCurrentClass = NULL;
+   RoadMapMaxUsedPen = 1;
+   RoadMapMaxDefinedLayers = 1;
+   RoadMapLayerActiveSet = NULL;
 }
