@@ -1,10 +1,8 @@
-/**
- * @brief roadmap_path.c - a module to handle file path in an OS independent way.
- *
+/*
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright (c) 2008, Danny Backx.
+ *   Copyright (c) 2008, 2010, Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -21,7 +19,11 @@
  *   You should have received a copy of the GNU General Public License
  *   along with RoadMap; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
+ */
+
+/**
+ * @file
+ * @brief roadmap_path.c - (Unix version of) a module to handle file path in an OS independent way.
  */
 
 #include <stdio.h>
@@ -34,7 +36,11 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <dirent.h>
+#ifndef ANDROID
 #include <ftw.h>
+#else
+#include <android/log.h>
+#endif
 
 #include "roadmap.h"
 #include "roadmap_file.h"
@@ -67,19 +73,27 @@ typedef struct {
 } RoadMapPathItem ;
 
 static RoadMapPathList RoadMapPaths = NULL;
+static const char *RoadMapUser = NULL;
+static const char *RoadMapTrips = NULL;
+static char *RoadMapPathHome = NULL;
+static const char *RoadMapPathEmptyList = NULL;
 
-
-/* This list exist because the user context is a special case
+/**
+ * @brief This list exist because the user context is a special case
  * that we want to handle in a standard way.
  */
 static const char *RoadMapPathUser[] = {
+#ifdef ANDROID
+  "/sdcard/roadmap",
+#endif
    "~/.roadmap",
    NULL
 };
 static const char RoadMapPathUserPreferred[] = "~/.roadmap";
 
 
-/* The hardcoded path for configuration files (the "config" path).
+/**
+ * @brief The hardcoded path for configuration files (the "config" path).
  * (Note that the user directory (~/.roadmap) does not appear here
  * as it is implicitely used by the callers--see above.)
  */ 
@@ -87,7 +101,11 @@ static const char *RoadMapPathConfig[] = {
 #ifdef ROADMAP_CONFIG_DIR
    ROADMAP_CONFIG_DIR,
 #endif
-#ifdef QWS
+#if defined(ANDROID)
+   "/sdcard/roadmap",
+   "/data/roadmap",
+   "/data/data/net.sourceforge.projects.roadmap",
+#elif defined(QWS)
    /* This is for the Sharp Zaurus PDA.. */
    "/opt/QtPalmtop/share/roadmap",
    "/mnt/cf/QtPalmtop/share/roadmap",
@@ -149,12 +167,18 @@ static const char RoadMapPathMapsPreferred[] =
 
 /* The default path for the icon files (the "icons" path): */
 static const char *RoadMapPathIcons[] = {
+#ifdef ANDROID
+   "/sdcard/roadmap/icons",
+   "/data/roadmap/icons",
+   "/data/data/net.sourceforge.projects.roadmap/icons",
+#else
    "~/.roadmap/pixmaps",
 #ifdef ROADMAP_CONFIG_DIR
    ROADMAP_CONFIG_DIR "/pixmaps",
 #endif
    "/usr/local/share/pixmaps",
    "/usr/share/pixmaps",
+#endif
    NULL
 };
 
@@ -179,9 +203,8 @@ static void roadmap_path_addlist(RoadMapList *list, char *path);
  */
 static RoadMapPathList roadmap_path_list_create(const char *name,
                                      const char **items,
-                                     const char *preferred) {
-
-
+                                     const char *preferred)
+{
    RoadMapPathList new_path;
    char *p;
 
@@ -230,7 +253,6 @@ struct {
  * @return
  */
 static RoadMapPathList roadmap_path_find (const char *name, int init_ok) {
-
    RoadMapPathList cursor;
 
    for (cursor = RoadMapPaths; cursor != NULL; cursor = cursor->next) {
@@ -327,8 +349,6 @@ char *roadmap_path_remove_extension (const char *name) {
 
 static const char *roadmap_path_home (void) {
 
-   static char *RoadMapPathHome = NULL;
-
    if (RoadMapPathHome == NULL) {
 
       RoadMapPathHome = getenv("HOME");
@@ -342,9 +362,11 @@ static const char *roadmap_path_home (void) {
 }
 
 
+/**
+ * @brief Determine the path for user files, create if necessary
+ * @return the path
+ */
 const char *roadmap_path_user (void) {
-
-    static const char *RoadMapUser = NULL;
 
     if (RoadMapUser == NULL) {
         RoadMapUser = roadmap_path_first ("user");
@@ -356,8 +378,6 @@ const char *roadmap_path_user (void) {
 
 const char *roadmap_path_trips (void) {
     
-    static const char *RoadMapTrips = NULL;
-
     if (RoadMapTrips == NULL) {
 
         RoadMapTrips = roadmap_config_get(&RoadMapConfigPathTrips);
@@ -396,6 +416,7 @@ static char *roadmap_path_expand (const char *item, size_t length) {
 
 /* Path lists operations. -------------------------------------------------- */
 
+#ifndef ANDROID
 /* bah.  globals.  too bad ftw() doesn't take a "void *cookie" argument */
 static RoadMapList *RoadMapPathFTWDirList;
 static int RoadMapPathFTWPathLen;
@@ -421,8 +442,11 @@ static int roadmap_path_ftw_cb
 
    return 0;
 }
+#endif
 
-static void roadmap_path_addlist(RoadMapList *list, char *path) {
+static void roadmap_path_addlist(RoadMapList *list, char *path)
+{
+#ifndef ANDROID
    int len;
    len = strlen(path);
    if (len > 4 && strcmp(&path[len-4], "/...") == 0) {
@@ -431,7 +455,8 @@ static void roadmap_path_addlist(RoadMapList *list, char *path) {
       RoadMapPathFTWPathLen = len - 4;
       ftw(path, roadmap_path_ftw_cb, 30);
       free(path);
-   } else {
+   } else
+   {
       RoadMapPathItem *pathitem;
       pathitem = malloc(sizeof(RoadMapPathItem));
       roadmap_check_allocated(pathitem);
@@ -439,10 +464,30 @@ static void roadmap_path_addlist(RoadMapList *list, char *path) {
       pathitem->path = path;
       roadmap_list_append(list, &pathitem->link);
    }
+#else
+   /* Android : ignore the /... stuff */
+   int len;
+   len = strlen(path);
+   if (len > 4 && strcmp(&path[len-4], "/...") == 0) {
+      path[len-4] = '\0';
+   }
+   {
+      RoadMapPathItem *pathitem;
+      pathitem = malloc(sizeof(RoadMapPathItem));
+      roadmap_check_allocated(pathitem);
+
+      pathitem->path = path;
+      roadmap_list_append(list, &pathitem->link);
+   }
+#endif
 }
 
+/**
+ * @brief
+ * @param name
+ * @param path
+ */
 void roadmap_path_set (const char *name, const char *path) {
-
    const char *item;
    const char *next_item;
    RoadMapListItem *elem, *tmp;
@@ -532,6 +577,11 @@ const char *roadmap_path_next  (const char *name, const char *current) {
 }
 
 
+/**
+ * @brief select the last element from a path
+ * @param name use this named path
+ * @return the element requested
+ */
 const char *roadmap_path_last (const char *name) {
 
    RoadMapPathList path_list = roadmap_path_find (name, 1);
@@ -549,7 +599,12 @@ const char *roadmap_path_last (const char *name) {
    return NULL;
 }
 
-
+/**
+ * @brief called after roadmap_path_last, return previous elements of the list
+ * @param name keyword
+ * @param current the previous path
+ * @return the previous one
+ */
 const char *roadmap_path_previous (const char *name, const char *current) {
 
    RoadMapPathList path_list = roadmap_path_find (name, 1);
@@ -570,8 +625,11 @@ const char *roadmap_path_previous (const char *name, const char *current) {
 }
 
 
-/* This function always return a hardcoded default location,
+/**
+ * @brief This function always return a hardcoded default location,
  * which is the recommended location for these objects.
+ * @param name the name of the path
+ * @return a path name
  */
 const char *roadmap_path_preferred (const char *name) {
 
@@ -592,9 +650,6 @@ void roadmap_path_create (const char *path) {
    snprintf (command, sizeof(command), "mkdir -p %s", path);
    system (command);
 }
-
-
-static char *RoadMapPathEmptyList = NULL;
 
 /**
  * @brief create a list of files matching the specified path and extension
@@ -680,7 +735,11 @@ void roadmap_path_free (const char *path) {
    }
 }
 
-
+/**
+ * @brief find the absolute path for an icon, keep the name convention in mind
+ * @param name the name of this icon (e.g. "gps")
+ * @return full path name (e.g. /sdcard/roadmap/icons/rm_gps.png)
+ */
 const char *roadmap_path_search_icon (const char *name) {
 
    char result[256];
@@ -728,3 +787,26 @@ const char *roadmap_path_temporary (void) {
    return "/var/tmp";
 }
 
+/**
+ * @brief recursively clean up a linked list
+ */
+static void roadmap_path_cleanup_recursive (RoadMapPathList p)
+{
+	if (p == NULL)
+		return;
+	roadmap_path_cleanup_recursive (p->next);
+	free(p);
+}
+
+/**
+ * @brief cleanup
+ */
+void roadmap_path_shutdown (void)
+{
+	roadmap_path_cleanup_recursive (RoadMapPaths);
+	RoadMapPaths = NULL;
+
+	RoadMapUser = NULL;	// this only points into a structure, free() happens elsewhere
+	RoadMapTrips = NULL;	// this only points into a structure, free() happens elsewhere
+	RoadMapPathHome = NULL;	// getenv() result or a constant : don't free
+}
