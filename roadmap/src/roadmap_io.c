@@ -1,8 +1,8 @@
-/* roadmap_io.c - a module to hide OS-specific IO operations.
- *
+/*
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
+ *   Copyright 2010 Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -19,7 +19,11 @@
  *   You should have received a copy of the GNU General Public License
  *   along with RoadMap; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
+ */
+
+/**
+ * @file
+ * @brief roadmap_io.c - a module to hide OS-specific IO operations.
  *
  * DESCRIPTION:
  *
@@ -51,6 +55,7 @@ int roadmap_io_read  (RoadMapIO *io, void *data, int size) {
          return roadmap_spawn_read_pipe (io->os.pipe, data, size);
 
       case ROADMAP_IO_NULL:
+      case ROADMAP_IO_ANDROID:
          return 0; /* Cannot receive anything from there. */
    }
    return -1;
@@ -74,6 +79,7 @@ int roadmap_io_write (RoadMapIO *io, const void *data, int length) {
          return roadmap_spawn_write_pipe (io->os.pipe, data, length);
 
       case ROADMAP_IO_NULL:
+      case ROADMAP_IO_ANDROID:
          return length; /* It's all done, since there is nothing to do. */
    }
    return -1;
@@ -101,6 +107,7 @@ void  roadmap_io_close (RoadMapIO *io) {
          break;
 
       case ROADMAP_IO_NULL:
+      case ROADMAP_IO_ANDROID:
          break;
    }
    io->subsystem = ROADMAP_IO_INVALID;
@@ -133,9 +140,9 @@ int roadmap_io_same (RoadMapIO *io1, RoadMapIO *io2) {
          break;
 
       case ROADMAP_IO_NULL:
+      case ROADMAP_IO_ANDROID:
          break; /* No reason to be any different from each other. */
    }
 
    return 1; /* We did not find any difference. */
 }
-
