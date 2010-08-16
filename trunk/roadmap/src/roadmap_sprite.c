@@ -2,6 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
+ *   Copyright 2010 Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -1023,4 +1024,16 @@ void roadmap_sprite_load (void)
 
    RoadMapSpritePercent = roadmap_config_get_integer (&RoadMapConfigSpritePercent);
 
+}
+
+/**
+ * @brief cleanup
+ */
+void roadmap_sprite_shutdown (void)
+{
+	RoadMapSpriteList = NULL;
+	RoadMapSpriteDefault = NULL;
+	RoadMapSpritePointCount = 0;
+	RoadMapSpritePoints = NULL;
+	RoadMapSpriteFile = NULL;
 }
