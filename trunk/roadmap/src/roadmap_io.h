@@ -1,8 +1,8 @@
-/* roadmap_file.h - a module to open/read/close a roadmap database file.
- *
+/*
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
+ *   Copyright 2010 Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -19,7 +19,11 @@
  *   You should have received a copy of the GNU General Public License
  *   along with RoadMap; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
+ */
+
+/**
+ * @file
+ * @brief roadmap_file.h - a module to open/read/close a roadmap database file.
  *
  * DESCRIPTION:
  *
@@ -48,6 +52,7 @@
 #define ROADMAP_IO_SERIAL  3
 #define ROADMAP_IO_PIPE    4
 #define ROADMAP_IO_NULL    5 /* Bottomless pitt (i.e., no IO). */
+#define ROADMAP_IO_ANDROID 6
 
 typedef struct {
 
@@ -69,4 +74,3 @@ void  roadmap_io_close (RoadMapIO *io);
 int roadmap_io_same (RoadMapIO *io1, RoadMapIO *io2);
 
 #endif // INCLUDE__ROADMAP_IO__H
-
