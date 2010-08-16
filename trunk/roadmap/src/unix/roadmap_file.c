@@ -111,9 +111,9 @@ void roadmap_file_remove (const char *path, const char *name) {
 }
 
 /**
- * @brief
- * @param path
- * @param name
+ * @brief check existence of a file
+ * @param path full path name
+ * @param name file name
  */
 int roadmap_file_exists (const char *path, const char *name) {
 
