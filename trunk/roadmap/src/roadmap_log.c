@@ -1,8 +1,8 @@
-/* roadmap_log.c - a module for managing uniform error & info messages.
- *
+/*
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
+ *   Copyright 2010 Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -19,12 +19,10 @@
  *   You should have received a copy of the GNU General Public License
  *   along with RoadMap; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * SYNOPSYS:
- *
- *   #include "roadmap.h"
- *
- *   void roadmap_log (int level, char *format, ...);
+ */
+/**
+ * @file
+ * @brief roadmap_log.c - a module for managing uniform error & info messages.
  *
  * This module is used to control and manage the appearance of messages
  * printed by the roadmap program. The goals are (1) to produce a uniform
@@ -41,7 +39,6 @@
 #include "roadmap.h"
 #include "roadmap_path.h"
 #include "roadmap_file.h"
-
 
 #define ROADMAP_LOG_STACK_SIZE 256
 
@@ -148,15 +145,28 @@ static void roadmap_log_one (struct roadmap_message_descriptor *category,
    fprintf (file, "%c%s %s, line %d: ", saved, category->prefix, source, line);
    vfprintf(file, format, ap);
    fprintf (file, "\n");
+#ifdef ANDROID
+   if (saved != ' ')
+	   __android_log_vprint (ANDROID_LOG_ERROR, "RoadMap", format, ap);
+#endif
 
    if (category->show_stack && RoadMapLogStackCursor > 0) {
 
       int indent = 8;
 
+#ifndef ANDROID
       fprintf (file, "   Call stack:\n");
+#else
+      __android_log_print (ANDROID_LOG_ERROR, "RoadMap", "   Call stack:\n");
+#endif
 
       for (i = 0; i < RoadMapLogStackCursor; ++i) {
+#ifndef ANDROID
           fprintf (file, "%*.*s %s\n", indent, indent, "", RoadMapLogStack[i]);
+#else
+          __android_log_print (ANDROID_LOG_ERROR, "RoadMap",
+			  "%*.*s %s\n", indent, indent, "", RoadMapLogStack[i]);
+#endif
           indent += 3;
       }
    }
