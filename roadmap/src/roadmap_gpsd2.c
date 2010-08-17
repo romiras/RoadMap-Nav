@@ -2,7 +2,6 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright 2010, Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -23,9 +22,11 @@
 
 /**
  * @file
- * @brief roadmap_gpsd2.c - a module to interact with gpsd using its library.
- *   This module hides the gpsd library API (version 2).
- *   If ROADMAP_USES_LIBGPS is defined, use the (pre) version 3 libgps.
+ * @brief roadmap_gpsd2.c - a module to interact with gpsd, version 2.
+ *
+ * Note : version 2 of gpsd is being obsoleted in 2010. An implementation
+ * that works with version 3 is in roadmap_gpsd3.c .
+ *
  */
 
 #include <time.h>
@@ -36,11 +37,6 @@
 #include "roadmap.h"
 #include "roadmap_gpsd2.h"
 #include "roadmap_math.h"
-
-#ifdef ROADMAP_USES_LIBGPS
-#include "errno.h"
-#include "gps.h"
-#endif
 
 
 static RoadMapGpsdNavigation RoadmapGpsd2NavigationListener = NULL;
@@ -103,18 +99,9 @@ static int roadmap_gpsd2_decode_coordinate (const char *input) {
 }
 
 RoadMapSocket gpsd2_socket;
-#ifdef ROADMAP_USES_LIBGPS
-struct gps_data_t	*gpsdp;
-#endif
 
 RoadMapSocket roadmap_gpsd2_connect (const char *name) {
-#ifdef ROADMAP_USES_LIBGPS
-   gpsdp = gps_open(name, "2947");
-   if (gpsdp == NULL)
-      return ROADMAP_INVALID_SOCKET;
-   gps_stream(gpsdp, WATCH_NMEA, NULL);
-   return (RoadMapSocket)gpsdp->gps_fd;
-#else
+
    gpsd2_socket = roadmap_net_connect ("tcp", name, 2947);
 
    if (ROADMAP_NET_IS_VALID(gpsd2_socket)) {
@@ -134,16 +121,11 @@ RoadMapSocket roadmap_gpsd2_connect (const char *name) {
    }
 
    return gpsd2_socket;
-#endif
 }
 
-/**
- * @brief this is probably a keepalive FIX ME
- */
 void roadmap_gpsd2_periodic (void) {
-#ifndef ROADMAP_USES_LIBGPS
+
    roadmap_net_send (gpsd2_socket, "q\n", 2);
-#endif
 }
 
 void roadmap_gpsd2_subscribe_to_navigation (RoadMapGpsdNavigation navigation) {
@@ -166,80 +148,18 @@ void roadmap_gpsd2_subscribe_to_dilution (RoadMapGpsdDilution dilution) {
 
 int roadmap_gpsd2_decode (void *user_context,
                           void *decoder_context, char *sentence) {
+
+   int got_navigation_data;
+
+   int got_o = 0;
+   int got_q = 0;
+
    int status;
    int latitude;
    int longitude;
    int altitude;
    int speed;
    int steering;
-
-   int  gps_time = 0;
-
-#ifdef ROADMAP_USES_LIBGPS
-   int i, j, s;
-   static bool	used[MAXCHANNELS];
-#define	MAX_POSSIBLE_SATS	(MAXCHANNELS - 2)
-
-   if (gps_read(gpsdp) < 0) {
-      roadmap_log(ROADMAP_ERROR, "gpsd error %d", errno);
-   }
-
-   if (gpsdp->satellites_visible == 0)
-      return 0;	// No data
-
-   roadmap_log(ROADMAP_WARNING, "gpsd sats %d", gpsdp->satellites_visible);
-
-   status = (gpsdp->fix.mode >= MODE_2D) ? 'A' : 'V';
-
-   if (gpsdp->fix.mode >= MODE_2D) {
-      if (isnan(gpsdp->fix.longitude) == 0) {
-         longitude = 1000000 * gpsdp->fix.longitude;
-      }
-      if (isnan(gpsdp->fix.latitude) == 0) {
-         latitude = 1000000 * gpsdp->fix.latitude;
-      }
-      if (isnan(gpsdp->fix.speed) == 0) {
-         speed = gpsdp->fix.speed;
-      }
-      if (isnan(gpsdp->fix.altitude) == 0) {
-         altitude = gpsdp->fix.altitude;
-      }
-      if (isnan(gpsdp->fix.time) == 0) {
-         gps_time = gpsdp->fix.time;
-      }
-   }
-
-   RoadmapGpsd2NavigationListener
-         (status, gps_time, latitude, longitude, altitude, speed, steering);
-
-   /* See demo app cgps.c in gpsd source distribution */
-   /* Must build bit vector of which satellites are used */
-   for (i = 0; i < MAXCHANNELS; i++) {
-      used[i] = false;
-      for (j = 0; j < gpsdp->satellites_used; j++)
-         if (gpsdp->used[j] == gpsdp->PRN[i])
-	    used[i] = true;
-   }
-
-   for (i=0, s=1; i<MAX_POSSIBLE_SATS; i++) {
-      if (gpsdp->used[i]) {
-         (*RoadmapGpsd2SatelliteListener)
-            (s,				// sequence
-	     gpsdp->PRN[i],		// id
-	     gpsdp->elevation[i],	// elevation
-	     gpsdp->azimuth[i],		// azimuth
-	     (int)gpsdp->ss[i],		// strength
-	     gpsdp->used[i]);		// active
-	 s++;
-      }
-   }
-   (*RoadmapGpsd2SatelliteListener) (0, 0, 0, 0, 0, 0);
-   return 1;
-#else
-   int got_navigation_data;
-
-   int got_o = 0;
-   int got_q = 0;
 
    char *reply[256];
    int   reply_count;
@@ -253,6 +173,8 @@ int roadmap_gpsd2_decode (void *user_context,
    double pdop = 0.0;
    double hdop = 0.0;
    double vdop = 0.0;
+
+   int  gps_time = 0;
 
    reply_count = roadmap_input_split (sentence, ',', reply, 256);
 
@@ -484,5 +406,5 @@ end_of_decoding:
    }
 
    return 0;
-#endif
 }
+

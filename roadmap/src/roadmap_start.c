@@ -100,6 +100,9 @@
 #ifdef HAVE_NAVIGATE_PLUGIN
 #include "navigate/navigate_plugin.h"
 #endif
+#ifdef HAVE_POI_PLUGIN
+#include "poi/poi_plugin.h"
+#endif
 
 #ifdef _WIN32
 extern const char *roadmap_build(void);
@@ -267,6 +270,16 @@ static void roadmap_start_about (void) {
        "received a copy of the GPL license along" CRLF
        "with this program." CRLF
    );
+
+}
+
+/**
+ * @brief get a string indicating current time
+ * @return the string, pointer to a static array (overwritten next call, don't free)
+ */
+char * roadmap_start_now() {
+
+   return roadmap_time_get_date_hours_minutes (time(NULL));
 
 }
 
@@ -1059,7 +1072,6 @@ static const char *RoadMapStartMenu[] = {
    NULL
 };
 
-
 static char const *RoadMapStartToolbar[] = {
 
    "destination",
@@ -1270,6 +1282,14 @@ static void roadmap_start_gps_listen
    }
 }
 
+/**
+ * @brief GPS monitor : periodically provide information about reception, satellites, ..
+ * @param reception
+ * @param precision
+ * @param satellites
+ * @param activecount
+ * @param count
+ */
 static void roadmap_start_gps_monitor
                (int reception,
                 const RoadMapGpsPrecision *precision,
@@ -1347,6 +1367,11 @@ static void roadmap_start_set_timeout (RoadMapCallback callback) {
 }
 
 
+/**
+ * @brief second part of startup, maybe window oriented.
+ * Note : not sure why this works across platforms if it may rely on windows
+ * being created already.
+ */
 static void roadmap_start_window (void) {
 
    roadmap_main_new (RoadMapMainTitle,
@@ -1426,16 +1451,6 @@ void roadmap_start_unfreeze (void) {
    roadmap_screen_unfreeze ();
 }
 
-/**
- * @brief get a string indicating current time
- * @return the string, pointer to a static array (overwritten next call, don't free)
- */
-char * roadmap_start_now() {
-
-   return roadmap_time_get_date_hours_minutes (time(NULL));
-
-}
-
 static void roadmap_start_screen_configure (void) {
    roadgps_screen_configure();
    roadmap_screen_configure();
@@ -1447,6 +1462,9 @@ int	editor_plugin_id = 0;
 #ifdef HAVE_NAVIGATE_PLUGIN
 int	navigate_plugin_id = 0;
 #endif
+#ifdef HAVE_POI_PLUGIN
+int	poi_plugin_id = 0;
+#endif
 #ifdef HAVE_TRIP_PLUGIN
 int	trip_plugin_id = 0;
 #endif
@@ -1457,6 +1475,9 @@ int	trip_plugin_id = 0;
  */
 void roadmap_start_plugin_register (void)
 {
+#ifdef HAVE_POI_PLUGIN
+	poi_plugin_id = poi_plugin_register ();
+#endif
 #if 1
 	/*
 	 * Workaround for now : register plugins here
@@ -1621,6 +1642,7 @@ void roadmap_start (int argc, char **argv) {
 
    roadmap_osm_initialize();
 
+   roadmap_factory_initialize();
    roadmap_factory_keymap (RoadMapStartActions, RoadMapStartKeyBinding);
 
    roadmap_option (argc, argv, 1, roadmap_start_usage);
@@ -1719,8 +1741,14 @@ void roadmap_start_exit (void)
     roadmap_trip_preserve_focus();
 #endif
     roadmap_config_save (0);
-    roadmap_display_shutdown ();
+    roadmap_screen_shutdown();
+    roadmap_display_shutdown  ();
     roadmap_gps_shutdown ();
+    roadmap_factory_shutdown();
+    roadmap_config_shutdown ();
+    roadmap_sprite_shutdown ();
+    roadmap_layer_shutdown ();
+    roadmap_path_shutdown ();
     roadmap_log (ROADMAP_WARNING, "RoadMap exiting, time %s", roadmap_start_now());
 }
 

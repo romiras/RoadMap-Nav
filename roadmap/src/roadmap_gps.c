@@ -2,6 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
+ *   Copyright 2010 Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -43,10 +44,15 @@
 #include "roadmap_state.h"
 #include "roadmap_nmea.h"
 #include "roadmap_gpsd2.h"
+#include "roadmap_gpsd3.h"
 #include "roadmap_vii.h"
 #include "roadmap_driver.h"
 
 #include "roadmap_gps.h"
+
+#ifdef ANDROID
+#include "android/roadmap_androidgps.h"
+#endif
 
 
 static RoadMapConfigDescriptor RoadMapConfigGPSAccuracy =
@@ -86,6 +92,9 @@ static roadmap_gps_logger   RoadMapGpsLoggers[ROADMAP_GPS_CLIENTS] = {NULL};
 #define ROADMAP_GPS_GPSD2    2
 #define ROADMAP_GPS_VII      3
 #define ROADMAP_GPS_OBJECT   4
+#define ROADMAP_GPS_ANDROID  5
+#define ROADMAP_GPS_GPSD3    6
+
 static int RoadMapGpsProtocol = ROADMAP_GPS_NONE;
 
 static void *RoadMapGpsLostFixMessage;
@@ -230,33 +239,42 @@ static char roadmap_gps_update_status (char status) {
 }
 
 /**
- * @brief
+ * @brief Record the time at which we got GPS data, so we know how old our latest data is.
  */
 static void roadmap_gps_got_data(void) {
    RoadMapGpsLatestData = time(NULL);
 }
 
 /**
- * @brief
+ * @brief spread information that comes in periodically to all 'listeners'.
+ * Similar mechanism to "monitors", the information provided is different.
  */
 static void roadmap_gps_call_all_listeners (void) {
 
    int i;
+   int count = 0;
 
    for (i = 0; i < ROADMAP_GPS_CLIENTS; ++i) {
 
       if (RoadMapGpsListeners[i] == NULL) break;
 
+      count++;
       (RoadMapGpsListeners[i]) (RoadMapGpsReception,
                                 RoadMapGpsReceivedTime,
                                 &RoadMapGpsQuality,
                                 &RoadMapGpsReceivedPosition);
    }
 
+   if (count == 0) {
+      /* Note this frequently happens when the application is shutting down. */
+      roadmap_log (ROADMAP_DEBUG, "roadmap_gps_call_all_listeners: no listeners");
+      return;
+   }
 }
 
 /**
- * @brief
+ * @brief spread information that comes in periodically to all "monitors".
+ * Similar mechanism to 'listeners', the information provided is different.
  */
 static void roadmap_gps_call_all_monitors (void) {
 
@@ -368,7 +386,11 @@ static void roadmap_gps_pgrme (void *context, const RoadMapNmeaFields *fields) {
                                       fields->pgrme.horizontal_unit);
 }
 
-
+/**
+ * @brief
+ * @param context
+ * @param fields
+ */
 static void roadmap_gps_gga (void *context, const RoadMapNmeaFields *fields) {
 
    char status;
@@ -591,6 +613,16 @@ static void roadmap_gps_nmea (void) {
 
 /* GPSD (or other) protocol support ------------------------------------ */
 
+/**
+ * @brief
+ * @param status
+ * @param gmt_time
+ * @param latitude
+ * @param longitude
+ * @param altitude
+ * @param speed
+ * @param steering
+ */
 static void roadmap_gps_navigation (char status,
                                     int gmt_time,
                                     int latitude,
@@ -634,7 +666,20 @@ static void roadmap_gps_navigation (char status,
    roadmap_gps_got_data();
 }
 
-
+/**
+ * @brief This function takes individual satellite date,
+ * calculates the number of (active) satellites,
+ * and stores all data in RoadMapGpsDetected.
+ *
+ * It appears to rely on "sequence" arriving as a sequence :-)
+ *
+ * @param sequence
+ * @param id
+ * @param elevation
+ * @param azimuth
+ * @param strength
+ * @param active
+ */
 static void roadmap_gps_satellites  (int sequence,
                                      int id,
                                      int elevation,
@@ -722,10 +767,15 @@ static void roadmap_gps_object_monitor (RoadMapDynamicString id) {
 
 /* End of OBJECT protocol support -------------------------------------- */
 
+int RoadMapGpsInitialized = 0;
 
 void roadmap_gps_initialize (void) {
 
-   static int RoadMapGpsInitialized = 0;
+   int i;
+
+   for (i=0; i<ROADMAP_GPS_CLIENTS; ++i) {
+      RoadMapGpsListeners[i] = NULL;
+   }
 
    if (! RoadMapGpsInitialized) {
 
@@ -764,13 +814,26 @@ void roadmap_gps_initialize (void) {
 
 void roadmap_gps_shutdown (void) {
 
+   int i;
+
    if (RoadMapGpsLink.subsystem == ROADMAP_IO_INVALID) return;
+
+#ifdef ANDROID
+   if (RoadMapGpsLink.subsystem == ROADMAP_IO_ANDROID) {
+      roadmap_androidgps_close ();
+   }
+#endif
 
    (*RoadMapGpsPeriodicRemove) (roadmap_gps_keep_alive);
 
    (*RoadMapGpsLinkRemove) (&RoadMapGpsLink);
 
    roadmap_io_close (&RoadMapGpsLink);
+
+   RoadMapGpsInitialized = 0;
+   for (i=0; i<ROADMAP_GPS_CLIENTS; ++i) {
+      RoadMapGpsListeners[i] = NULL;
+   }
 }
 
 /**
@@ -790,8 +853,8 @@ void roadmap_gps_register_listener (roadmap_gps_listener listener) {
 }
 
 /**
- * @brief
- * @param monitor
+ * @brief add monitor, this is called when new info about GPS reception is available
+ * @param monitor the function to be called
  */
 void roadmap_gps_register_monitor (roadmap_gps_monitor monitor) {
 
@@ -805,7 +868,10 @@ void roadmap_gps_register_monitor (roadmap_gps_monitor monitor) {
    }
 }
 
-
+/**
+ * @brief function to call the system-dependent stuff to activate/open the GPS,
+ * and register the right functions in the system-independent roadmap_io module.
+ */
 void roadmap_gps_open (void) {
 
    const char *url;
@@ -817,6 +883,7 @@ void roadmap_gps_open (void) {
    RoadMapGpsLatestData = 0;
    roadmap_gps_update_reception ();
 
+#ifndef ANDROID
    url = roadmap_gps_source ();
 
    if (url == NULL) {
@@ -861,6 +928,16 @@ void roadmap_gps_open (void) {
 
             RoadMapGpsLink.subsystem = ROADMAP_IO_NET;
             RoadMapGpsProtocol = ROADMAP_GPS_GPSD2;
+      }
+
+   } else if (strncasecmp (url, "gpsd3://", 8) == 0) {
+
+      RoadMapGpsLink.os.socket = roadmap_gpsd3_connect (url+8);
+
+      if (ROADMAP_NET_IS_VALID(RoadMapGpsLink.os.socket)) {
+
+            RoadMapGpsLink.subsystem = ROADMAP_IO_NET;
+            RoadMapGpsProtocol = ROADMAP_GPS_GPSD3;
       }
 
    } else if (strncasecmp (url, "vii://", 6) == 0) {
@@ -997,10 +1074,18 @@ void roadmap_gps_open (void) {
       (*RoadMapGpsPeriodicRemove) (roadmap_gps_open);
       RoadMapGpsRetryPending = 0;
    }
+#else /* ANDROID */
+   RoadMapGpsLink.subsystem = ROADMAP_IO_ANDROID;
+   RoadMapGpsProtocol = ROADMAP_GPS_ANDROID;
+#endif
 
-    /* Give time for the whole system to initialize itself.  */
+   /* Give time for the whole system to initialize itself.  */
    roadmap_gps_got_data();
 
+   /*
+    * Don't remove the keepalive, even if it isn't necessary for the connection :
+    * the underlying roadmap_gps_update_reception() call is required.
+    */
    (*RoadMapGpsPeriodicAdd) (roadmap_gps_keep_alive);
 
    /* Declare this IO to the GUI toolkit so that we wake up on GPS data. */
@@ -1023,6 +1108,13 @@ void roadmap_gps_open (void) {
          roadmap_gpsd2_subscribe_to_dilution   (roadmap_gps_dilution);
          break;
 
+      case ROADMAP_GPS_GPSD3:
+
+         roadmap_gpsd3_subscribe_to_navigation (roadmap_gps_navigation);
+         roadmap_gpsd3_subscribe_to_satellites (roadmap_gps_satellites);
+         roadmap_gpsd3_subscribe_to_dilution   (roadmap_gps_dilution);
+         break;
+
       case ROADMAP_GPS_VII:
 
          roadmap_vii_subscribe_to_navigation (roadmap_gps_navigation);
@@ -1030,6 +1122,17 @@ void roadmap_gps_open (void) {
 
       case ROADMAP_GPS_OBJECT:
          break;
+
+#ifdef ANDROID
+      case ROADMAP_GPS_ANDROID:
+         roadmap_log (ROADMAP_DEBUG, "Subscribe to Android GPS services");
+         roadmap_androidgps_connect (NULL);
+         roadmap_androidgps_subscribe_to_navigation (roadmap_gps_navigation);
+         roadmap_androidgps_subscribe_to_satellites (roadmap_gps_satellites);
+         roadmap_androidgps_subscribe_to_dilution   (roadmap_gps_dilution);
+         break;
+
+#endif
 
       default:
 
@@ -1100,6 +1203,12 @@ void roadmap_gps_input (RoadMapIO *io) {
          decode.decoder_context = NULL;
          break;
 
+      case ROADMAP_GPS_GPSD3:
+
+         decode.decoder = roadmap_gpsd3_decode;
+         decode.decoder_context = NULL;
+         break;
+
       case ROADMAP_GPS_VII:
 
          decode.decoder = roadmap_vii_decode;
@@ -1109,6 +1218,13 @@ void roadmap_gps_input (RoadMapIO *io) {
       case ROADMAP_GPS_OBJECT:
 
          return;
+
+#ifdef ANDROID
+      case ROADMAP_GPS_ANDROID:
+         decode.decoder = roadmap_androidgps_decode;
+	 decode.decoder_context = NULL;
+	 break;
+#endif
 
       default:
 
@@ -1128,7 +1244,9 @@ void roadmap_gps_input (RoadMapIO *io) {
       roadmap_io_close (&context);
 
       /* Try to establish a new IO channel, but don't reread a file: */
+#ifndef ANDROID
       (*RoadMapGpsPeriodicRemove) (roadmap_gps_keep_alive);
+#endif
       if (RoadMapGpsLink.subsystem != ROADMAP_IO_FILE) {
          roadmap_gps_open();
       }
@@ -1158,6 +1276,7 @@ int  roadmap_gps_is_nmea (void) {
 
       case ROADMAP_GPS_NMEA:              return 1;
       case ROADMAP_GPS_GPSD2:             return 0;
+      case ROADMAP_GPS_GPSD3:             return 0;
       case ROADMAP_GPS_VII:               return 0;
       case ROADMAP_GPS_OBJECT:            return 0;
    }
