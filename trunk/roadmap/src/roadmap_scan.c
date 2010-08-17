@@ -1,5 +1,4 @@
-/* roadmap_scan.c - a module to scan for files using path lists.
- *
+/*
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
@@ -19,15 +18,11 @@
  *   You should have received a copy of the GNU General Public License
  *   along with RoadMap; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- *
- * DESCRIPTION:
- *
- *   The roadmap_scan_first() function returns a single directory path
- *   where the given file exists.
- *
- *   The roadmap_scan_next() function returns all successive directories
- *   where to find the given file.
+ */
+
+/**
+ * @file
+ * @brief a module to scan for files using path lists.
  */
 
 #include "roadmap.h"
@@ -37,10 +32,16 @@
 #include "roadmap_scan.h"
 
 
+/**
+ * @brief returns all successive directories where to find the given file.
+ * @param set
+ * @param name
+ * @param sequence
+ * @return
+ */
 const char *roadmap_scan_next (const char *set,
                                const char *name,
                                const char *sequence) {
-
    if (roadmap_path_is_full_path(name)) {
 
       if (roadmap_file_exists (NULL, name)) {
@@ -75,7 +76,12 @@ const char *roadmap_scan_next (const char *set,
    return NULL; /* Could not find anything. */
 }
 
-
+/**
+ * @brief returns a single directory path where the given file exists.
+ * @param set
+ * @param name
+ * @return
+ */
 const char *roadmap_scan (const char *set, const char *name) {
 
    return roadmap_scan_next (set, name, NULL);
