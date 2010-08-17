@@ -36,7 +36,7 @@ RMLIBSRC = roadmap_log.c \
 	roadmap_history.c \
 	roadmap_input.c \
 	roadmap_nmea.c \
-	roadmap_gpsd2.c \
+	roadmap_gpsd2.c roadmap_gpsd3.c \
 	roadmap_io.c \
 	roadmap_gps.c \
 	roadmap_vii.c \
@@ -93,10 +93,7 @@ RGGUIOBJS = $(RGGUISRC:.c=.o)
 RMPLUGINSRC = \
 	roadmap_copy.c \
 	roadmap_httpcopy.c \
-	$(EDITOR_PLUGINSRC) \
-	$(TRIP_PLUGINSRC) \
-	$(NAVIGATE_PLUGINSRC) \
-	$(POI_PLUGINSRC)
+	$(EDITOR_PLUGINSRC) $(TRIP_PLUGINSRC) $(NAVIGATE_PLUGINSRC)
 
 RMPLUGINOBJS=$(RMPLUGINSRC:.c=.o)
 
@@ -248,7 +245,7 @@ RMHEADERS = \
 	roadmap_fuzzy.h \
 	roadmap_geocode.h \
 	roadmap_gps.h \
-	roadmap_gpsd2.h \
+	roadmap_gpsd2.h roadmap_gpsd3.h \
 	roadmap_gpx.h \
 	roadmap_gui.h \
 	roadmap_hash.h \
@@ -403,23 +400,6 @@ ALL_SUBDIRS +=
 
 else
 TRIP_PLUGINSRC =
-endif
-
-# --- Additions for POI plugin -------------------------------
-
-ifeq ($(USE_POI_PLUGIN),yes)
-POI_PLUGINSRC = \
-		poi/poi_plugin.c \
-		poi/poi.c
-
-POC_PLUGIN_HDR = \
-		 poi/poi.h \
-		 poi/poi_plugin.h
-
-CFLAGS += -DHAVE_POI_PLUGIN
-PLUGIN_CLEAN += ${POI_PLUGINSRC:.c=.o}
-else
-POI_PLUGINSRC =
 endif
 
 # --- Additions for Navigate plugin -------------------------------

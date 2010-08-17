@@ -14,6 +14,7 @@
 USE_EDITOR_PLUGIN = no
 USE_TRIP_PLUGIN = no
 USE_NAVIGATE_PLUGIN = no
+USE_POI_PLUGIN = no
 
 # default installation directory.
 # INSTALLDIR = /usr/local
@@ -113,10 +114,12 @@ DESKTOP = GTK2
 EXPAT = YES
 # EXPAT = NO
 
-# Experimental code
-# Use the new libgps
-CFLAGS += -DROADMAP_USE_LIBGPS
-LIBS += -lgps
+#
+# Implement the new gpsd protocol, referred to as gpsd3 .
+# This requires the libgps library, part of the gpsd distribution.
+#
+# CFLAGS += -DROADMAP_USES_LIBGPS
+# LIBS += -lgps
 
 # RoadMap users in the USA will probably use the Tiger maps from
 # the US Census bureau.  These maps do not requre "shapefile"
