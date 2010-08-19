@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright (c) 2009, Danny Backx
+ *   Copyright (c) 2009, 2010, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -97,6 +97,7 @@ void  roadmap_config_initialize (void);
 void  roadmap_config_load       (void);
 void  roadmap_config_save       (int force);
 void  roadmap_config_reload     (const char *);
+void  roadmap_config_shutdown   (void);
 
 int   roadmap_config_get_type (RoadMapConfigDescriptor *descriptor);
 

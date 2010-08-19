@@ -3,6 +3,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
+ *   Copyright 2010, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -28,6 +29,7 @@
 #include "roadmap_plugin.h"
 
 void roadmap_display_initialize (void);
+void roadmap_display_shutdown (void);
 
 void roadmap_display_page (const char *name);
 
