@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2003 Pascal F. Martin
- *   Copyright (c) 2008, 2009, Danny Backx.
+ *   Copyright (c) 2008, 2009, 2010, Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -102,6 +102,7 @@ void roadmap_layer_load (void);
 
 int  roadmap_layer_declare_navigation_mode (const char *name);
 void roadmap_layer_initialize (void);
+void roadmap_layer_shutdown (void);
 
 int roadmap_layer_last(void);
 int roadmap_layer_is_street(int layer);

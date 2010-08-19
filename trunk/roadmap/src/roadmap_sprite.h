@@ -3,6 +3,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
+ *   Copyright (c) 2010, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -40,6 +41,7 @@ void roadmap_sprite_draw_with_text
 	 RoadMapGuiRect *bbox, RoadMapGuiRect *text_bbox, char *text);
 
 void roadmap_sprite_bbox (const char *name, RoadMapGuiRect *bbox);
+void roadmap_sprite_shutdown (void);
 
 #endif // INCLUDE__ROADMAP_CANVAS__H
 

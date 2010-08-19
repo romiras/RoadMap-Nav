@@ -84,6 +84,7 @@ void roadmap_screen_text_angle
 void roadmap_screen_text_extents 
         (int id, const char *text, int size,
          int *width, int *ascent, int *descent, int *can_tilt);
+void roadmap_screen_shutdown (void);
 
 #ifdef ROADMAP_DBG_TIME
 

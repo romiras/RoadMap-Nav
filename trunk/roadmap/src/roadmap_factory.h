@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright (c) 2008, Danny Backx.
+ *   Copyright (c) 2008, 2010, Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -73,6 +73,7 @@ void roadmap_factory_popup (const char *title,
                             const RoadMapGuiPoint *position);
 
 void roadmap_factory_usage (const char *section, const RoadMapAction *action);
+void roadmap_factory_shutdown (void);
 
 #endif /* INCLUDE__ROADMAP_FACTORY__H */
 
