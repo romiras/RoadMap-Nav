@@ -178,7 +178,7 @@ public class RoadMap extends Activity
 		// the activity is terminated by the user.
 		//
 		System.loadLibrary("expat-1");
-		System.loadLibrary("jni");
+		System.loadLibrary("rmnative");
 	}
 
 	public void StartGPS()
