@@ -205,6 +205,8 @@ void roadmap_canvas_draw_image_text (RoadMapImage image,
                                      const RoadMapGuiPoint *position,
                                      int size, const char *text);
 
+void roadmap_canvas_shutdown (void);
+
 #ifdef IPHONE
 void roadmap_canvas_get_chording_pt (RoadMapGuiPoint points[MAX_CHORDING_POINTS]);
 int roadmap_canvas_is_chording();

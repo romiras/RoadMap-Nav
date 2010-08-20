@@ -1125,7 +1125,6 @@ void roadmap_gps_open (void) {
 
 #ifdef ANDROID
       case ROADMAP_GPS_ANDROID:
-         roadmap_log (ROADMAP_DEBUG, "Subscribe to Android GPS services");
          roadmap_androidgps_connect (NULL);
          roadmap_androidgps_subscribe_to_navigation (roadmap_gps_navigation);
          roadmap_androidgps_subscribe_to_satellites (roadmap_gps_satellites);

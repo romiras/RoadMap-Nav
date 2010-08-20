@@ -56,20 +56,13 @@ libs/armeabi/libexpat-1.so:	/opt/android/lib/libexpat-1.so
 #
 # I used this with Android 2.1
 #
-#NDKHOME=	/home/danny/src/android/android-ndk-r3
-#SDKPLAT=	${SDKHOME}/platforms/android-7
-#NDK_CFLAGS=	-I$(NDKHOME)/build/platforms/android-5/arch-arm/usr/include \
-#		-I$(NDK)/apps/ndk_demo/project/jni \
-#		-DANDROID -fno-short-enums -g
 
 NDKHOME=	/home/danny/src/android/android-ndk-r4
 SDKHOME=	/home/danny/src/android/android-sdk-linux_86
 SDKPLAT=	${SDKHOME}/platforms/android-8
 NDK_CFLAGS=	-I$(NDKHOME)/build/platforms/android-5/arch-arm/usr/include \
-		-I$(NDK)/apps/ndk_demo/project/jni \
 		-DANDROID -fno-short-enums -g
 NDK_LDFLAGS=	-nostdlib -Wl,-shared,-Bsymbolic -Wl,--no-undefined -Wl,-z,noexecstack
-#JAVAC_FLAGS=	-cp ${SDKPLAT}/android.jar -sourcepath gen:src
 JAVA=		/usr/share/java
 JAVAC_FLAGS=	-cp ${JAVA}/jaxp_parser_impl.jar:${JAVA}/xml-commons-apis.jar:${JAVA}/antlr.jar:${JAVA}/ant/ant-antlr.jar:${JAVA}/regexp.jar:${JAVA}/ant/ant-apache-regexp.jar:${JAVA}/jakarta-commons-logging.jar:${JAVA}/ant/ant-commons-logging.jar:${JAVA}/javamail.jar:${JAVA}/jaf.jar:${JAVA}/ant/ant-javamail.jar:${JAVA}/jsch.jar:${JAVA}/ant/ant-jsch.jar:/usr/lib/jvm/java/lib/tools.jar:${SDKPLAT}/android.jar -sourcepath gen:src -bootclasspath ${SDKPLAT}/android.jar
 SRCNAME=	RoadMap

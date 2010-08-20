@@ -177,8 +177,12 @@ public class RoadMap extends Activity
 		// Currently this happens only once : not unloaded / cleaned up after
 		// the activity is terminated by the user.
 		//
-		System.loadLibrary("expat-1");
-		System.loadLibrary("rmnative");
+		try {
+			System.loadLibrary("expat-1");
+			System.loadLibrary("rmnative");
+		} catch (Exception e) {
+			Log.e("RoadMap", "Shared library installation problem");
+		}
 	}
 
 	public void StartGPS()

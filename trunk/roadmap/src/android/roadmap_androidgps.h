@@ -44,6 +44,7 @@ RoadMapSocket roadmap_androidgps_connect (const char *name);
 int roadmap_androidgps_decode (void *user_context, void *decoder_context, char *sentence);
 
 void roadmap_androidgps_periodic (void);
+void roadmap_androidgps_close (void);
 
 #endif // INCLUDE__ROADMAP_ANDROIDGPS__H
 
