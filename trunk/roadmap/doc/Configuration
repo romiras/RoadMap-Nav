@@ -862,6 +862,7 @@ January 2009
          - //Comment:// The gpsd protocol (gpsd://<hostname>[:<port>]) uses
                    the NMEA raw mode of gpsd, while the gpsd2 protocol
                    (gpsd2://<hostname>[:<port>]) uses the gpsd native protocol.
+                   Newer versions of gpsd (2.90 and up) support the gpsd3 protocol.
                    The object protocol (object:<id>) makes it possible to use
                    an internal RoadMap object as GPS source (so that a driver
                    can feed the GPS position to RoadMap).  The file protocol
