@@ -41,9 +41,9 @@
 /*
  * These functions need to be called when Android has info from the GPS.
  */
-static RoadMapGpsdNavigation RoadmapGpsd2NavigationListener = NULL;
-static RoadMapGpsdSatellite  RoadmapGpsd2SatelliteListener = NULL;
-static RoadMapGpsdDilution   RoadmapGpsd2DilutionListener = NULL;
+static RoadMapGpsdNavigation navigationListener = NULL;
+static RoadMapGpsdSatellite  satelliteListener = NULL;
+static RoadMapGpsdDilution   dilutionListener = NULL;
 
 /**
  * @brief periodic call - unused on Android
@@ -54,19 +54,19 @@ void roadmap_androidgps_periodic (void)
 
 void roadmap_androidgps_subscribe_to_navigation (RoadMapGpsdNavigation navigation)
 {
-	RoadmapGpsd2NavigationListener = navigation;
+	navigationListener = navigation;
 }
 
 
 void roadmap_androidgps_subscribe_to_satellites (RoadMapGpsdSatellite satellite)
 {
-	RoadmapGpsd2SatelliteListener = satellite;
+	satelliteListener = satellite;
 }
 
 
 void roadmap_androidgps_subscribe_to_dilution (RoadMapGpsdDilution dilution)
 {
-	RoadmapGpsd2DilutionListener = dilution;
+	dilutionListener = dilution;
 }
 
 
@@ -79,15 +79,15 @@ void
 Java_net_sourceforge_projects_roadmap_RoadMap_HereAmI(JNIEnv* env, jobject thiz,
 		int status, int gpstime, int lat, int lon, int alt, int speed, int steering)
 {
-	if (! RoadmapGpsd2NavigationListener) {
+	if (! navigationListener) {
 		// FIX ME should be an exception ?
 		__android_log_print (ANDROID_LOG_ERROR, "RoadMap", "No listener");
 		return;
 	}
-	roadmap_log (ROADMAP_DEBUG,
-		"HereAmI(st %d, gps %d %d, spd %d, tm %d)",
-		status, lat, lon, speed, gpstime);
-	RoadmapGpsd2NavigationListener(status, gpstime, lat, lon, alt, speed, steering);
+
+	// roadmap_log (ROADMAP_DEBUG, "HereAmI(st %d, gps %d %d, spd %d, tm %d)", status, lat, lon, speed, gpstime);
+
+	navigationListener(status, gpstime, lat, lon, alt, speed, steering);
 
 }
 
@@ -130,7 +130,7 @@ void roadmap_androidgps_satellites (int sequence, int id, int elevation, int azi
 {
 //	__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "Satellite(%d,%d,%d,%d,%d,%d", sequence, id, elevation, azimuth, strength, active);
 
-	RoadmapGpsd2SatelliteListener(sequence, id, elevation, azimuth, strength, active);
+	satelliteListener(sequence, id, elevation, azimuth, strength, active);
 }
 
 void

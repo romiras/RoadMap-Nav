@@ -38,6 +38,7 @@
 #include "roadmap_start.h"
 #include "roadmap_config.h"
 #include "roadmap_history.h"
+#include "roadmap_canvas.h"
 
 #include "roadmap_main.h"
 #include "roadmap_time.h"
@@ -250,7 +251,6 @@ void roadmap_main_add_tool (const char *label,
 	jclass          cls;
 	jmethodID       mid;
 	jstring         jslabel, jsicon, jstip;
-	char		*fnicon;
 
 	if ((label == 0 || strlen(label) == 0) && (icon == 0 || strlen(icon) == 0))
 		return;
@@ -265,7 +265,7 @@ void roadmap_main_add_tool (const char *label,
 	 * Locate the icon bitmap here, or pass NULL.
 	 * The Java code doesn't handle this because we do it here.
 	 */
-	fnicon = roadmap_path_search_icon(icon);
+	const char *fnicon = roadmap_path_search_icon(icon);
 	jsicon = fnicon ? (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, fnicon) : NULL;
 
 	jslabel = label ? (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, label) : NULL;
@@ -339,7 +339,7 @@ void roadmap_main_set_input (RoadMapIO *io, RoadMapInput callback)
       if (RoadMapMainIo[i].io.subsystem == ROADMAP_IO_INVALID) {
          RoadMapMainIo[i].io = *io;
          RoadMapMainIo[i].callback = callback;
-         RoadMapMainIo[i].id = NULL;
+         RoadMapMainIo[i].id = 0;
          break;
       }
    }
@@ -375,6 +375,9 @@ void roadmap_main_set_periodic (int interval, RoadMapCallback callback)
 
    for (index = 0; index < ROADMAP_MAX_TIMER; ++index) {
       if (RoadMapMainPeriodicTimer[index].callback == callback) {
+	 /* this should not happen */
+	 roadmap_log(ROADMAP_ERROR, "roadmap_main_set_periodic - duplicate %d %p",
+			 interval, callback);
          return;
       }
       if (RoadMapMainPeriodicTimer[index].callback == NULL) {
@@ -423,6 +426,8 @@ void roadmap_main_remove_periodic (RoadMapCallback callback)
 	      jmethodID	mid = TheMethod(cls, "RemovePeriodic", "(I)V");
 
 	      (*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, RoadMapThiz, mid, index);
+
+	      RoadMapMainPeriodicTimer[index].callback = NULL;
       }
    }
 }
