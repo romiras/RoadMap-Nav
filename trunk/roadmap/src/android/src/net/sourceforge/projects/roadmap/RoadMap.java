@@ -222,11 +222,16 @@ public class RoadMap extends Activity
 				+ ", lon " + location.getLongitude());
 			/* */
 
+				/* getTime() returns UTC of this fix in ms since 1/1/1970 */
 			int	gpstime = (int) location.getTime(),
 				lat = (int) (location.getLatitude() * 1000000),
 				lon = (int) (location.getLongitude() * 1000000),
+				/* getAltitude() returns m */
 				alt = (int) (location.getAltitude() * 1000000),
-				speed = (int) (location.getSpeed() * 1000),
+				/* getSpeed() returns m/s, this calculation
+				 * turns it into knots, see roadmap_gpsd2.c */
+				speed = (int) (1944 * location.getSpeed() / 1000),
+				/* getBearing returns degrees East of true North */
 				steering = (int) location.getBearing();
 
 			// The code in roadmap_gps.c requires 'A' as status.
