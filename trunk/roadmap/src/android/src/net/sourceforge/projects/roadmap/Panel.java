@@ -156,9 +156,41 @@ class Panel
 		return pen.SetForeground(color);
 	}
 
+	// Copy from roadmap_canvas.h
+	private final int ROADMAP_CANVAS_RIGHT = 1;
+	private final int ROADMAP_CANVAS_BOTTOM = 2;
+	private final int ROADMAP_CANVAS_CENTER_X = 4;
+	private final int ROADMAP_CANVAS_CENTER_Y = 8;
+
 	public void DrawString(int x, int y, int corner, int size, String text)
 	{
-		DrawStringAngle(x, y, size, 0, text);
+		try {
+			paint = pen.GetPaint();
+
+			// Copy from gtk2/roadmap_canvas.c:roadmap_canvas_draw_string()
+			int width = (int)paint.measureText(text);
+			int descent = (int)paint.descent();
+			// Ascent is negative on Android
+			int ascent = (int)-paint.ascent();
+
+			int height = ascent + descent;
+
+			if ((corner & ROADMAP_CANVAS_RIGHT) != 0)
+				x -= width;
+			else if ((corner & ROADMAP_CANVAS_CENTER_X) != 0)
+				x -= width / 2;
+
+			if ((corner & ROADMAP_CANVAS_BOTTOM) != 0)
+				y -= descent;
+			else if ((corner & ROADMAP_CANVAS_CENTER_Y) != 0)
+				y -= descent + height / 2;
+			else /* TOP */
+				y += ascent;
+
+			cacheCanvas.drawText(text, x, y, paint);
+		} catch (Exception e) {
+			Log.e("RoadMap", "Exception " + e + " in DrawString");
+		}
 	}
 
 	public int Screenshot(String filename)
@@ -252,15 +284,10 @@ class Panel
 		}
 	}
 
+	// RoadMap cannot cope with the angle, so just call DrawString.
 	public void DrawStringAngle(int x, int y, int size, int angle, String text)
 	{
-		/* FIX ME Haven't looked into the angle yet */
-		try {
-			paint = pen.GetPaint();
-			cacheCanvas.drawText(text, x, y, paint);
-		} catch (Exception e) {
-			Log.e("RoadMap", "Exception " + e + " in DrawStringAngle");
-		}
+		DrawString(x, y, ROADMAP_CANVAS_CENTER_X | ROADMAP_CANVAS_BOTTOM, 0, text);
 	}
 
 	public void DrawPoints(int count, float[] points)
@@ -290,6 +317,7 @@ class Panel
 		try {
 			paint = pen.GetPaint();
 			// Log.e("RoadMap", "MeasureAscent() -> " + paint.ascent());
+			// Ascent is negative on Android
 			return (int)-paint.ascent();
 		} catch (Exception e) {
 			Log.e("RoadMap", "MeasureAscent() : exception " + e);
