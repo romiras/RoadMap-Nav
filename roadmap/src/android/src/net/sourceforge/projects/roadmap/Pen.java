@@ -11,6 +11,7 @@ import java.lang.Exception;
 class Pen {
 	private int current = -1;
 	private Paint	pens[];
+	private Paint fallback = null;
 	private int maxPens = 0;
 	private float[]	dash = new float[] {5, 5};
 	private DashPathEffect	dashEffect = null;
@@ -77,7 +78,12 @@ class Pen {
 	public Paint GetPaint()
 	{
 		try {
-			// Log.e("RoadMap", "GetPaint(" + current + ")");
+			if (pens[current] == null) {
+				Log.e("RoadMap.Pen", "GetPaint(" + current + ") replaced by dummy paint");
+				if (fallback == null)
+					fallback = new Paint();
+				return fallback;
+			}
 			return pens[current];
 		} catch (Exception e) {
 			Log.e("RoadMap", "GetPaint: failed (pen " + current + ")");

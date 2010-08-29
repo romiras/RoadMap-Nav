@@ -200,8 +200,7 @@ void roadmap_canvas_get_text_extents (const char *text, int size, int *width,
 	if (can_tilt)
 		*can_tilt = 0;	// copied from Win32 implementation
 
-	__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "text(%s) wid %d asc %d desc %d",
-			text, *width, *ascent, *descent);
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "text get extents(%s) wid %d asc %d desc %d", text, *width, *ascent, *descent);
 	return;
 }
 
@@ -338,7 +337,7 @@ void roadmap_canvas_draw_string (RoadMapGuiPoint *position, int corner, int size
 	jclass		cls = TheClass();
 	jmethodID	mid = TheMethod(cls, "DrawString", "(IIIILjava/lang/String;)V");
 
-	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "draw_string(%s)", text);
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "draw_string(%s) x %d y %d corner %d", text, position->x, position->y, corner);
 
 	js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, text);
 	(*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, PanelThiz, mid,
@@ -352,6 +351,8 @@ void roadmap_canvas_draw_string_angle (RoadMapGuiPoint *position,
 	jstring		js;
 	jclass		cls = TheClass();
 	jmethodID	mid = TheMethod(cls, "DrawStringAngle", "(IIIILjava/lang/String;)V");
+
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "draw_string_angle(%s) x %d y %d", text, position->x, position->y);
 
 	js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, text);
 	(*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, PanelThiz, mid,
@@ -389,7 +390,7 @@ void roadmap_canvas_draw_multiple_points (int count, RoadMapGuiPoint *points)
  *
  * Not doing this buffering gets the JNI into trouble.
  */
-#define	RM_MAXLINES	40
+#define	RM_MAXLINES	4000
 
 /**
  * @brief
