@@ -30,17 +30,10 @@
 #include <string.h>
 #include <stdlib.h>
 
-// #include <gtk/gtk.h>
-
-#ifdef ROADMAP_USES_GPE
-#include <libdisplaymigration/displaymigration.h>
-#endif
-
 #include "roadmap.h"
 #include "roadmap_types.h"
 #include "roadmap_start.h"
-// #include "roadmap_gtkmain.h"
-// #include "roadmap_keyboard.h"
+#include "roadmap_jni.h"
 
 #define __ROADMAP_DIALOG_NO_LANG
 #include "roadmap_dialog.h"
@@ -91,7 +84,7 @@ struct roadmap_dialog_item {
    void *context;  /* References a caller-specific context. */
 
    int widget_type;
-//    GtkWidget *w;
+   int w;
 
    short rank;
    short count;
@@ -106,10 +99,48 @@ struct roadmap_dialog_item {
 static RoadMapDialogItem RoadMapDialogWindows = NULL;
 static RoadMapDialogItem RoadMapDialogCurrent = NULL;
 
+/*
+ * JNI
+ */
+#define	MYCLS2	"net/sourceforge/projects/roadmap/RoadMap"
+static jclass	myRmClassCache = (jclass) 0;
 
+static jclass TheRoadMapClass()
+{
+	if (myRmClassCache == 0) {
+		myRmClassCache = (*RoadMapJniEnv)->FindClass(RoadMapJniEnv, MYCLS2);
+		myRmClassCache = (*RoadMapJniEnv)->NewGlobalRef(RoadMapJniEnv, myRmClassCache);
+	}
+	if (myRmClassCache == 0) {
+		__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "Class not found");
+		// throw
+		(*RoadMapJniEnv)->ThrowNew(RoadMapJniEnv,
+			(*RoadMapJniEnv)->FindClass(RoadMapJniEnv, "java/io/IOException"),
+			"A JNI Exception occurred");
+	}
+
+	return myRmClassCache;
+}
+
+static jmethodID TheMethod(const jclass cls, const char *name, const char *signature)
+{
+	jmethodID	mid;
+
+	mid = (*RoadMapJniEnv)->GetMethodID(RoadMapJniEnv, cls, name, signature);
+	if (mid == 0) {
+		(*RoadMapJniEnv)->ThrowNew(RoadMapJniEnv,
+			(*RoadMapJniEnv)->FindClass(RoadMapJniEnv, "java/io/IOException"),
+			"A JNI Exception occurred");
+	}
+	return mid;
+}
+
+/*
+ * roadmap_dialog.c
+ */
 static RoadMapDialogItem roadmap_dialog_get (RoadMapDialogItem parent,
                                              const char *name) {
-#if 0
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_get(%s)", name);
    RoadMapDialogItem child;
 
    if (parent == NULL) {
@@ -165,7 +196,6 @@ static RoadMapDialogItem roadmap_dialog_get (RoadMapDialogItem parent,
    }
 
    return child;
-#endif
 }
 
 
@@ -177,177 +207,46 @@ static void roadmap_dialog_hide_window (RoadMapDialogItem dialog) {
 #endif
 }
 
-#if 0
-static gint roadmap_dialog_action (GtkWidget *w, gpointer data) {
-
-   RoadMapDialogItem item = (RoadMapDialogItem)data;
-   RoadMapDialogCallback callback = item->callback;
-
-   if (callback != NULL) {
-
-      while (item->parent != NULL) {
-         item = item->parent;
-      }
-      RoadMapDialogCurrent = item;
-
-      (*callback) (item->name, item->context);
-   }
-
-   return FALSE;
-}
-#endif
-
-#if 0
-static gint roadmap_dialog_destroyed (GtkWidget *w, gpointer data) {
-
-   RoadMapDialogItem item = (RoadMapDialogItem)data;
-   RoadMapDialogItem child;
-
-   /* Forget about the whole Gtk dialog: it is being destroyed. */
-
-   for (child = item->children; child != NULL; child = child->next) {
-      roadmap_dialog_destroyed (w, child);
-   }
-   item->w = NULL;
-
-   return TRUE;
-}
-
-static gint roadmap_dialog_selected
-               (GtkWidget *w, GdkEventButton *event, gpointer data) {
-
-   roadmap_keyboard_set_focus ((RoadMapKeyboard) data, w);
-
-   return FALSE;
-}
-
-
-static gint roadmap_dialog_chosen (gpointer data, GtkMenuItem *w) {
-
-   RoadMapDialogSelection *selection = (RoadMapDialogSelection *)data;
-
-   if (selection != NULL) {
-
-      selection->item->value = selection->value;
-
-      if (selection->callback != NULL) {
-
-         RoadMapDialogItem item = selection->item;
-
-         while (item->parent != NULL) {
-            item = item->parent;
-         }
-         RoadMapDialogCurrent = item;
-
-         (*selection->callback) (item->name, item->context);
-      }
-   }
-
-   return FALSE;
-}
-
-
-static gboolean roadmap_dialog_list_selected
-                    (GtkTreeSelection *selection,
-                     GtkTreeModel *model,
-                     GtkTreePath *path,
-                     gboolean path_currently_selected,
-                     gpointer data) {
-
-   RoadMapDialogSelection *choice = (RoadMapDialogSelection *) data;
-
-   if (! path_currently_selected) {
-
-      int i = *gtk_tree_path_get_indices(path);
-
-      if (choice != NULL && i >= 0) {
-
-         roadmap_dialog_chosen (choice + i, NULL);
-      }
-   }
-
-   return TRUE;
-}
-
-static RoadMapDialogItem roadmap_dialog_new_item (const char *frame,
-                                                  const char *name,
-                                                  GtkWidget *w,
-                                                  int expand) {
+static RoadMapDialogItem roadmap_dialog_new_item (const char *frame, const char *name) {
    RoadMapDialogItem parent;
    RoadMapDialogItem child;
 
+   // __android_log_print (ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_new_item(%s,%s)", frame, name);
+
    parent = roadmap_dialog_get (RoadMapDialogCurrent, frame);
    child  = roadmap_dialog_get (parent, name);
-
-   if (w == NULL) {
-      child->w = w;
-      return child;
-   }
+   // __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_new_item -> parent->w %d", parent->w);
+   // if (child) __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_new_item -> child->w %d", child->w);
 
    if (parent->w == NULL) {
+	/*
+	 * New sub-dialog : create a separate Android dialog
+	 */
+	jclass		cls = TheRoadMapClass();
+	jmethodID	mid = TheMethod(cls, "CreateDialog", "(Ljava/lang/String;I)I");
+	jstring		js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, frame);
 
-      /* This is a new frame: create the Gtk table for it. */
-      parent->w = gtk_table_new (1, 2, FALSE);
-
-      gtk_table_set_row_spacings (GTK_TABLE(parent->w), 2);
-
-   } else {
-
-      /* This is an existing frame: increase the size of the frame. */
-      gtk_table_resize (GTK_TABLE(parent->w), parent->count, 2);
+	parent->w = (*RoadMapJniEnv)->CallIntMethod(RoadMapJniEnv, RoadMapThiz, mid, js,
+			parent->parent->w);
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "CreateDialog -> parent->w %d", parent->w);
    }
 
-   if (expand) {
-      expand = GTK_EXPAND+GTK_FILL+GTK_SHRINK;
-   }
-
+   /*
+    * Create a widget to show the name of this object.
+    * A separate widget will be the data entry field (e.g. created by roadmap_dialog_new_entry).
+    */
    if (name[0] != '.') {
+	jclass		cls = TheRoadMapClass();
+	jmethodID	mid = TheMethod(cls, "DialogAddButton", "(ILjava/lang/String;)I");
+	jstring		js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, name);
 
-      GtkWidget *label;
-      int length = strlen(name);
-      char *title = malloc (length + 6);
-
-      if (title != NULL) {
-
-         title[0] = ' ';
-         strcpy (title+1, name);
-         if (name[length-1] != ':') {
-            title[++length] = ':';
-         }
-         title[++length] = ' ';
-         title[++length] = 0;
-
-         label = gtk_label_new (title);
-         free(title);
-
-      } else {
-
-         label = gtk_label_new (name);
-      }
-
-      gtk_misc_set_alignment (GTK_MISC(label), 1.0, 0.5);
-
-      gtk_table_attach (GTK_TABLE(parent->w),
-                        label, 0, 1, child->rank, child->rank+1,
-                        GTK_FILL, GTK_FILL, 2, 2);
-
-      gtk_table_attach (GTK_TABLE(parent->w),
-                        w, 1, 2, child->rank, child->rank+1,
-                        GTK_EXPAND+GTK_FILL+GTK_SHRINK,
-                        expand, 2, 2);
+	child->w = (*RoadMapJniEnv)->CallIntMethod(RoadMapJniEnv, RoadMapThiz, mid, parent->w, js);
    } else {
-
-      gtk_table_attach (GTK_TABLE(parent->w),
-                        w, 0, 2, child->rank, child->rank+1,
-                        GTK_EXPAND+GTK_FILL+GTK_SHRINK,
-                        expand, 2, 2);
+	   /* ?? FIX ME Not sure what to do with this */
    }
-
-   child->w = w;
 
    return child;
 }
-#endif
 
 /**
  * @brief This function activates a dialog:
@@ -361,39 +260,38 @@ static RoadMapDialogItem roadmap_dialog_new_item (const char *frame,
  * @param context
  * @return returns 1 if this is a new, undefined, dialog; 0 otherwise.
  */
-int roadmap_dialog_activate (const char *name, void *context) {
-#if 0
-   RoadMapDialogItem dialog = roadmap_dialog_get (NULL, name);
+int roadmap_dialog_activate (const char *name, void *context)
+{
+	__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_activate(%s)", name);
+	RoadMapDialogItem dialog = roadmap_dialog_get (NULL, name);
 
-   dialog->context = context;
+	dialog->context = context;
 
-   if (dialog->w != NULL) {
+	if (dialog->w != NULL) {
+		/* The dialog exists already: show it on top. */
+		RoadMapDialogCurrent = dialog;
 
-      /* The dialog exists already: show it on top. */
+		// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_activate(%s) -> id %d -> ShowDialog", name, dialog->w);
 
-      RoadMapDialogCurrent = dialog;
+		jclass		cls = TheRoadMapClass();
+		jmethodID	mid = TheMethod(cls, "ShowDialog", "(I)V");
 
-      gdk_window_show (dialog->w->window);
-      gdk_window_raise (dialog->w->window);
-      gtk_widget_show_all (GTK_WIDGET(dialog->w));
+		(*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, RoadMapThiz, mid, dialog->w);
 
-      return 0; /* Tell the caller the dialog already exists. */
-   }
+		return 0; /* Tell the caller the dialog already exists. */
+	}
 
-   /* Create the dialog's window. */
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_activate(%s) -> CreateDialog", name);
 
-   dialog->w = gtk_dialog_new();
-#ifdef ROADMAP_USES_GPE
-   displaymigration_mark_window (dialog->w);
-#endif
-   gtk_window_set_title (GTK_WINDOW(dialog->w), roadmap_start_get_title(name));
+	/* Create the dialog's window. */
+	jclass		cls = TheRoadMapClass();
+	jmethodID	mid = TheMethod(cls, "CreateDialog", "(Ljava/lang/String;I)I");
+	jstring		js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, name);
 
-   gtk_button_box_set_layout
-      (GTK_BUTTON_BOX(GTK_DIALOG(dialog->w)->action_area),
-       GTK_BUTTONBOX_SPREAD);
+	dialog->w = (*RoadMapJniEnv)->CallIntMethod(RoadMapJniEnv, RoadMapThiz, mid, js, 0);
+// 	__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "CreateDialog -> dialog->w %d, int name %s", dialog->w, dialog->name);
 
-   return 1; /* Tell the caller this is a new, undefined, dialog. */
-#endif
+	return 1; /* Tell the caller this is a new, undefined, dialog. */
 }
 
 /**
@@ -402,6 +300,7 @@ int roadmap_dialog_activate (const char *name, void *context) {
  */
 void roadmap_dialog_hide (const char *name)
 {
+	__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_hide(%s)", name);
    roadmap_dialog_hide_window (roadmap_dialog_get (NULL, name));
 }
 
@@ -411,12 +310,19 @@ void roadmap_dialog_hide (const char *name)
  * @param name
  */
 void roadmap_dialog_new_entry (const char *frame, const char *name) {
-#if 0
-   GtkWidget *w = gtk_entry_new ();
-   RoadMapDialogItem child = roadmap_dialog_new_item (frame, name, w, 0);
+ 	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_new_entry(%s,%s)", frame, name);
+	jclass		cls = TheRoadMapClass();
+	jmethodID	mid = TheMethod(cls, "DialogAddTextEntry", "(ILjava/lang/String;)I");
+	jstring		js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, name);
 
-   child->widget_type = ROADMAP_WIDGET_ENTRY;
-#endif
+	/* Side effect of .._new_item() : creates a widget with this name */
+	RoadMapDialogItem child = roadmap_dialog_new_item (frame, name);
+	// RoadMapDialogItem parent = roadmap_dialog_get (NULL, frame);
+	// RoadMapDialogItem child  = roadmap_dialog_get (parent, name);
+	RoadMapDialogItem parent = roadmap_dialog_get (RoadMapDialogCurrent, frame);
+
+	/* Now also create the real "edit" widget */
+	int w = (*RoadMapJniEnv)->CallIntMethod(RoadMapJniEnv, RoadMapThiz, mid, parent->w, js);
 }
 
 /**
@@ -425,9 +331,10 @@ void roadmap_dialog_new_entry (const char *frame, const char *name) {
  * @param name
  */
 void roadmap_dialog_new_label (const char *frame, const char *name) {
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_new_label(%s,%s)", frame, name);
 #if 0
    GtkWidget *w = gtk_label_new (name);
-   RoadMapDialogItem child = roadmap_dialog_new_item (frame, name, w, 0);
+   RoadMapDialogItem child = roadmap_dialog_new_item (frame, name);
 
    child->widget_type = ROADMAP_WIDGET_LABEL;
 #endif
@@ -440,6 +347,7 @@ void roadmap_dialog_new_label (const char *frame, const char *name) {
  */
 void roadmap_dialog_new_color (const char *frame, const char *name)
 {
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_new_color(%s,%s)", frame, name);
    roadmap_dialog_new_entry (frame, name);
 }
 
@@ -450,8 +358,9 @@ void roadmap_dialog_new_color (const char *frame, const char *name)
  */
 void roadmap_dialog_new_hidden (const char *frame, const char *name)
 {
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_new_hidden(%s,%s)", frame, name);
 #if 0
-   RoadMapDialogItem child = roadmap_dialog_new_item (frame, name, 0, 0);
+   RoadMapDialogItem child = roadmap_dialog_new_item (frame, name);
 
    child->widget_type = ROADMAP_WIDGET_HIDDEN;
 #endif
@@ -476,49 +385,7 @@ void roadmap_dialog_new_choice (const char *frame,
                                 char **labels,
                                 void *values,
                                 RoadMapDialogCallback callback) {
-#if 0
-   int i;
-   GtkWidget *w = gtk_option_menu_new ();
-   RoadMapDialogItem child = roadmap_dialog_new_item (frame, name, w, 0);
-   GtkWidget *menu;
-   GtkWidget *menu_item;
-   RoadMapDialogSelection *choice;
-   char **vals = (char **)values;
-
-   child->widget_type = ROADMAP_WIDGET_CHOICE;
-
-   menu = gtk_menu_new ();
-
-   choice = (RoadMapDialogSelection *) calloc (count, sizeof(*choice));
-   roadmap_check_allocated(choice);
-
-   for (i = 0; i < count; ++i) {
-
-      choice[i].typeid = "RoadMapDialogSelection";
-      choice[i].item = child;
-      choice[i].value = vals[i];
-      choice[i].callback = NULL;
-
-      menu_item = gtk_menu_item_new_with_label (labels[i]);
-      gtk_menu_shell_append (GTK_MENU_SHELL(menu), menu_item);
-
-      g_signal_connect_swapped
-                  (menu_item,
-                   "activate",
-                   (GCallback) roadmap_dialog_chosen,
-                   (gpointer) (choice+i));
-
-      gtk_widget_show (menu_item);
-   }
-   gtk_option_menu_set_menu (GTK_OPTION_MENU(w), menu);
-   gtk_option_menu_set_history (GTK_OPTION_MENU(w), current);
-
-   if (child->choice != NULL) {
-      free(child->choice);
-   }
-   child->choice = choice;
-   child->value  = choice[0].value;
-#endif
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_new_choice(%s,%s)", frame, name);
 }
 
 /**
@@ -530,42 +397,7 @@ void roadmap_dialog_new_choice (const char *frame,
  * @param name
  */
 void roadmap_dialog_new_list (const char  *frame, const char  *name) {
-#if 0
-   GtkWidget         *listbox;
-   GtkListStore      *store;
-   GtkTreeViewColumn *column;
-
-
-   GtkWidget *scrollbox = gtk_scrolled_window_new (NULL, NULL);
-
-   RoadMapDialogItem child =
-      roadmap_dialog_new_item (frame, name, scrollbox, 1);
-
-   store = gtk_list_store_new (RM_LIST_WAYPOINT_COLUMNS, G_TYPE_STRING);
-   listbox = gtk_tree_view_new_with_model (GTK_TREE_MODEL (store));
-   g_object_unref (G_OBJECT (store));
-
-   // gtk_tree_view_set_headers_visible (GTK_TREE_VIEW(listbox), 0);
-
-   gtk_scrolled_window_add_with_viewport
-         (GTK_SCROLLED_WINDOW(scrollbox), listbox);
-
-   child->w = listbox;
-   child->widget_type = ROADMAP_WIDGET_LIST;
-
-   if (name[0] == '.') name += 1;
-
-   column = gtk_tree_view_column_new_with_attributes
-                (name, gtk_cell_renderer_text_new (),
-                 "text", RM_LIST_WAYPOINT_NAME,
-                 NULL);
-
-   gtk_tree_view_append_column (GTK_TREE_VIEW (listbox), column);
-
-   gtk_tree_selection_set_mode
-       (gtk_tree_view_get_selection (GTK_TREE_VIEW (listbox)),
-        GTK_SELECTION_SINGLE);
-#endif
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_new_list(%s,%s)", frame, name);
 }
 
 
@@ -575,62 +407,7 @@ void roadmap_dialog_show_list (const char  *frame,
                                char **labels,
                                void **values,
                                RoadMapDialogCallback callback) {
-#if 0
-   int i;
-   RoadMapDialogItem parent;
-   RoadMapDialogItem child;
-   RoadMapDialogSelection *choice;
-
-   GtkTreeModel *model;
-   GtkTreeIter   iterator;
-
-   parent = roadmap_dialog_get (RoadMapDialogCurrent, frame);
-   if (parent->w == NULL) {
-      roadmap_log (ROADMAP_ERROR,
-                   "list %s in dialog %s filled before built", name, frame);
-      return;
-   }
-
-   child  = roadmap_dialog_get (parent, name);
-   if (child->w == NULL) {
-      roadmap_log (ROADMAP_ERROR,
-                   "list %s in dialog %s filled before finished", name, frame);
-      return;
-   }
-   model = gtk_tree_view_get_model (GTK_TREE_VIEW(child->w));
-
-   if (child->choice != NULL) {
-      gtk_list_store_clear (GTK_LIST_STORE(model));
-      free (child->choice);
-      child->choice = NULL;
-   }
-
-   choice = (RoadMapDialogSelection *) calloc (count, sizeof(*choice));
-   roadmap_check_allocated(choice);
-
-   gtk_tree_selection_set_select_function
-       (gtk_tree_view_get_selection (GTK_TREE_VIEW (child->w)),
-        roadmap_dialog_list_selected,
-        (gpointer)choice,
-        NULL);
-
-   for (i = 0; i < count; ++i) {
-
-      choice[i].typeid = "RoadMapDialogSelection";
-      choice[i].item = child;
-      choice[i].value = values[i];
-      choice[i].callback = callback;
-
-      gtk_list_store_append (GTK_LIST_STORE(model), &iterator);
-      gtk_list_store_set (GTK_LIST_STORE(model), &iterator,
-                          RM_LIST_WAYPOINT_NAME, labels[i],
-                          -1);
-   }
-   child->choice = choice;
-   child->value  = choice[0].value;
-
-   gtk_widget_show (parent->w);
-#endif
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_show_list(%s,%s)", frame, name);
 }
 
 /**
@@ -640,28 +417,7 @@ void roadmap_dialog_show_list (const char  *frame,
  */
 void roadmap_dialog_add_button (const char *label, RoadMapDialogCallback callback)
 {
-#if 0
-   RoadMapDialogItem dialog = RoadMapDialogCurrent;
-   RoadMapDialogItem child;
-
-   GtkWidget *button = gtk_button_new_with_label (label);
-
-   child = roadmap_dialog_get (dialog, label);
-
-   child->w = button;
-   child->callback = callback;
-   child->widget_type = ROADMAP_WIDGET_BUTTON;
-
-   g_signal_connect (button, "clicked",
-                     (GCallback) roadmap_dialog_action, child);
-
-   GTK_WIDGET_SET_FLAGS (button, GTK_CAN_DEFAULT);
-
-   gtk_box_pack_start (GTK_BOX(GTK_DIALOG(dialog->w)->action_area),
-                       button, TRUE, FALSE, 0);
-
-   gtk_widget_grab_default (button);
-#endif
+	__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_add_button(%s)", label);
 }
 
 /**
@@ -670,144 +426,32 @@ void roadmap_dialog_add_button (const char *label, RoadMapDialogCallback callbac
  */
 void roadmap_dialog_complete (int use_keyboard)
 {
-#if 0
-   int count;
-   RoadMapDialogItem dialog = RoadMapDialogCurrent;
-   RoadMapDialogItem frame;
+	RoadMapDialogItem	dialog = RoadMapDialogCurrent;
+	jclass			cls = TheRoadMapClass();
+	jmethodID		mid = TheMethod(cls, "ShowDialog", "(I)V");
 
-
-   count = 0;
-
-   for (frame = dialog->children; frame != NULL; frame = frame->next) {
-      if (frame->widget_type == ROADMAP_WIDGET_CONTAINER) {
-         count += 1;
-      }
-   }
-
-   if (count > 1) {
-
-      /* There are several frames in that dialog: use a notebook widget
-       * to let the user access all of them.
-       */
-      GtkWidget *notebook = gtk_notebook_new();
-
-      gtk_notebook_set_scrollable (GTK_NOTEBOOK(notebook), TRUE);
-
-      gtk_box_pack_start (GTK_BOX(GTK_DIALOG(dialog->w)->vbox),
-                          notebook, TRUE, TRUE, 0);
-
-      for (frame = dialog->children; frame != NULL; frame = frame->next) {
-
-         if (frame->widget_type == ROADMAP_WIDGET_CONTAINER) {
-
-            GtkWidget *label = gtk_label_new (frame->name);
-
-            gtk_notebook_append_page (GTK_NOTEBOOK(notebook), frame->w, label);
-         }
-      }
-
-   } else if (count == 1) {
-
-      /* There is only one frame in that dialog: show it straight. */
-
-      for (frame = dialog->children; frame != NULL; frame = frame->next) {
-
-         if (frame->widget_type == ROADMAP_WIDGET_CONTAINER) {
-
-            gtk_box_pack_start (GTK_BOX(GTK_DIALOG(dialog->w)->vbox),
-                                frame->w, TRUE, TRUE, 0);
-            break;
-         }
-      }
-
-   } else {
-      roadmap_log (ROADMAP_FATAL,
-                   "no frame defined for dialog %s", dialog->name);
-   }
-
-   if (use_keyboard) {
-
-      RoadMapDialogItem last_item = NULL;
-      RoadMapKeyboard   keyboard  = roadmap_keyboard_new ();
-
-      gtk_box_pack_start (GTK_BOX(GTK_DIALOG(dialog->w)->vbox),
-                          roadmap_keyboard_widget(keyboard),
-                          TRUE, TRUE, 0);
-
-      for (frame = dialog->children; frame != NULL; frame = frame->next) {
-
-         if (frame->widget_type == ROADMAP_WIDGET_CONTAINER) {
-
-            RoadMapDialogItem item;
-
-            for (item = frame->children; item != NULL; item = item->next) {
-
-                if (item->widget_type == ROADMAP_WIDGET_ENTRY) {
-
-                   g_signal_connect (item->w, "button_press_event",
-                                     (GCallback) roadmap_dialog_selected,
-                                     keyboard);
-
-                   last_item = item;
-                }
-            }
-         }
-      }
-      if (last_item != NULL) {
-         roadmap_keyboard_set_focus (keyboard, last_item->w);
-      }
-   }
-
-   gtk_container_set_border_width
-      (GTK_CONTAINER(GTK_BOX(GTK_DIALOG(dialog->w)->vbox)), 4);
-
-   g_signal_connect (dialog->w, "destroy",
-                     (GCallback) roadmap_dialog_destroyed,
-                     dialog);
-
-   roadmap_main_set_window_size (dialog->w,
-                                 roadmap_option_width(dialog->name),
-                                 roadmap_option_height(dialog->name));
-
-   gtk_widget_show_all (GTK_WIDGET(dialog->w));
-#endif
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_complete %d", dialog->w);
+	(*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, RoadMapThiz, mid, dialog->w);
 }
 
 
 void roadmap_dialog_select (const char *dialog)
 {
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_select(%s)", dialog);
    RoadMapDialogCurrent = roadmap_dialog_get (NULL, dialog);
 }
 
 
 void *roadmap_dialog_get_data (const char *frame, const char *name)
 {
-#if 0
-   RoadMapDialogItem this_frame;
-   RoadMapDialogItem this_item;
-
-
-   this_frame  = roadmap_dialog_get (RoadMapDialogCurrent, frame);
-   this_item   = roadmap_dialog_get (this_frame, name);
-
-   switch (this_item->widget_type) {
-
-   case ROADMAP_WIDGET_ENTRY:
-
-      return (void *)gtk_entry_get_text (GTK_ENTRY(this_item->w));
-   }
-
-   return this_item->value;
-#endif
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_get_data(%s,%s)", frame, name);
 }
 
 
 void  roadmap_dialog_set_data (const char *frame, const char *name,
                                const void *data) {
-#if 0
-   RoadMapDialogItem this_frame;
-   RoadMapDialogItem this_item;
-
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_set_data(%s,%s)", frame, name);
+   RoadMapDialogItem this_frame, this_item;
 
    this_frame  = roadmap_dialog_get (RoadMapDialogCurrent, frame);
    this_item   = roadmap_dialog_get (this_frame, name);
@@ -816,25 +460,25 @@ void  roadmap_dialog_set_data (const char *frame, const char *name,
 
    case ROADMAP_WIDGET_ENTRY:
 
-      gtk_entry_set_text (GTK_ENTRY(this_item->w), (const char *)data);
+//      gtk_entry_set_text (GTK_ENTRY(this_item->w), (const char *)data);
       break;
 
    case ROADMAP_WIDGET_LABEL:
 
-      gtk_label_set_text (GTK_LABEL(this_item->w), (const char *)data);
+//      gtk_label_set_text (GTK_LABEL(this_item->w), (const char *)data);
       break;
    }
    this_item->value = (char *)data;
-#endif
 }
 
 void roadmap_dialog_new_progress (const char *frame, const char *name)
 {
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_new_progress(%s,%s)", frame, name);
 #warning implement roadmap_dialog_new_progress
 }
 
 void  roadmap_dialog_set_progress (const char *frame, const char *name, int progress)
 {
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_set_progress(%s,%s,%d)", frame, name, progress);
 #warning implement roadmap_dialog_set_progress
 }
-
