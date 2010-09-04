@@ -1,9 +1,8 @@
-/* roadmap_label.c - Manage map labels.
- *
+/*
  * LICENSE:
  *
  *   Copyright 2006 Ehud Shabtai
- *   Label cache 2006, Paul Fox
+ *   Label cache 2006, 2010, Paul Fox
  *
  *   This code was mostly taken from UMN Mapserver
  *   
@@ -22,8 +21,32 @@
  *   You should have received a copy of the GNU General Public License
  *   along with RoadMap; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+/**
+ * @file
+ * @brief roadmap_label.c - Manage map labels.
  *
- * TODO:
+ * Quick overview (Paul gave a great answer to a vague question) :
+ *
+ * For every visible county, and for every street on the screen,
+ * it tries to find a segment that's long enough to "hold" the street's name,
+ * so that it can be printed parallel to the street.
+ * (I don't recall how that selection is affected if we're printing non-angled
+ * labels.)
+ * Labels also can't overlap other labels, so their bounding box has to be
+ * taken account of.
+ * Every street is only labeled once per county per screen.
+ * This should arguably be "once per screen" -- currently if you have two counties
+ * visible (or, more likely, because they're smaller, two quadtiles)
+ * you'll get a street label in each county.
+ * Partly because the placement calculation is expensive, but mostly because
+ * you want labels to stay put as the screen is redrawn, we keep a cache of
+ * placement information.  (i.e., without the cache, the algorithm may completely
+ * shuffle labels when a new area of map comes in view, since it changes
+ * where some labels might be placed, which in turn affects others.)
+ *
+ * TODO (old?) :
  *   - As the cache holds labels which are not drawn, we need a way to clean
  *     the cache by throwing out old entries. The age mechanism will keep
  *     the cache clean, but that may not be enough if we get many labels.
@@ -39,10 +62,6 @@
  *     "cache full" condition, we should consider splicing the "undrawn"
  *     list onto the "spares" list rather than onto the cache, to free
  *     up cache entries.
- *
- * SYNOPSYS:
- *
- *   See roadmap_label.h.
  */
 
 #include <stdlib.h>
