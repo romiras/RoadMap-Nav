@@ -225,8 +225,30 @@ buildmap_osm_process_one_tile
         // ret = -1;
     }
 
+    /*
+     * When the OSM server is congested, it returns
+     * HTTP/1.1 509 Bandwidth Limit Exceeded
+     *
+     * Don't fail on this, but retry after a while.
+     */
+    int cnt = 0;
+    while (ret == -509 && cnt++ < 100) {
+       sleep(30);
+       fdata = popen(urlcmd, "r");
+       if (fdata == NULL) {
+          buildmap_fatal(0, "couldn't open \"%s\"", urlcmd);
+       }
+
+       buildmap_osm_common_find_layers();
+
+       ret = buildmap_osm_binary_read(fdata);
+
+       if (pclose(fdata) != 0) {
+	  buildmap_error(0, "problem fetching data (pclose: %s), continuing", strerror(errno));
+	  // ret = -1;
+       }
+    }
     return ret;
-     
 }
 
 /**
