@@ -493,8 +493,14 @@ buildmap_osm_binary_time(unsigned char *data)
 }
 
 /**
- * @brief
- * @param data
+ * @brief interpret the data read and collect error information
+ *
+ * known cases :
+ *	return -2 on error 5 (The tile is too big, or contains too much data)
+ *	convert HTTP error code in return value (negative)
+ *	return -1 otherwise
+ *
+ * @param data string received
  * @return
  */
 static int
@@ -505,6 +511,14 @@ buildmap_osm_binary_error(unsigned char *data)
     buildmap_error(0, "Error %d: '%.*s'", error, slen, data);
     if (error == 5)
         return -2;
+
+    /*
+     * Interpret the HTTP error code, if present
+     */
+    if (slen > 14 && strncasecmp(data+5, "http", 4) == 0) {
+       error = atoi(data + 14);
+       return -error;
+    }
     return -1;
 }
 
