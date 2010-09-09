@@ -2379,12 +2379,6 @@ void roadmap_trip_format_messages (void)
 
         roadmap_math_trip_set_distance ('W', distance_to_next);
 
-#if 1
-	/* Hack */
-	roadmap_message_set ('D', "?? %s", roadmap_math_trip_unit());
-	roadmap_message_set ('X', "??");
-	roadmap_message_set ('Y', "?? %s", roadmap_math_trip_unit());
-#endif
     }
 
     lastgpsmap = gps->map;
