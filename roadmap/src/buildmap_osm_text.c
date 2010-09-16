@@ -695,8 +695,10 @@ buildmap_osm_text_way_end(char *data)
         int             j;
         int             was_split = 0;
 
-        if (WayInvalid)
+        if (WayInvalid) {
+                buildmap_osm_text_reset_way();
                 return 0;
+	}
 
         if (in_way == 0)
                 buildmap_fatal(0, "Wasn't in a way (%s)", data);
