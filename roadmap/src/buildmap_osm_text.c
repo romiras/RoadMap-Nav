@@ -703,7 +703,7 @@ buildmap_osm_text_way_end(char *data)
         if (in_way == 0)
                 buildmap_fatal(0, "Wasn't in a way (%s)", data);
 
-        if (WayLandUseNotInteresting) {
+        if (WayLandUseNotInteresting || WayLayer == 0) {
 #if 0
                 buildmap_info("discarding way %d, landuse %s", in_way, data);
 #endif
@@ -724,14 +724,6 @@ buildmap_osm_text_way_end(char *data)
         fromlat = buildmap_point_get_latitude(from_point);
         tolon = buildmap_point_get_longitude(to_point);
         tolat = buildmap_point_get_latitude(to_point);
-
-	if (WayLayer == 0) {
-		buildmap_info ("Way %d (%s) layer 0 is invalid",
-				in_way,
-				WayStreetName ? WayStreetName :
-				WayStreetRef ? WayStreetRef : "");
-		WayLayer = TRAIL;
-	}
 
         if ((WayFlags & AREA)  && (fromlon == tolon) && (fromlat == tolat)) {
                 static int polyid = 0;
@@ -759,6 +751,7 @@ buildmap_osm_text_way_end(char *data)
                         line = buildmap_line_add
                                 (LineId, WayLayer, prevpoint, point,
 				 ROADMAP_LINE_DIRECTION_BOTH);
+			buildmap_polygon_add_line (cenid, polyid, LineId, POLYGON_SIDE_RIGHT);
                 }
         } else {
                 /*
