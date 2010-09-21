@@ -299,20 +299,21 @@ struct iso_country IsoCountryCodeTable[] = {
  * @param buf is the buffer to put the file name in
  * @param fips the input parameter
  *
- * FIX ME maybe this function should build a list of possible file names instead of just one
  */
 void roadmap_iso_mapfile_from_fips(char *buf, int fips)
 {
 	int	i, j;
 	int	country = (fips / 1000) % 1000;
+	int	division = fips % 1000;
 
 	for (i=0; IsoCountryCodeTable[i].name; i++)
 		if (IsoCountryCodeTable[i].numeric == country) {
-			sprintf(buf, "iso-%s.rdm", IsoCountryCodeTable[i].alpha2);
+			sprintf(buf, "iso-%s-%03d.rdm", IsoCountryCodeTable[i].alpha2, division);
 			for (j=0; buf[j]; j++)
 				buf[j] = tolower(buf[j]);
 			return;
 		}
+	/* wtf ? */
 }
 
 /**
@@ -362,6 +363,10 @@ int buildmap_osm_filename_iso(char *fn, char *country, char *division, char *suf
  *
  * This function looks up the "division" in a file that is supposed to
  * contain stuff about the "country".
+ *
+ * Except if the division we have is numeric, then no file is involved,
+ * and the string is converted into a number.
+ *
  * The file is named "iso-division-%s [.txt]", and contains one line
  * per entry, each line has a number (this is what we look for),
  * whitespace, and the division code.
@@ -379,6 +384,12 @@ int roadmap_iso_division_to_num(char *country, char *division)
 	char	mfn[20], div[16];
 	FILE	*f;
 	int	num;
+
+	if ((strlen(division) == 3 && isdigit(division[0]) && isdigit(division[1])
+			&& isdigit(division[2]))
+	   || (strlen(division) == 2 && isdigit(division[0]) && isdigit(division[1]))) {
+		return atoi(division);
+	}
 
 	sprintf(mfn, "iso-division-%s" _TXT, country);
 	f = fopen(mfn, "r");
