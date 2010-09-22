@@ -817,8 +817,12 @@ main(int argc, char **argv)
         *tileslist = tileid;
         count = 1;
 
-    } else if (*inputfile) {
+    } else if (*inputfile && *BuildMapFileName) {
             exit(buildmap_osm_text_process_file(inputfile));
+    } else if (*inputfile) {
+            usage(argv[0], "cannot specify -i without -o");
+    } else if (*BuildMapFileName) {
+            usage(argv[0], "cannot specify -o without -i");
     } else {
 
         if (argc < 2)

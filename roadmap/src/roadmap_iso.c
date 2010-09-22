@@ -335,10 +335,13 @@ void roadmap_iso_mapfile_from_fips(char *buf, int fips)
 int buildmap_osm_filename_iso(char *fn, char *country, char *division, char *suffix)
 {
 	int	n;
-	char	pattern[32];
+	char	pattern[32], *p;
+
+	/* Find last path separator, if any */
+	p = strrchr(fn, '/');
 
 	sprintf(pattern, "iso-%%[a-zA-Z]-%%[a-zA-Z0-9]%s", suffix);
-	n = sscanf(fn, pattern, country, division);
+	n = sscanf(p ? p+1 : fn, pattern, country, division);
 	if (strlen(country) != 2)
 		return 0;
 	if (n == 2) {
@@ -420,8 +423,12 @@ int roadmap_iso_division_to_num(char *country, char *division)
 int buildmap_osm_filename_usc(char *fn, int *fips)
 {
 	int	n, f;
+	char	*p;
 
-	n = sscanf(fn, "usc%d.rdm", &f);
+	/* find last path separator, if any */
+	p = strrchr(fn, '/');
+
+	n = sscanf(p ? p+1 : fn, "usc%d.rdm", &f);
 	if (n != 1)
 		return 0;
 	if (fips)
