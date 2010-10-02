@@ -1,7 +1,7 @@
 /*
  * LICENSE:
  *
- *   Copyright (c) 2008, 2009, Danny Backx.
+ *   Copyright (c) 2008, 2009, 2010, Danny Backx.
  *
  *   Based on code Copyright 2007 Paul Fox that interprets the OSM
  *   binary stream.
@@ -48,6 +48,7 @@
 #include "roadmap_file.h"
 #include "roadmap_osm.h"
 #include "roadmap_line.h"
+#include "roadmap_hash.h"
 
 #include "buildmap.h"
 #include "buildmap_zip.h"
@@ -97,8 +98,7 @@ static int      NodeLon,                /**< coordinates */
                 NodeLat;                /**< coordinates */
 
 static int      NodeFakeFips;           /**< fake postal code */
-static int      WayLandUseNotInteresting = 0;   /**< land use not interesting
-                                                        for RoadMap */
+static int      WayNotInteresting = 0;	/**< this way is not interesting for RoadMap */
 
 /**
  * @brief some global variables
@@ -110,8 +110,9 @@ static int      nPolygons = 0;          /**< current polygon id (number of
 static int      LineId = 0;             /**< for buildmap_line_add */
 static int      nsplits = 0;            /**< number of times we've split
                                                         a way */
-static int      WaysSplit = 0,  /**< Number of ways that were split */
-                WaysNotSplit = 0;       /**< Number of ways not split */
+static int	WaysSplit = 0,		/**< Number of ways that were split */
+                WaysNotSplit = 0,       /**< Number of ways not split */
+		WaysMissingNode = 0;	/**< Number of ways discarded due to missing nodes */
 
 /**
  * @brief allow the user to specify a bounding box
@@ -239,15 +240,27 @@ static struct points {
         int     npoint;
 } *points = 0;
 
+#define	NPOINTSINC	10000
+
+RoadMapHash	*PointsHash = NULL;
+
 static void
 buildmap_osm_text_point_add(int id, int npoint)
 {
         if (nPoints == nPointsAlloc) {
-                nPointsAlloc += 10000;
+                nPointsAlloc += NPOINTSINC;
+
+		if (PointsHash == NULL)
+			PointsHash = roadmap_hash_new("PointsHash", nPointsAlloc);
+		else
+			roadmap_hash_resize(PointsHash, nPointsAlloc);
+
                 points = realloc(points, sizeof(struct points) * nPointsAlloc);
                 if (!points)
                         buildmap_fatal(0, "allocate %d points", nPointsAlloc);
         }
+
+	roadmap_hash_add(PointsHash, id, nPoints);
 
         points[nPoints].id = id;
         points[nPoints++].npoint = npoint;
@@ -263,8 +276,9 @@ buildmap_osm_text_point_get(int id)
 {
         int     i;
 
-        /* fix me, this needs to be speed up */
-        for (i=0; i<nPoints; i++)
+        for (i = roadmap_hash_get_first(PointsHash, id);
+			i >= 0;
+			i = roadmap_hash_get_next(PointsHash, i))
                 if (points[i].id == id)
                         return points[i].npoint;
         return -1;
@@ -398,6 +412,7 @@ static int nallocshapes = 0;
  */
 static struct shapeinfo *shapes;
 
+#if 0
 /*
  * Count nodes
  * Watch out : should be called in Pass 1.
@@ -466,6 +481,7 @@ static int NodeReportUse(int node)
         buildmap_fatal(0, "NodeReportUse %d", node);
         return -1;
 }
+#endif
 
 /**
  * @brief
@@ -492,13 +508,102 @@ buildmap_osm_text_way(char *data)
          * This only remembers which way we're in...
          */
         sscanf(data, "way id=%*[\"']%d%*[\"']", &in_way);
-        WayLandUseNotInteresting = 0;
+        WayNotInteresting = 0;
 
         if (in_way == 0)
                 buildmap_fatal(0, "buildmap_osm_text_way(%s) error", data);
         return 0;
 }
 
+static int maxWayTable = 0;
+static int nWayTable = 0;
+static int interestingWays = 0;
+typedef struct WayTableStruct {
+	int	wayid;
+	int	notinteresting;
+} WayTableStruct;
+static WayTableStruct *WayTable = NULL;
+
+static void
+WayIsInteresting(int wayid, int ni)
+{
+	int	i;
+
+	// buildmap_info("WayIsInteresting(%d,%d)", wayid, ni);
+
+	if (nWayTable == maxWayTable) {
+		maxWayTable += 1000;
+		WayTable = (struct WayTableStruct *) realloc(WayTable,
+				sizeof(struct WayTableStruct) * maxWayTable);
+	}
+
+	for (i=0; i<nWayTable; i++)
+		if (WayTable[i].wayid == wayid)
+			return;
+
+	WayTable[nWayTable].wayid = wayid;
+	WayTable[nWayTable].notinteresting = ni;
+	nWayTable++;
+	if (ni == 0)
+		interestingWays++;
+}
+
+/**
+ * @brief find out if this way is interesting
+ * @param wayid
+ * @return inverted !!
+ *
+ * Note : relies on the order of ways encountered in the file, for performance
+ */
+static int
+IsWayInteresting(int wayid)
+{
+	static int	ptr = 0;
+
+	if (wayid == WayTable[ptr].wayid)
+		return WayTable[ptr].notinteresting;
+	if (wayid == WayTable[ptr+1].wayid) {
+		ptr++;
+		return WayTable[ptr].notinteresting;
+	}
+
+	buildmap_info("IsWayInteresting(%d) : reposition", wayid);
+	for (ptr=0; ptr<nWayTable; ptr++)
+		if (wayid == WayTable[ptr].wayid)
+			return WayTable[ptr].notinteresting;
+
+	/* Should not happen */
+	buildmap_fatal(0, "IsWayInteresting(%d): unknown way", wayid);
+	return 0;	/* to avoid compiler warning */
+}
+
+/**
+ * @brief to figure out early (in pass 1) whether this is an interesting way
+ * @param data
+ * @return
+ */
+static int
+buildmap_osm_text_way_pass1(char *data)
+{
+        sscanf(data, "way id=%*[\"']%d%*[\"']", &in_way);
+        WayNotInteresting = 0;
+	return 0;
+}
+
+/**
+ * @brief to figure out early (in pass 1) whether this is an interesting way
+ * @param data
+ * @return
+ */
+static int
+buildmap_osm_text_way_end_pass1(char *data)
+{
+	WayIsInteresting(in_way, WayNotInteresting);
+	buildmap_osm_text_reset_way();
+	return 0;
+}
+
+#if 0
 /**
  * @brief
  * @param data points into the line of text being processed
@@ -515,9 +620,88 @@ buildmap_osm_text_nd_pass1(char *data)
         if (sscanf(data, "nd ref=%*[\"']%d%*[\"']", &node) != 1)
                 return -1;
 
-        CountNode(node);
+        // CountNode(node);
         return 0;
 }
+#endif
+
+static int maxNodeTable = 0;
+static int nNodeTable = 0;
+typedef struct NodeTableStruct {
+	int	nodeid;
+} NodeTableStruct;
+static NodeTableStruct *NodeTable = NULL;
+
+static void
+NodeIsInteresting(int node)
+{
+	int	i;
+
+	if (nNodeTable == maxNodeTable) {
+		maxNodeTable += 1000;
+		NodeTable = (struct NodeTableStruct *) realloc(NodeTable,
+				sizeof(struct NodeTableStruct) * maxNodeTable);
+	}
+	for (i=0; i<nNodeTable; i++) {
+		if (NodeTable[i].nodeid == node) {
+			// buildmap_info("Duplicate interesting node %d", node);
+			return;
+		}
+	}
+
+	// buildmap_info("NodeIsInteresting(%d)", node);
+	NodeTable[nNodeTable].nodeid = node;
+	nNodeTable++;
+}
+
+/**
+ * @brief this <nd> is interesting, register it so we can later treat its <node>
+ * @param data
+ * @return
+ */
+static int
+buildmap_osm_text_nd_interesting(char *data)
+{
+        int     node;
+
+        if (sscanf(data, "nd ref=%*[\"']%d%*[\"']", &node) != 1)
+                return -1;
+
+	NodeIsInteresting(node);
+
+        // CountNode(node);
+        return 0;
+}
+
+static int
+buildmap_osm_text_node_interesting(char *data)
+{
+	int	node, r;
+
+        if (sscanf(data, "node id=%*[\"']%d%*[\"']", &node) != 1)
+                return -1;
+	// buildmap_verbose("buildmap_osm_text_node_interesting(%d)", node);
+	r = buildmap_osm_text_node(data);
+	r += buildmap_osm_text_node_end(data);
+
+	// buildmap_info("NodeInteresting(%d)", node);
+	return r;
+}
+
+/**
+ * @build this is called on every node, but should figure out whether it is interesting
+ */
+static int
+buildmap_osm_text_node_interesting_end(char *data)
+{
+	int	node;
+        if (sscanf(data, "node id=%*[\"']%d%*[\"']", &node) != 1)
+                return -1;
+	buildmap_verbose("buildmap_osm_text_node_interesting_end(%d)", node);
+	return buildmap_osm_text_node_end(data);
+	// return 0;
+}
+
 
 /**
  * @brief
@@ -542,7 +726,11 @@ buildmap_osm_text_nd(char *data)
         ix = buildmap_osm_text_point_get(node);
         if (ix < 0) {
                 /* Inconsistent OSM file, this node is not defined */
+		/* Only count if we didn't already know this */
+		if (WayInvalid == 0)
+			WaysMissingNode++;
                 WayInvalid = 1;
+		buildmap_verbose("Invalid way %d due to missing node %d", in_way, node);
                 return 0;
         }
         lon = buildmap_point_get_longitude(ix);
@@ -636,10 +824,14 @@ buildmap_osm_text_tag(char *data)
 		WayStreetName = FromXmlAndDup(value);
 		return 0;	/* FIX ME ?? */
 	} else if (strcmp(tag, "landuse") == 0) {
-		WayLandUseNotInteresting = 1;
+		WayNotInteresting = 1;
 //		buildmap_info("discarding way %d, landuse %s", in_way, data);
 	} else if (strcmp(tag, "oneway") == 0 && strcmp(value, "yes") == 0) {
 		WayIsOneWay = ROADMAP_LINE_DIRECTION_ONEWAY;
+	} else if (strcmp(tag, "building") == 0) {
+		if (strcasecmp(value, "yes") == 0) {
+			WayNotInteresting = 1;
+		}
 	} else if (strcmp(tag, "ref") == 0) {
 		if (WayStreetRef)
 			free(WayStreetRef);
@@ -703,11 +895,10 @@ buildmap_osm_text_way_end(char *data)
         if (in_way == 0)
                 buildmap_fatal(0, "Wasn't in a way (%s)", data);
 
-        if (WayLandUseNotInteresting || WayLayer == 0) {
-#if 0
-                buildmap_info("discarding way %d, landuse %s", in_way, data);
-#endif
-                WayLandUseNotInteresting = 0;
+        if (WayNotInteresting || WayLayer == 0) {
+                buildmap_verbose("discarding way %d, not interesting (%s)", in_way, data);
+
+                WayNotInteresting = 0;
                 buildmap_osm_text_reset_way();
                 return 0;
         }
@@ -798,10 +989,12 @@ buildmap_osm_text_way_end(char *data)
                  */
                 from_ix = 0;
                 for (j=1; j<nWayNodes-1; j++) {
+#if 0
                         int point = WayNodes[j];
+
                         if (NodeReportUse(point) <= 1)
                                 continue;
-
+#endif
                         int     k, num;
 
                         /* Keep track of what we did */
@@ -1084,22 +1277,26 @@ buildmap_osm_text_ways_shapeinfo(void)
  * (Note that this simplistic approach may raise eyebrows, but this is
  * not a big time consumer !)
  *
- * Pass 1 deals with node definitions only.
- * Pass 2 interprets ways and a few tags.
+ * Pass 1 deals with way definitions.
+ * Pass 2 deals with node definitions only.
+ * Pass 3 interprets ways and a few tags.
+ *
  * All underlying processing is passed to other functions.
  */
 int
 buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
 {
-    char *got;
-    static char buf[LINELEN];
-    int ret = 0;
-    char *p;
-    time_t      t0, t1, t2, t3;
+    char	*got;
+    static char	buf[LINELEN];
+    int		ret = 0;
+    char	*p;
+    time_t	t[10];
+    int		passid, NumNodes, NumWays;
 
     NodeFakeFips = 1000000 + country_num * 1000 + division_num;
 
-    (void) time(&t0);
+    passid = 1;
+    (void) time(&t[passid - 1]);
 
     DictionaryPrefix = buildmap_dictionary_open("prefix");
     DictionaryStreet = buildmap_dictionary_open("street");
@@ -1110,9 +1307,10 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
     buildmap_osm_common_find_layers ();
 
     /*
-     * Pass 1
+     * Pass 1 - just figure out which ways are interesting
      */
     LineNo = 0;
+    NumWays = 0;
 
     while (! feof(fdata)) {
         buildmap_set_line(++LineNo);
@@ -1133,54 +1331,118 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
         p++; /* point to character after '<' now */
         for (; *p && isspace(*p); p++) ;
 
-        if (strncasecmp(p, "osm", 3) == 0) {
-                continue;
-        } else if (strncasecmp(p, "?xml", 4) == 0) {
-                continue;
-        } else if (strncasecmp(p, "way", 3) == 0) {
-//              ret += buildmap_osm_text_way(p);
+        if (strncasecmp(p, "way", 3) == 0) {
+		ret += buildmap_osm_text_way_pass1(p);
+		NumWays++;
                 continue;
         } else if (strncasecmp(p, "/way", 4) == 0) {
-//              ret += buildmap_osm_text_way_end(p);
+		ret += buildmap_osm_text_way_end_pass1(p);
                 continue;
-        } else if (strncasecmp(p, "node", 4) == 0) {
-                ret += buildmap_osm_text_node(p);
+        } else if (strncasecmp(p, "tag", 3) == 0) {
+                ret += buildmap_osm_text_tag(p);
+                continue;
+        }
+    }
+
+    (void) time(&t[passid]);
+    buildmap_info("Pass %d : %d lines read (%d seconds)",
+		    passid, LineNo, t[passid] - t[passid - 1]);
+    passid++;
+
+    /*
+     * Pass 2 - flag interesting nodes
+     */
+    LineNo = 0;
+    fseek(fdata, 0L, SEEK_SET);
+
+    while (! feof(fdata)) {
+        buildmap_set_line(++LineNo);
+        got = fgets(buf, LINELEN, fdata);
+        if (got == NULL) {
+            if (feof(fdata))
+                break;
+            buildmap_fatal(0, "short read (length)");
+        }
+
+        /* Figure out the XML */
+        for (p=buf; *p && isspace(*p); p++) ;
+        if (*p == '\n' || *p == '\r') 
+                continue;
+        if (*p != '<')
+                buildmap_fatal(0, "invalid XML (line %d, %s)", LineNo, buf);
+
+        p++; /* point to character after '<' now */
+        for (; *p && isspace(*p); p++) ;
+
+        if (strncasecmp(p, "way", 3) == 0) {
+		ret += buildmap_osm_text_way_pass1(p);
+                continue;
+        } else if (strncasecmp(p, "/way", 4) == 0) {
+		ret += buildmap_osm_text_way_end_pass1(p);
+                continue;
+        } else if (strncasecmp(p, "nd", 2) == 0) {
+                if (in_way && ! IsWayInteresting(in_way))
+			ret += buildmap_osm_text_nd_interesting(p);
+                continue;
+        }
+    }
+
+    (void) time(&t[passid]);
+    buildmap_info("Pass %d : %d lines read (%d seconds)",
+		    passid, LineNo, t[passid] - t[passid - 1]);
+    passid++;
+
+    /*
+     * Pass 3
+     */
+    LineNo = 0;
+    NumNodes = 0;
+    fseek(fdata, 0L, SEEK_SET);
+
+    while (! feof(fdata)) {
+        buildmap_set_line(++LineNo);
+        got = fgets(buf, LINELEN, fdata);
+        if (got == NULL) {
+            if (feof(fdata))
+                break;
+            buildmap_fatal(0, "short read (length)");
+        }
+
+        /* Figure out the XML */
+        for (p=buf; *p && isspace(*p); p++) ;
+        if (*p == '\n' || *p == '\r') 
+                continue;
+        if (*p != '<')
+                buildmap_fatal(0, "invalid XML (line %d, %s)", LineNo, buf);
+
+        p++; /* point to character after '<' now */
+        for (; *p && isspace(*p); p++) ;
+
+        if (strncasecmp(p, "node", 4) == 0) {
+		ret += buildmap_osm_text_node_interesting(p);
+		NumNodes++;
                 continue;
         } else if (strncasecmp(p, "/node", 5) == 0) {
-                ret += buildmap_osm_text_node_end(p);
+		ret += buildmap_osm_text_node_interesting_end(p);
                 continue;
+#if 0
         } else if (strncasecmp(p, "nd", 2) == 0) {
                 ret += buildmap_osm_text_nd_pass1(p);
                 continue;
         } else if (strncasecmp(p, "tag", 3) == 0) {
                 ret += buildmap_osm_text_tag(p);
                 continue;
-        } else if (strncasecmp(p, "relation", 8) == 0) {
-                continue;
-        } else if (strncasecmp(p, "/relation", 9) == 0) {
-                continue;
-        } else if (strncasecmp(p, "member", 6) == 0) {
-                continue;
-        } else if (strncasecmp(p, "/member", 7) == 0) {
-                continue;
-        } else if (strncasecmp(p, "bound", 5) == 0) {
-                continue;
-        } else if (strncasecmp(p, "bounds", 6) == 0) {
-                continue;
-        } else if (strncasecmp(p, "/bounds", 7) == 0) {
-                continue;
-        } else if (strncasecmp(p, "/osm", 4) == 0) {
-                continue;
-        } else {
-                buildmap_fatal(0, "invalid XML token (%s)", p);
+#endif
         }
     }
 
-    (void) time(&t1);
-    buildmap_info("Pass 1 : %d lines read (%d seconds)", LineNo, t1 - t0);
+    (void) time(&t[passid]);
+    buildmap_info("Pass %d : %d lines read (%d seconds)",
+		    passid, LineNo, t[passid] - t[passid - 1]);
+    passid++;
 
     /*
-     * Pass 2
+     * Pass 4
      */
     LineNo = 0;
     fseek(fdata, 0L, SEEK_SET);
@@ -1215,10 +1477,8 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
                 ret += buildmap_osm_text_way_end(p);
                 continue;
         } else if (strncasecmp(p, "node", 4) == 0) {
-//              ret += buildmap_osm_text_node(p);
                 continue;
         } else if (strncasecmp(p, "/node", 5) == 0) {
-//              ret += buildmap_osm_text_node_end(p);
                 continue;
         } else if (strncasecmp(p, "nd", 2) == 0) {
                 ret += buildmap_osm_text_nd(p);
@@ -1247,16 +1507,24 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
         }
     }
 
-    (void) time(&t2);
-    buildmap_info("Pass 2 : %d lines read (%d seconds)", LineNo, t2 - t1);
+    (void) time(&t[passid]);
+    buildmap_info("Pass %d : %d lines read (%d seconds)",
+		    passid, LineNo, t[passid] - t[passid - 1]);
+    buildmap_info("Ways %d, interesting %d, discarded (missing node) %d",
+	    NumWays, interestingWays, WaysMissingNode);
+    buildmap_info("Number of nodes : %d, interesting %d", NumNodes, nNodeTable);
+
+    passid++;
 
     /*
-     * End pass 2
+     * End pass 4
      */
     buildmap_osm_text_ways_shapeinfo();
-    (void) time(&t3);
-    buildmap_info("Shape info processed (%d seconds)", t3 - t2);
 
+    (void) time(&t[passid]);
+    buildmap_info("Pass %d : %d lines read (%d seconds)",
+		    passid, LineNo, t[passid] - t[passid - 1]);
+    passid++;
 
     buildmap_info("Splits %d, ways split %d, not split %d",
         nsplits, WaysSplit, WaysNotSplit);
