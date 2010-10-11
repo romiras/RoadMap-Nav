@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright (c) 2009 Danny Backx.
+ *   Copyright (c) 2009, 2010 Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -896,33 +896,15 @@ static void buildmap_polygon_save (void) {
 
    buildmap_db *root;
    buildmap_db *head_table;
-   buildmap_db *point_table;
    buildmap_db *line_table;
 
-
-   buildmap_info ("saving polygons...");
-
-   /* Create empty old-style "polygon" tables, to satisfy old
-    * RoadMap code that might be asked to use this db.  (without this,
-    * old code will segv.)
-    */
-   root = buildmap_db_add_section (NULL, "polygon");
-   if (root == NULL) buildmap_fatal (0, "Can't add a new section");
-
-   head_table = buildmap_db_add_section (root, "head");
-   if (head_table == NULL) buildmap_fatal (0, "Can't add a new section");
-   buildmap_db_add_data (head_table, 0, sizeof(RoadMapPolygon));
-
-   point_table = buildmap_db_add_section (root, "point");
-   if (point_table == NULL) buildmap_fatal (0, "Can't add a new section");
-   buildmap_db_add_data (point_table, 0, sizeof(RoadMapPolygonPoint));
-
+   buildmap_info ("saving %d polygons...", PolygonLineCount);
 
    /* Create the new-style "polygons" (note new name) tables,
     * based on lines, instead of points).
     */
    if (PolygonLineCount > 0xffff) {
-      buildmap_fatal (0, "too many polygon lines");
+      buildmap_fatal (0, "too many polygon lines - %d, max %d", PolygonLineCount, 0xffff);
    }
 
    root = buildmap_db_add_section (NULL, "polygons");
@@ -980,7 +962,7 @@ static void buildmap_polygon_save (void) {
          db_poly->cfcc  = one_polygon->cfcc;
 
          if (one_polygon->count > 0xfffff) {
-            buildmap_fatal (0, "too many polygon lines");
+            buildmap_fatal (0, "too many polygon lines (%d, max %d)", one_polygon->count, 0xfffff);
          }
          buildmap_polygon_set_count(db_poly, one_polygon->count);
 
