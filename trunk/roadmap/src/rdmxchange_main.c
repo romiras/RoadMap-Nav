@@ -265,7 +265,7 @@ int main (int argc, const char **argv) {
    rdmxchange_main_declare (&RoadMapZipExport,      &RdmXchangeZipImport);
    rdmxchange_main_declare (&RoadMapStreetExport,   &RdmXchangeStreetImport);
    rdmxchange_main_declare (&RoadMapRangeExport,    &RdmXchangeRangeImport);
-   rdmxchange_main_declare (&RoadMapPolygonExport,  &RdmXchangePolygonImport);
+//   rdmxchange_main_declare (&RoadMapPolygonExport,  &RdmXchangePolygonImport);
    rdmxchange_main_declare (&RoadMapShapeExport,    &RdmXchangeShapeImport);
    rdmxchange_main_declare (&RoadMapLineExport,     &RdmXchangeLineImport);
    rdmxchange_main_declare (&RoadMapPointExport,    &RdmXchangePointImport);
@@ -275,6 +275,8 @@ int main (int argc, const char **argv) {
    rdmxchange_main_declare (&RoadMapDictionaryExport,
                             &RdmXchangeDictionaryImport);
 
+   fprintf(stderr, "\nNOTE : this program is not up to date, "
+		   "e.g. the 'polygon' tables are not converted\n");
 
    for (i = 1; i < argc; ++i) {
 

@@ -169,7 +169,6 @@ XCHGSRC = rdmxchange_main.c \
 	rdmxchange_point.c \
 	rdmxchange_line.c \
 	rdmxchange_shape.c \
-	rdmxchange_polygon.c \
 	rdmxchange_square.c \
 	rdmxchange_street.c \
 	rdmxchange_range.c \

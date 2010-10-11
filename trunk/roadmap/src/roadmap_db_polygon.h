@@ -1,9 +1,8 @@
-/* roadmap_polygon.h - the format of the polygon table used by RoadMap.
- *
- *
+/*
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
+ *   Copyright 2010 Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -20,8 +19,11 @@
  *   You should have received a copy of the GNU General Public License
  *   along with RoadMap; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * SYNOPSYS:
+ */
+
+/**
+ * @file
+ * @brief roadmap_polygon.h - the format of the polygon table used by RoadMap.
  *
  * The RoadMap polygons are described by the following tables:
  *
@@ -50,9 +52,6 @@ typedef struct {  /* table polygon/head */
    int   south;
 
 } RoadMapPolygon;
-
-/* Table polygons/points (old code only) is an array of int. */
-typedef int RoadMapPolygonPoint;
 
 /* Table polygons/lines is an array of int. */
 typedef int RoadMapPolygonLine;
