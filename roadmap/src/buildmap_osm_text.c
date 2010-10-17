@@ -114,20 +114,10 @@ static int	WaysSplit = 0,		/**< Number of ways that were split */
                 WaysNotSplit = 0,       /**< Number of ways not split */
 		WaysMissingNode = 0;	/**< Number of ways discarded due to missing nodes */
 
+#if 0
 /**
  * @brief allow the user to specify a bounding box
  */
-#if 0
-        /* Mallorca ? */
-int     HaveLonMin = 1,
-        HaveLonMax = 1,
-        HaveLatMin = 1,
-        HaveLatMax = 1,
-        LonMin =  2200000,
-        LonMax =  3150000,
-        LatMin = 39100000,
-        LatMax = 39950000;
-#else
 int     HaveLonMin = 0,
         HaveLonMax = 0,
         HaveLatMin = 0,
@@ -209,6 +199,8 @@ buildmap_osm_text_reset_way(void)
 static void
 buildmap_osm_text_reset_node(void)
 {
+//	buildmap_info("reset node %d", NodeId);
+
         NodeId = 0;
         free(NodePlace); NodePlace = 0;
         free(NodeTownName); NodeTownName = 0;
@@ -335,6 +327,7 @@ buildmap_osm_text_node(char *data)
             p += nchars;
     }
 
+#if 0
     if ((HaveLonMin && (NodeLon < LonMin))
     ||  (HaveLonMax && (NodeLon > LonMax))
     ||  (HaveLatMin && (NodeLat < LatMin))
@@ -346,6 +339,7 @@ buildmap_osm_text_node(char *data)
 
             return 1;
     }
+#endif
 
     npoints = buildmap_point_add(NodeLon, NodeLat);
     buildmap_osm_text_point_add(NodeId, npoints);       /* hack */
@@ -361,23 +355,30 @@ buildmap_osm_text_node(char *data)
 int
 buildmap_osm_text_node_end(char *data)
 {
-        if (NodePlace && strcmp(NodePlace, "town") == 0) {
+        buildmap_osm_text_reset_node();
+        return 0;
+}
+
+/**
+ * @brief At the end of a node, process its data
+ * @param data point to the line buffer
+ * @return error indication
+ */
+int
+buildmap_osm_text_node_end_and_process(char *data)
+{
+//	buildmap_info("buildmap_osm_text_node_end_and_process node id %d, place %s, Name %s, Postal %s\n", NodeId, NodePlace, NodeTownName, NodePostalCode);
+        if (NodePlace && (strcmp(NodePlace, "town") == 0
+			|| strcmp(NodePlace, "village") == 0
+			|| strcmp(NodePlace, "city") == 0)) {
                 /* We have a town, process it */
-                if (NodeTownName && NodePostalCode) {
-                        buildmap_verbose("Node %d town %s postal %s",
-                                        NodeId, NodeTownName, NodePostalCode);
-                }
 
                 if (NodeTownName) {
                         NodeFakeFips++;
-//                      buildmap_verbose ("buildmap_osm_text_node_end: "
-//                                          "fake fips %d\n", NodeFakeFips);
                         int year = 2008;
-#if 0
-                        buildmap_verbose("Node %d town %s, no postal code",
-                                        NodeId, NodeTownName);
-#endif
                         RoadMapString s;
+
+//			buildmap_info("buildmap_dictionary_add(%s)", NodeTownName);
                         s = buildmap_dictionary_add (DictionaryCity,
                                 (char *) NodeTownName, strlen(NodeTownName));
                         buildmap_city_add(NodeFakeFips, year, s);
@@ -411,77 +412,6 @@ static int nallocshapes = 0;
  * @brief ?
  */
 static struct shapeinfo *shapes;
-
-#if 0
-/*
- * Count nodes
- * Watch out : should be called in Pass 1.
- */
-struct node_counter {
-        int     count;
-        int     node;
-};
-struct node_counter_row {
-        int     max, alloc;
-        struct node_counter *row;
-};
-
-static struct node_counter_row nc[256];
-static int node_counter_init = 0;
-
-/**
- * @brief add one to the use counter of this node
- * @param node a node id
- */
-static void CountNode(int node)
-{
-        int     i, row;
-
-        if (! node_counter_init) {
-                node_counter_init++;
-                for (i=0; i<256; i++) {
-                        nc[i].max = nc[i].alloc = 0;
-                        nc[i].row = NULL;
-                }
-        }
-
-        row = node % 256;
-        for (i=0; i<nc[row].max; i++)
-                if (node == nc[row].row[i].node) {
-                        nc[row].row[i].count++;
-                        return;
-                }
-
-        if (nc[row].alloc == nc[row].max) {
-                nc[row].alloc += 256;
-                nc[row].row = realloc(nc[row].row,
-                                sizeof(struct node_counter) * nc[row].alloc);
-        }
-
-        i = nc[row].max;
-        nc[row].row[i].node = node;
-        nc[row].row[i].count = 1;
-        nc[row].max++;
-}
-
-/**
- * @brief report the number of uses of this node
- * @param node the node id
- * @return the number of uses
- */
-static int NodeReportUse(int node)
-{
-        int row = node % 256;
-        int i;
-
-        for (i=0; i<nc[row].max; i++)
-                if (node == nc[row].row[i].node) {
-                        return nc[row].row[i].count;
-		}
-        buildmap_fatal(0, "NodeReportUse %d", node);
-        return -1;
-}
-#endif
 
 /**
  * @brief
@@ -529,8 +459,6 @@ WayIsInteresting(int wayid, int ni)
 {
 	int	i;
 
-	// buildmap_info("WayIsInteresting(%d,%d)", wayid, ni);
-
 	if (nWayTable == maxWayTable) {
 		maxWayTable += 1000;
 		WayTable = (struct WayTableStruct *) realloc(WayTable,
@@ -567,7 +495,6 @@ IsWayInteresting(int wayid)
 		return WayTable[ptr].notinteresting;
 	}
 
-	buildmap_info("IsWayInteresting(%d) : reposition", wayid);
 	for (ptr=0; ptr<nWayTable; ptr++)
 		if (wayid == WayTable[ptr].wayid)
 			return WayTable[ptr].notinteresting;
@@ -603,28 +530,6 @@ buildmap_osm_text_way_end_pass1(char *data)
 	return 0;
 }
 
-#if 0
-/**
- * @brief
- * @param data points into the line of text being processed
- * @return error indication
- *
- * Example line :
- *     <nd ref="997470"/>
- */
-static int
-buildmap_osm_text_nd_pass1(char *data)
-{
-        int     node;
-
-        if (sscanf(data, "nd ref=%*[\"']%d%*[\"']", &node) != 1)
-                return -1;
-
-        // CountNode(node);
-        return 0;
-}
-#endif
-
 static int maxNodeTable = 0;
 static int nNodeTable = 0;
 typedef struct NodeTableStruct {
@@ -644,14 +549,24 @@ NodeIsInteresting(int node)
 	}
 	for (i=0; i<nNodeTable; i++) {
 		if (NodeTable[i].nodeid == node) {
-			// buildmap_info("Duplicate interesting node %d", node);
 			return;
 		}
 	}
 
-	// buildmap_info("NodeIsInteresting(%d)", node);
 	NodeTable[nNodeTable].nodeid = node;
 	nNodeTable++;
+}
+
+/* FIX ME */
+static int
+IsNodeInteresting(int node)
+{
+	int	i;
+	for (i=0; i<nNodeTable; i++) {
+		if (NodeTable[i].nodeid == node)
+			return 1;
+	}
+	return 0;
 }
 
 /**
@@ -676,15 +591,27 @@ buildmap_osm_text_nd_interesting(char *data)
 static int
 buildmap_osm_text_node_interesting(char *data)
 {
-	int	node, r;
+	int	r = 0;
 
-        if (sscanf(data, "node id=%*[\"']%d%*[\"']", &node) != 1)
+//	buildmap_verbose("buildmap_osm_text_node_interesting(%d)", NodeId);
+	/*
+	 * Avoid figuring out whether we're in a
+	 *	<node ... />
+	 * or
+	 *	<node ... >
+	 *	..
+	 *	</node>
+	 * case, by resetting first if needed.
+	 */
+	if (NodeId)
+		r += buildmap_osm_text_node_end("");
+
+        if (sscanf(data, "node id=%*[\"']%d%*[\"']", &NodeId) != 1) {
                 return -1;
-	// buildmap_verbose("buildmap_osm_text_node_interesting(%d)", node);
-	r = buildmap_osm_text_node(data);
-	r += buildmap_osm_text_node_end(data);
+	}
 
-	// buildmap_info("NodeInteresting(%d)", node);
+	r += buildmap_osm_text_node(data);
+
 	return r;
 }
 
@@ -694,12 +621,11 @@ buildmap_osm_text_node_interesting(char *data)
 static int
 buildmap_osm_text_node_interesting_end(char *data)
 {
-	int	node;
-        if (sscanf(data, "node id=%*[\"']%d%*[\"']", &node) != 1)
-                return -1;
-	buildmap_verbose("buildmap_osm_text_node_interesting_end(%d)", node);
-	return buildmap_osm_text_node_end(data);
-	// return 0;
+//	buildmap_verbose("buildmap_osm_text_node_interesting_end(%d)", NodeId);
+	if (IsNodeInteresting(NodeId))
+		return buildmap_osm_text_node_end_and_process(data);
+	else
+		return 0;
 }
 
 
@@ -773,17 +699,21 @@ buildmap_osm_text_node_tag(char *data)
                 if (NodePostalCode)
                         free(NodePostalCode);
                 NodePostalCode = strdup(tagv);
+		NodeIsInteresting(NodeId);
         } else if (strcmp(tagk, "place") == 0) {
                 /* <tag k="place" v="town"/> */
                 if (NodePlace)
                         free(NodePlace);
                 NodePlace = strdup(tagv);
+		NodeIsInteresting(NodeId);
         } else if (strcmp(tagk, "name") == 0) {
                 /* <tag k="name" v="Herent"/> */
                 if (NodeTownName)
                         free(NodeTownName);
                 NodeTownName = FromXmlAndDup(tagv);
+		NodeIsInteresting(NodeId);
         }
+
         return 0;
 }
 
@@ -1341,7 +1271,13 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
         } else if (strncasecmp(p, "tag", 3) == 0) {
                 ret += buildmap_osm_text_tag(p);
                 continue;
-        }
+        } else if (strncasecmp(p, "node", 4) == 0) {
+		ret += buildmap_osm_text_node(p);
+                continue;
+        } else if (strncasecmp(p, "/node", 5) == 0) {
+		ret += buildmap_osm_text_node_end(p);
+                continue;
+	}
     }
 
     (void) time(&t[passid]);
@@ -1354,6 +1290,8 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
      */
     LineNo = 0;
     fseek(fdata, 0L, SEEK_SET);
+    buildmap_osm_text_reset_way();
+    buildmap_osm_text_reset_node();
 
     while (! feof(fdata)) {
         buildmap_set_line(++LineNo);
@@ -1398,6 +1336,8 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
     LineNo = 0;
     NumNodes = 0;
     fseek(fdata, 0L, SEEK_SET);
+    buildmap_osm_text_reset_way();
+    buildmap_osm_text_reset_node();
 
     while (! feof(fdata)) {
         buildmap_set_line(++LineNo);
@@ -1429,10 +1369,10 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
         } else if (strncasecmp(p, "nd", 2) == 0) {
                 ret += buildmap_osm_text_nd_pass1(p);
                 continue;
+#endif
         } else if (strncasecmp(p, "tag", 3) == 0) {
                 ret += buildmap_osm_text_tag(p);
                 continue;
-#endif
         }
     }
 
@@ -1446,6 +1386,8 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
      */
     LineNo = 0;
     fseek(fdata, 0L, SEEK_SET);
+    buildmap_osm_text_reset_way();
+    buildmap_osm_text_reset_node();
 
     while (! feof(fdata)) {
         buildmap_set_line(++LineNo);
