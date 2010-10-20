@@ -114,20 +114,6 @@ static int	WaysSplit = 0,		/**< Number of ways that were split */
                 WaysNotSplit = 0,       /**< Number of ways not split */
 		WaysMissingNode = 0;	/**< Number of ways discarded due to missing nodes */
 
-#if 0
-/**
- * @brief allow the user to specify a bounding box
- */
-int     HaveLonMin = 0,
-        HaveLonMax = 0,
-        HaveLatMin = 0,
-        HaveLatMax = 0,
-        LonMin = 0,
-        LonMax = 0,
-        LatMin = 0,
-        LatMax = 0;
-#endif
-
 /**
  * @brief table for translating the names in XML strings into readable format
  */
@@ -291,7 +277,7 @@ buildmap_osm_text_point_get(int id)
 int
 buildmap_osm_text_node(char *data)
 {
-    int         npoints, nchars, r;
+    int         nchars, r;
     double      flat, flon;
     char        *p;
     static char *tag = 0, *value = 0;
@@ -327,23 +313,6 @@ buildmap_osm_text_node(char *data)
             p += nchars;
     }
 
-#if 0
-    if ((HaveLonMin && (NodeLon < LonMin))
-    ||  (HaveLonMax && (NodeLon > LonMax))
-    ||  (HaveLatMin && (NodeLat < LatMin))
-    ||  (HaveLatMax && (NodeLat > LatMax))) {
-
-            /* Outside the specified bounding box, ignore this node */
-            NodeLat = NodeLon = 0;
-            NodeLatRead = NodeLonRead = 0;
-
-            return 1;
-    }
-#endif
-
-    npoints = buildmap_point_add(NodeLon, NodeLat);
-    buildmap_osm_text_point_add(NodeId, npoints);       /* hack */
-
     return 0;
 }
 
@@ -367,7 +336,8 @@ buildmap_osm_text_node_end(char *data)
 int
 buildmap_osm_text_node_end_and_process(char *data)
 {
-//	buildmap_info("buildmap_osm_text_node_end_and_process node id %d, place %s, Name %s, Postal %s\n", NodeId, NodePlace, NodeTownName, NodePostalCode);
+	int npoints;
+
         if (NodePlace && (strcmp(NodePlace, "town") == 0
 			|| strcmp(NodePlace, "village") == 0
 			|| strcmp(NodePlace, "city") == 0)) {
@@ -390,6 +360,10 @@ buildmap_osm_text_node_end_and_process(char *data)
                                 buildmap_zip_add(zip, NodeLon, NodeLat);
                 }
         }
+
+	/* Add the node */
+	npoints = buildmap_point_add(NodeLon, NodeLat);
+	buildmap_osm_text_point_add(NodeId, npoints);
 
         buildmap_osm_text_reset_node();
         return 0;
@@ -604,7 +578,7 @@ buildmap_osm_text_node_interesting(char *data)
 	 * case, by resetting first if needed.
 	 */
 	if (NodeId)
-		r += buildmap_osm_text_node_end("");
+		r += buildmap_osm_text_node_end_and_process("");
 
         if (sscanf(data, "node id=%*[\"']%d%*[\"']", &NodeId) != 1) {
                 return -1;
@@ -748,21 +722,22 @@ buildmap_osm_text_tag(char *data)
 	sscanf(data, "tag k=%*[\"']%[^\"']%*[\"'] v=%*[\"']%[^\"']%*[\"']", tag, value);
 
 	/* street names */
-	if (strcmp(tag, "name") == 0) {
+	if (strcasecmp(tag, "name") == 0) {
 		if (WayStreetName)
 			free(WayStreetName);
 		WayStreetName = FromXmlAndDup(value);
 		return 0;	/* FIX ME ?? */
-	} else if (strcmp(tag, "landuse") == 0) {
+	} else if (strcasecmp(tag, "landuse") == 0) {
 		WayNotInteresting = 1;
 //		buildmap_info("discarding way %d, landuse %s", in_way, data);
-	} else if (strcmp(tag, "oneway") == 0 && strcmp(value, "yes") == 0) {
+	} else if (strcasecmp(tag, "oneway") == 0 && strcasecmp(value, "yes") == 0) {
 		WayIsOneWay = ROADMAP_LINE_DIRECTION_ONEWAY;
-	} else if (strcmp(tag, "building") == 0) {
+	} else if (strcasecmp(tag, "building") == 0) {
 		if (strcasecmp(value, "yes") == 0) {
 			WayNotInteresting = 1;
+			buildmap_verbose("buildmap_osm_text_tag(%d) building, not interesting", in_way);
 		}
-	} else if (strcmp(tag, "ref") == 0) {
+	} else if (strcasecmp(tag, "ref") == 0) {
 		if (WayStreetRef)
 			free(WayStreetRef);
 		WayStreetRef = FromXmlAndDup(value);
@@ -1238,6 +1213,7 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
 
     /*
      * Pass 1 - just figure out which ways are interesting
+     * Currently this is *all ways* but this may change.
      */
     LineNo = 0;
     NumWays = 0;
@@ -1286,7 +1262,8 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
     passid++;
 
     /*
-     * Pass 2 - flag interesting nodes
+     * Pass 2 - flag interesting nodes : any node (a <nd>) in a way,
+     * but e.g. nodes that represent town definitions as well.
      */
     LineNo = 0;
     fseek(fdata, 0L, SEEK_SET);
@@ -1331,7 +1308,8 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
     passid++;
 
     /*
-     * Pass 3
+     * Pass 3 - look for all <node>s, define the interesting ones.
+     * Pass 3 - define ways flagged as interesting
      */
     LineNo = 0;
     NumNodes = 0;
@@ -1365,13 +1343,17 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
         } else if (strncasecmp(p, "/node", 5) == 0) {
 		ret += buildmap_osm_text_node_interesting_end(p);
                 continue;
-#if 0
-        } else if (strncasecmp(p, "nd", 2) == 0) {
-                ret += buildmap_osm_text_nd_pass1(p);
-                continue;
-#endif
         } else if (strncasecmp(p, "tag", 3) == 0) {
                 ret += buildmap_osm_text_tag(p);
+                continue;
+	} else if (strncasecmp(p, "way", 3) == 0) {
+                ret += buildmap_osm_text_way(p);
+                continue;
+        } else if (strncasecmp(p, "/way", 4) == 0) {
+                ret += buildmap_osm_text_way_end(p);
+                continue;
+        } else if (strncasecmp(p, "nd", 2) == 0) {
+                ret += buildmap_osm_text_nd(p);
                 continue;
         }
     }
@@ -1381,8 +1363,9 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
 		    passid, LineNo, t[passid] - t[passid - 1]);
     passid++;
 
+#if 0
     /*
-     * Pass 4
+     * Pass 4 - define ways flagged as interesting
      */
     LineNo = 0;
     fseek(fdata, 0L, SEEK_SET);
@@ -1408,19 +1391,11 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
         p++; /* point to character after '<' now */
         for (; *p && isspace(*p); p++) ;
 
-        if (strncasecmp(p, "osm", 3) == 0) {
-                continue;
-        } else if (strncasecmp(p, "?xml", 4) == 0) {
-                continue;
-        } else if (strncasecmp(p, "way", 3) == 0) {
+        if (strncasecmp(p, "way", 3) == 0) {
                 ret += buildmap_osm_text_way(p);
                 continue;
         } else if (strncasecmp(p, "/way", 4) == 0) {
                 ret += buildmap_osm_text_way_end(p);
-                continue;
-        } else if (strncasecmp(p, "node", 4) == 0) {
-                continue;
-        } else if (strncasecmp(p, "/node", 5) == 0) {
                 continue;
         } else if (strncasecmp(p, "nd", 2) == 0) {
                 ret += buildmap_osm_text_nd(p);
@@ -1428,24 +1403,6 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
         } else if (strncasecmp(p, "tag", 3) == 0) {
                 ret += buildmap_osm_text_tag(p);
                 continue;
-        } else if (strncasecmp(p, "relation", 8) == 0) {
-                continue;
-        } else if (strncasecmp(p, "/relation", 9) == 0) {
-                continue;
-        } else if (strncasecmp(p, "member", 6) == 0) {
-                continue;
-        } else if (strncasecmp(p, "/member", 7) == 0) {
-                continue;
-        } else if (strncasecmp(p, "bound", 5) == 0) {
-                continue;
-        } else if (strncasecmp(p, "bounds", 6) == 0) {
-                continue;
-        } else if (strncasecmp(p, "/bounds", 7) == 0) {
-                continue;
-        } else if (strncasecmp(p, "/osm", 4) == 0) {
-                continue;
-        } else {
-                buildmap_fatal(0, "invalid XML token (%s)", p);
         }
     }
 
@@ -1457,7 +1414,7 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
     buildmap_info("Number of nodes : %d, interesting %d", NumNodes, nNodeTable);
 
     passid++;
-
+#endif
     /*
      * End pass 4
      */
