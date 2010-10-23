@@ -302,7 +302,7 @@ int buildmap_osm_text_process_file(char *fn)
     }
 
     buildmap_db_sort();
-    buildmap_osm_save_custom(BuildMapFileName, ret);
+    buildmap_osm_save_custom(BuildMapFileName, (ret == 0) ? 1 : 0);
 
     return ret;
      
