@@ -553,8 +553,9 @@ buildmap_osm_text_nd_interesting(char *data)
 {
         int     node;
 
-        if (sscanf(data, "nd ref=%*[\"']%d%*[\"']", &node) != 1)
+        if (sscanf(data, "nd ref=%*[\"']%d%*[\"']", &node) != 1) {
                 return -1;
+	}
 
 	NodeIsInteresting(node);
 
@@ -775,7 +776,7 @@ buildmap_osm_text_tag(char *data)
 	if (ret)
 		WayLayer = ret;
 
-        return ret;
+	return 0;
 }
 
 /**
