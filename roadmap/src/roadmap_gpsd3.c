@@ -35,7 +35,10 @@
 #include "roadmap.h"
 #include "roadmap_gpsd3.h"
 
+#if defined(ROADMAP_USES_LIBGPS)
+/* This include won't work on WinCE but libgps won't run on WinCE either. */
 #include "errno.h"
+#endif
 
 #ifdef ROADMAP_USES_LIBGPS
 #include "gps.h"
