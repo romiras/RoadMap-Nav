@@ -74,6 +74,8 @@ static RoadMapPathList RoadMapPaths = NULL;
 static char **RoadMapPathConfig = 0;
 static const char *RoadMapPathConfigSuffix = "roadmap";
 
+static char *RoadMapUser = NULL;
+static char *RoadMapTrips = NULL;
 static const char *RoadMapPathConfigPreferred = "/Storage Card/roadmap";
 
 /* The default path for the map files (the "maps" path): */
@@ -354,8 +356,6 @@ char *roadmap_path_remove_extension (const char *name)
 
 const char *roadmap_path_user (void)
 {
-	static char *RoadMapUser = NULL;
-
 	if (RoadMapUser == NULL) {
 		WCHAR path_unicode[MAX_PATH];
 		char *path;
@@ -379,7 +379,6 @@ const char *roadmap_path_user (void)
 const char *roadmap_path_trips (void)
 {   
 	static char  RoadMapDefaultTrips[] = "trips";
-	static char *RoadMapTrips = NULL;
 
 	if (RoadMapTrips == NULL) {
 
@@ -667,3 +666,25 @@ const char *roadmap_path_temporary (void)
 	return roadmap_path_user();
 }
 
+/**
+ * @brief recursively clean up a linked list
+ */
+static void roadmap_path_cleanup_recursive (RoadMapPathList p)
+{
+	if (p == NULL)
+		return;
+	roadmap_path_cleanup_recursive (p->next);
+	free(p);
+}
+
+/**
+ * @brief cleanup
+ */
+void roadmap_path_shutdown (void)
+{
+	roadmap_path_cleanup_recursive (RoadMapPaths);
+	RoadMapPaths = NULL;
+
+	RoadMapUser = NULL;	// this only points into a structure, free() happens elsewhere
+	RoadMapTrips = NULL;	// this only points into a structure, free() happens elsewhere
+}
