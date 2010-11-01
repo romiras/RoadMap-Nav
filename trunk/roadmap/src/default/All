@@ -1,6 +1,6 @@
 Class.Name: All
 Class.Lines: Freeways Ramps Highways Streets Trails Rivers Shore Railroads Boundaries
-Class.Polygons: Lakes Sea Parks Hospitals Airports Stations Malls
+Class.Polygons: Lakes Sea Parks Hospitals Airports Stations Malls Nature Amenity
 Class.NavigationModes: Car Bike Foot Boat
 Navigation.Car: Freeways Ramps Highways Streets
 Navigation.Bike: Streets Trails Shore Parks
@@ -81,3 +81,11 @@ Boundaries.Color: darkgreen
 Boundaries.Thickness: 2
 Boundaries.Declutter: 2147483647
 Boundaries.Speed: 1
+Nature.Color: green
+Nature.Declutter: 1300
+Nature.Thickness: 1
+Nature.Speed: 1
+Amenity.Color: orange
+Amenity.Declutter: 1300
+Amenity.Thickness: 1
+Amenity.Speed: 1

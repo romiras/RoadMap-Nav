@@ -86,6 +86,8 @@ static int      WayFlags = 0;           /**< properties of this way, from
 static int      WayInvalid = 0;         /**< this way contains invalid nodes */
 static int	WayIsOneWay = ROADMAP_LINE_DIRECTION_BOTH;
 					/**< is this way one direction only */
+static int	WayAdminLevel = 0;	/**< boundaries */
+static int	WayCoast = 0;		/**< coastline */
 
 /**
  * @brief variables referring to the current node
@@ -177,6 +179,8 @@ buildmap_osm_text_reset_way(void)
         WayFlags = 0;
         WayInvalid = 0;
 	WayIsOneWay = ROADMAP_LINE_DIRECTION_BOTH;
+	WayAdminLevel = 0;
+	WayCoast = 0;
 }
 
 /**
@@ -743,6 +747,10 @@ buildmap_osm_text_tag(char *data)
 			free(WayStreetRef);
 		WayStreetRef = FromXmlAndDup(value);
 		return 0;	/* FIX ME ?? */
+	} else if (strcasecmp(tag, "admin_level") == 0) {
+		WayAdminLevel = atoi(value);
+	} else if (strcasecmp(tag, "natural") == 0 && strcasecmp(value, "coastline") == 0) {
+		WayCoast = 1;
 	}
 
 	/* Scan list_info
@@ -792,6 +800,13 @@ buildmap_osm_text_way_end(char *data)
         int             fromlon, tolon, fromlat, tolat;
         int             j;
         int             was_split = 0;
+	static int	l_shoreline = 0,
+			l_boundary = 0;
+       
+	if (l_shoreline == 0)
+		l_shoreline = buildmap_layer_get("shore");;
+	if (l_boundary == 0)
+		l_boundary = buildmap_layer_get("boundaries");;
 
         if (WayInvalid) {
                 buildmap_osm_text_reset_way();
@@ -800,6 +815,32 @@ buildmap_osm_text_way_end(char *data)
 
         if (in_way == 0)
                 buildmap_fatal(0, "Wasn't in a way (%s)", data);
+
+	if (WayCoast) {
+		WayNotInteresting = 0;
+#if 0
+		buildmap_info("Way %d (%s) admin level %d",
+				in_way, WayStreetName ? WayStreetName : "", WayAdminLevel);
+#endif
+		WayLayer = l_shoreline;
+	}
+
+	if (WayAdminLevel) {
+#if 0
+		if (WayStreetName) {
+			buildmap_info("Way %s admin level %d", WayStreetName, WayAdminLevel);
+		} else {
+			buildmap_info("Way %d <unnamed> admin level %d", in_way, WayAdminLevel);
+		}
+#endif
+
+		if (WayAdminLevel == 2) {
+			/* National border, always considered interesting */
+			WayNotInteresting = 0;
+		}
+
+		WayLayer = l_boundary;
+	}
 
         if (WayNotInteresting || WayLayer == 0) {
                 buildmap_verbose("discarding way %d, not interesting (%s)", in_way, data);
@@ -877,6 +918,11 @@ buildmap_osm_text_way_end(char *data)
                         rms_name = str2dict(DictionaryStreet, WayStreetRef);
 #if 0
 		else {
+			/*
+			 * debugging purpose : flag unnamed ways, whatever they
+			 * are, with the OSM way id.
+			 * You can use this to look them up in the OSM XML file.
+			 */
 			char s[64];
 			sprintf(s, "OSM unnamed way %d", in_way);
                         rms_name = str2dict(DictionaryStreet, s);
