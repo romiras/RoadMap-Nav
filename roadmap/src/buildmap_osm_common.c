@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright (c) 2007 Paul Fox
- *   Copyright (c) 2008, Danny Backx
+ *   Copyright (c) 2008, 2010, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -26,6 +26,8 @@
  * @brief a module to convert OSM (OpenStreetMap) data into RoadMap maps.
  *
  * This file contains the static data.
+ *
+ * See http://wiki.openstreetmap.org/wiki/Map_Features
  */
 
 #include <stdio.h>
@@ -80,6 +82,8 @@ int BuildMapLayerHospital = 0;
 int BuildMapLayerAirport = 0;
 int BuildMapLayerStation = 0;
 int BuildMapLayerMall = 0;
+int BuildMapLayerNature = 0;
+int BuildMapLayerAmenity = 0;
 
 /* Water layers. */
 
@@ -110,6 +114,8 @@ int BuildMapLayerBoundary = 0;
 #define LAKE        &BuildMapLayerLake        
 #define SEA         &BuildMapLayerSea         
 #define BOUNDARY    &BuildMapLayerBoundary
+#define	NATURE      &BuildMapLayerNature
+#define AMENITY     &BuildMapLayerAmenity
 
 BuildMapDictionary DictionaryPrefix;
 BuildMapDictionary DictionaryStreet;
@@ -140,6 +146,9 @@ void buildmap_osm_common_find_layers (void) {
    BuildMapLayerCanal     = buildmap_layer_get ("canals");
    BuildMapLayerLake      = buildmap_layer_get ("lakes");
    BuildMapLayerSea       = buildmap_layer_get ("sea");
+
+   BuildMapLayerNature    = buildmap_layer_get ("nature");
+   BuildMapLayerAmenity   = buildmap_layer_get ("amenity");
 
    BuildMapLayerBoundary = buildmap_layer_get ("boundaries");
 }
@@ -223,7 +232,11 @@ layer_info_t highway_to_layer[] = {
         { "bridleway",          TRAIL,          0 },            /* 15 */
         { "footway",            TRAIL,          0 },            /* 16 */
         { "steps",              TRAIL,          0 },            /* 17 */
-        { "pedestrian",         TRAIL,          0 },            /* =>17 */
+        { "pedestrian",         TRAIL,          0 },            /* 18 */
+        { "pathway",            TRAIL,          0 },            /* 19 */
+	{ "road",		STREET,		0 },		/* 20 */	/* New - ok ? */
+	{ "secondary_link",	STREET,		0 },		/* 21 */	/* New - ok ? */
+	{ "path",		TRAIL,		0 },		/* 22 */	/* New - ok ? */
         { 0,                    NULL,           0 },
 };
 
@@ -251,6 +264,8 @@ layer_info_t waterway_to_layer[] = {
 	{ "water_point",	RIVER,		0 },		/* 10 */
 	{ "weir",		RIVER,		0 },		/* 11 */
 	{ "dam",		RIVER,		0 },		/* 12 */
+	{ "riverbank",		RIVER,		0 },		/* 13 */	/* New - ok ? */
+	{ "ditch",		RIVER,		0 },		/* 14 */	/* New - ok ? */
         { 0,                    NULL,           0 },
 };
 
@@ -290,8 +305,26 @@ layer_info_t natural_to_layer[] = {
         { 0,                    NULL,           0 },
         { "coastline",          SHORELINE,      0 },            /* 1 */
         { "water",              LAKE,           AREA },         /* 2 */
-        { "wood",               NULL,           AREA },         /* 3 */
+        { "wood",               NATURE,         AREA },         /* 3 */
         { "peak",               NULL,           0 },            /* 4 */
+        { "land",		NULL,		AREA },		/* 5 */		/* New - ok ? */
+        { "bay",		NULL,		AREA },		/* 6 */		/* New - ok ? */
+        { "beach",		NULL,		AREA },		/* 7 */		/* New - ok ? */
+        { "cave_entrance",	NULL,		AREA },		/* 8 */		/* New - ok ? */
+        { "cliff",		NULL,		AREA },		/* 9 */		/* New - ok ? */
+        { "fell",		NULL,		AREA },		/* 10 */	/* New - ok ? */
+        { "glacier",		NULL,		AREA },		/* 11 */	/* New - ok ? */
+        { "heath",		NULL,		AREA },		/* 12 */	/* New - ok ? */
+        { "marsh",		NULL,		AREA },		/* 13 */	/* New - ok ? */
+        { "mud",		NULL,		AREA },		/* 14 */	/* New - ok ? */
+        { "sand",		NULL,		AREA },		/* 15 */	/* New - ok ? */
+        { "scree",		NULL,		AREA },		/* 16 */	/* New - ok ? */
+        { "scrub",		NULL,		AREA },		/* 17 */	/* New - ok ? */
+        { "sprint",		NULL,		AREA },		/* 18 */	/* New - ok ? */
+        { "stone",		NULL,		AREA },		/* 19 */	/* New - ok ? */
+        { "tree",		NULL,		AREA },		/* 20 */	/* New - ok ? */
+        { "volcano",		NULL,		AREA },		/* 21 */	/* New - ok ? */
+        { "wetland",		NULL,		AREA },		/* 22 */	/* New - ok ? */
         { 0,                    NULL,           0 },
 };
 
@@ -309,30 +342,78 @@ layer_info_t amenity_to_layer[] = {
         { 0,                    NULL,           0 },
         { "hospital",           HOSPITAL,       0 },            /* 1 */
         { "pub",                NULL,           0 },            /* 2 */
-        { "parking",            NULL,           AREA },         /* 3 */
-        { "post_office",        NULL,           0 },            /* 4 */
+        { "parking",            AMENITY,        AREA },         /* 3 */
+        { "post_office",        AMENITY,        0 },            /* 4 */
         { "fuel",               NULL,           0 },            /* 5 */
         { "telephone",          NULL,           0 },            /* 6 */
         { "toilets",            NULL,           0 },            /* 7 */
         { "post_box",           NULL,           0 },            /* 8 */
-        { "school",             NULL,           AREA },         /* 9 */
-        { "supermarket",        NULL,           0 },            /* 10 */
-        { "library",            NULL,           0 },            /* 11 */
+        { "school",             AMENITY,        AREA },         /* 9 */
+        { "supermarket",        AMENITY,        0 },            /* 10 */
+        { "library",            AMENITY,        0 },            /* 11 */
         { "theatre",            NULL,           0 },            /* 12 */
         { "cinema",             NULL,           0 },            /* 13 */
-        { "police",             NULL,           0 },            /* 14 */
-        { "fire_station",       NULL,           0 },            /* 15 */
+        { "police",             AMENITY,	0 },            /* 14 */
+        { "fire_station",       AMENITY,	0 },            /* 15 */
         { "restaurant",         NULL,           0 },            /* 16 */
-        { "fastfood",           NULL,           0 },            /* 17 */
+        { "fast_food",          NULL,           0 },            /* 17 */	/* Changed */
         { "bus_station",        NULL,           0 },            /* 18 */
-        { "place_of_worship",   NULL,           0 },            /* 19 */
+        { "place_of_worship",   AMENITY,	0 },            /* 19 */
         { "cafe",               NULL,           0 },            /* 20 */
         { "bicycle_parking",    NULL,           AREA },         /* 21 */
         { "public_building",    NULL,           AREA },         /* 22 */
         { "grave_yard",         NULL,           AREA },         /* 23 */
         { "university",         NULL,           AREA },         /* 24 */
-        { "college",            NULL,           AREA },         /* 25 */
+        { "college",            AMENITY,        AREA },         /* 25 */
         { "townhall",           NULL,           AREA },         /* 26 */
+        { "food_court",         NULL,           0 },            /* 27 */	/* New - ok ? */
+        { "drinking_water",     NULL,           0 },            /* 28 */	/* New - ok ? */
+        { "bbq",                NULL,           0 },            /* 28 */	/* New - ok ? */
+        { "bar",                NULL,           0 },            /* 29 */	/* New - ok ? */
+        { "biergarten",         NULL,           0 },            /* 30 */	/* New - ok ? */
+        { "ice_cream",          NULL,           0 },            /* 31 */	/* New - ok ? */
+        { "kindergarten",       NULL,           0 },            /* 32 */	/* New - ok ? */
+        { "ice_cream",          NULL,           0 },            /* 33 */	/* New - ok ? */
+        { "ferry_terminal",     AMENITY,	AREA },         /* 34 */	/* New - ok ? */
+        { "bicycle_rental",     NULL,           0 },            /* 35 */	/* New - ok ? */
+        { "car_rental",         NULL,           0 },            /* 36 */	/* New - ok ? */
+        { "car_sharing",        NULL,           AREA },         /* 37 */	/* New - ok ? */
+        { "car_wash",           NULL,           0 },            /* 38 */	/* New - ok ? */
+        { "grit_bin",           NULL,           0 },            /* 39 */	/* New - ok ? */
+        { "taxi",               NULL,           AREA },         /* 40 */	/* New - ok ? */
+        { "atm",                NULL,           0 },            /* 41 */	/* New - ok ? */
+        { "bank",               NULL,           0 },            /* 42 */	/* New - ok ? */
+        { "bureau_de_change",   NULL,           0 },            /* 43 */	/* New - ok ? */
+        { "pharmacy",           NULL,           0 },            /* 44 */	/* New - ok ? */
+        { "baby_hatch",         NULL,           0 },            /* 45 */	/* New - ok ? */
+        { "dentist",            NULL,           0 },            /* 46 */	/* New - ok ? */
+        { "doctor",             NULL,           0 },            /* 47 */	/* New - ok ? */
+        { "social_facility",    NULL,           0 },            /* 48 */	/* New - ok ? */
+        { "veterinary",         NULL,           0 },            /* 49 */	/* New - ok ? */
+        { "architect_office",   NULL,           0 },            /* 50 */	/* New - ok ? */
+        { "arts_centre",        AMENITY,	AREA },         /* 51 */	/* New - ok ? */
+        { "community_centre",   AMENITY,	AREA },         /* 52 */	/* New - ok ? */
+        { "social_centre",      AMENITY,	AREA },         /* 53 */	/* New - ok ? */
+        { "fountain",           NULL,           0 },            /* 51 */	/* New - ok ? */
+        { "nightclub",          NULL,           0 },            /* 51 */	/* New - ok ? */
+        { "stripclub",          NULL,           0 },            /* 51 */	/* New - ok ? */
+        { "studio",             NULL,           0 },            /* 54 */	/* New - ok ? */
+        { "bench",              NULL,           0 },            /* 55 */	/* New - ok ? */
+        { "brothel",            NULL,           0 },            /* 56 */	/* New - ok ? */
+        { "clock",              NULL,           0 },            /* 57 */	/* New - ok ? */
+        { "courthouse",         AMENITY,        0 },            /* 58 */	/* New - ok ? */
+        { "crematorium",        AMENITY,        0 },            /* 59 */	/* New - ok ? */
+        { "embassy",            AMENITY,        0 },            /* 60 */	/* New - ok ? */
+        { "hunting_stand",      NULL,           0 },            /* 61 */	/* New - ok ? */
+        { "marketplace",        AMENITY,        AREA },         /* 62 */	/* New - ok ? */
+        { "prison",             AMENITY,        AREA },         /* 63 */	/* New - ok ? */
+        { "recycling",          NULL,           0 },            /* 64 */	/* New - ok ? */
+        { "sauna",              NULL,           0 },            /* 65 */	/* New - ok ? */
+        { "shelter",            NULL,           AREA },         /* 66 */	/* New - ok ? */
+        { "vending_machine",    NULL,           0 },            /* 67 */	/* New - ok ? */
+        { "waste_basket",       NULL,           0 },            /* 68 */	/* New - ok ? */
+        { "waste_disposal",     NULL,           0 },            /* 69 */	/* New - ok ? */
+        { "watering_place",     NULL,           0 },            /* 70 */	/* New - ok ? */
         { 0,                    NULL,           0 },
 };
 
@@ -362,8 +443,8 @@ layer_info_t leisure_to_layer[] = {
         { "water_park",         NULL,           AREA },         /* 7 */
         { "pitch",              NULL,           AREA },         /* 8 */
         { "track",              NULL,           AREA },         /* 9 */
-        { "marina",             NULL,           AREA },         /* 10 */
-        { "stadium",            NULL,           AREA },         /* 11 */
+        { "marina",             AMENITY,        AREA },         /* 10 */
+        { "stadium",            AMENITY,        AREA },         /* 11 */
         { "golf_course",        PARK,           AREA },         /* 12 */
         { "sports_centre",      NULL,           AREA },         /* 13 */
         { 0,                    NULL,           0 },
@@ -389,6 +470,110 @@ char *oneway_type[] = {
 };
 #endif
 
+layer_info_t office_to_layer[] = {
+        { 0,                    NULL,           0 },
+	{ "accountant",		NULL,		0 },
+	{ "architect",		NULL,		0 },
+	{ "company",		NULL,		0 },
+	{ "employment_agency",	NULL,		0 },
+	{ "estate_agent",	NULL,		0 },
+	{ "government",		NULL,		0 },
+	{ "insurance",		NULL,		0 },
+	{ "it",			NULL,		0 },
+	{ "lawyer",		NULL,		0 },
+	{ "newspaper",		NULL,		0 },
+	{ "ngo",		NULL,		0 },
+	{ "quango",		NULL,		0 },
+	{ "research",		NULL,		0 },
+	{ "telecommunication",	NULL,		0 },
+	{ "travel_agent",	NULL,		0 },
+	{ 0,			NULL,		0 },
+};
+
+layer_info_t barrier_to_layer[] = {
+	{ 0,			NULL,		0 },
+	{ "hedge",		NULL,		0 },
+	{ "fence",		NULL,		0 },
+	{ "wall",		NULL,		0 },
+	{ "ditch",		NULL,		0 },
+	{ "retaining_wall",	NULL,		0 },
+	{ "city_wall",		NULL,		0 },
+	{ "bollard",		NULL,		0 },
+	{ "cycle_barrier",	NULL,		0 },
+	{ "block",		NULL,		0 },
+	{ "cattle_grid",	NULL,		0 },
+	{ "toll_booth",		NULL,		0 },
+	{ "entrance",		NULL,		0 },
+	{ "gate",		NULL,		0 },
+	{ "lift_gate",		NULL,		0 },
+	{ "stile",		NULL,		0 },
+	{ "horse_stile",	NULL,		0 },
+	{ "kissing_gate",	NULL,		0 },
+	{ "sally_port",		NULL,		0 },
+	{ "turnstile",		NULL,		0 },
+	{ "kent_carriage_gap",	NULL,		0 },
+	{ 0,			NULL,		0 },
+};
+
+layer_info_t craft_to_layer[] = {
+	{ 0,				NULL,           0 },
+	{ "agricultural_engines",	NULL,		0 },
+	{ "basket_maker",		NULL,		0 },
+	{ "beekeeper",			NULL,		0 },
+	{ "blacksmith",			NULL,		0 },
+	{ "boatbuilder",		NULL,		0 },
+	{ "carpenter",			NULL,		0 },
+	{ "carpet_layer",		NULL,		0 },
+	{ "caterer",			NULL,		0 },
+	{ "clockmaker",			NULL,		0 },
+	{ "confectionery",		NULL,		0 },
+	{ "electrician",		NULL,		0 },
+	{ "gardener",			NULL,		0 },
+	{ "handicraft",			NULL,		0 },
+	{ "hvac",			NULL,		0 },
+	{ "jeweller",			NULL,		0 },
+	{ "locksmith",			NULL,		0 },
+	{ "metal_construction",		NULL,		0 },
+	{ "optician",			NULL,		0 },
+	{ "painter",			NULL,		0 },
+	{ "photographer",		NULL,		0 },
+	{ "photographic_laboratory",	NULL,		0 },
+	{ "plasterer",			NULL,		0 },
+	{ "plumber",			NULL,		0 },
+	{ "pottery",			NULL,		0 },
+	{ "roofer",			NULL,		0 },
+	{ "shoemaker",			NULL,		0 },
+	{ "scaffolder",			NULL,		0 },
+	{ "stonemason",			NULL,		0 },
+	{ "sweep",			NULL,		0 },
+	{ "tailor",			NULL,		0 },
+	{ "tiler",			NULL,		0 },
+	{ "sailmaker",			NULL,		0 },
+	{ "rigger",			NULL,		0 },
+	{ "saddler",			NULL,		0 },
+	{ "sculptor",			NULL,		0 },
+	{ "upholsterer",		NULL,		0 },
+	{ 0,				NULL,		0 },
+};
+
+layer_info_t emergency_to_layer[] = {
+        { 0,                    NULL,           0 },
+	{ "ambulance_station",	NULL,		AREA },
+	{ "fire_extinguisher",	NULL,		0 },
+	{ "fire_flapper",	NULL,		0 },
+	{ "fire_hose",		NULL,		0 },
+	{ "fire_hydrant",	NULL,		0 },
+	{ "phone",		NULL,		0 },
+	{ "ses_station",	NULL,		0 },
+	{ "siren",		NULL,		0 },
+	{ 0,			NULL,		0 },
+};
+
+layer_info_t geological_to_layer[] = {
+        { 0,				NULL,           0 },
+	{ "palaeontological_site",	NULL,		0 },
+	{ 0,				NULL,		0 },
+};
 
 layer_info_sublist_t list_info[] = {
         {0,                     NULL,                 NULL },
@@ -439,6 +624,11 @@ layer_info_sublist_t list_info[] = {
         {"attraction",          NULL,                 NULL },
         {"wheelchair",          NULL,                 NULL },
         {"junction",            NULL,                 NULL },
+	{"office",		office_to_layer,	NULL },
+	{"barrier",		barrier_to_layer,	NULL },
+	{"craft",		craft_to_layer,		NULL },
+	{"emergency",		emergency_to_layer,	NULL },
+	{"geological",		geological_to_layer,	NULL },
         { 0,                    NULL,           0 },
 };
 
