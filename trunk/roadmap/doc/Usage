@@ -402,6 +402,9 @@ January 2009
      ** NOTE THAT MANY (ALL?) OF THE ADDRESS AND INTERSECTION SEARCHING
      OPTIONS ARE ONLY CURRENTLY AVAILABLE WHEN USING THE US TIGER MAPS. **
 
+     ** NEW : OSM based maps based on XML map data, built with buildmap_osm
+	from sources November 2010 and newer, do support address lookup. **
+
      RoadMap manages several types of points: a location point (selected using
      a street address or the mouse), the GPS position (updated automatically
      if a GPS fix is available), and an arbitrary number of user-defined
