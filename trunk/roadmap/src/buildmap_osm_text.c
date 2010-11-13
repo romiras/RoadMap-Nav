@@ -1278,8 +1278,23 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
         for (p=buf; *p && isspace(*p); p++) ;
         if (*p == '\n' || *p == '\r') 
                 continue;
-        if (*p != '<')
-                buildmap_fatal(0, "invalid XML (line %d, %s)", LineNo, buf);
+        if (*p != '<') {
+		/*
+		 * Assume we're in a continuation line such as
+		 *
+		 * <tag k='opening_hours' v='Mo 09:30-19:00;
+		 * Tu 09:30-17:00;
+		 * We 09:30-17:00;
+		 * Th 09:30-19:00;
+		 * Fr 09:30-17:00;
+		 * Sa 09:30-16:00;
+		 * Su 10:00-14:00'/>
+		 *
+		 * and just continue with the next line and hope we'll pick up
+		 * a new tag soon.
+		 */
+		continue;
+	}
 
         p++; /* point to character after '<' now */
         for (; *p && isspace(*p); p++) ;
@@ -1330,8 +1345,23 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
         for (p=buf; *p && isspace(*p); p++) ;
         if (*p == '\n' || *p == '\r') 
                 continue;
-        if (*p != '<')
-                buildmap_fatal(0, "invalid XML (line %d, %s)", LineNo, buf);
+        if (*p != '<') {
+		/*
+		 * Assume we're in a continuation line such as
+		 *
+		 * <tag k='opening_hours' v='Mo 09:30-19:00;
+		 * Tu 09:30-17:00;
+		 * We 09:30-17:00;
+		 * Th 09:30-19:00;
+		 * Fr 09:30-17:00;
+		 * Sa 09:30-16:00;
+		 * Su 10:00-14:00'/>
+		 *
+		 * and just continue with the next line and hope we'll pick up
+		 * a new tag soon.
+		 */
+		continue;
+	}
 
         p++; /* point to character after '<' now */
         for (; *p && isspace(*p); p++) ;
@@ -1377,8 +1407,23 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
         for (p=buf; *p && isspace(*p); p++) ;
         if (*p == '\n' || *p == '\r') 
                 continue;
-        if (*p != '<')
-                buildmap_fatal(0, "invalid XML (line %d, %s)", LineNo, buf);
+        if (*p != '<') {
+		/*
+		 * Assume we're in a continuation line such as
+		 *
+		 * <tag k='opening_hours' v='Mo 09:30-19:00;
+		 * Tu 09:30-17:00;
+		 * We 09:30-17:00;
+		 * Th 09:30-19:00;
+		 * Fr 09:30-17:00;
+		 * Sa 09:30-16:00;
+		 * Su 10:00-14:00'/>
+		 *
+		 * and just continue with the next line and hope we'll pick up
+		 * a new tag soon.
+		 */
+		continue;
+	}
 
         p++; /* point to character after '<' now */
         for (; *p && isspace(*p); p++) ;
@@ -1432,8 +1477,23 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
         for (p=buf; *p && isspace(*p); p++) ;
         if (*p == '\n' || *p == '\r') 
                 continue;
-        if (*p != '<')
-                buildmap_fatal(0, "invalid XML");
+        if (*p != '<') {
+		/*
+		 * Assume we're in a continuation line such as
+		 *
+		 * <tag k='opening_hours' v='Mo 09:30-19:00;
+		 * Tu 09:30-17:00;
+		 * We 09:30-17:00;
+		 * Th 09:30-19:00;
+		 * Fr 09:30-17:00;
+		 * Sa 09:30-16:00;
+		 * Su 10:00-14:00'/>
+		 *
+		 * and just continue with the next line and hope we'll pick up
+		 * a new tag soon.
+		 */
+		continue;
+	}
 
         p++; /* point to character after '<' now */
         for (; *p && isspace(*p); p++) ;
