@@ -49,3 +49,5 @@ depends:
 	$(MAKEDEPS) -Y -f - $(LIBSRCS) > .depends.mk 2>/dev/null
 
 -include .depends.mk
+
+gpx.o:	../config.mk

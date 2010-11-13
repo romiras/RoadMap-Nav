@@ -612,7 +612,7 @@ installman: $(MANPAGES)
 installdoc: $(MANUAL) 
 	-cp $(MANUAL) $(pkgdatadir)
 
-$(MANUAL): ../README
+$(MANUAL): ../README $(addprefix ../doc/, $(DOC_SRC))
 	expand $< | \
 	(cd ../doc; txt2tags --target html \
 	    --toc --infile - --outfile - ) >$@
@@ -772,3 +772,6 @@ roadmap_point.o:	Makefile config.mk
 roadmap_screen.o:	Makefile config.mk
 roadmap_plugin.o:	Makefile config.mk
 roadmap_trip.o:		Makefile config.mk
+
+roadmap_gpx.o:		Makefile config.mk
+roadmap_landmark.o:		Makefile config.mk
