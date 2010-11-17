@@ -200,6 +200,29 @@ int buildmap_db_open (const char *path, const char *name) {
 }
 
 /**
+ * @bref remove the output file, it is bad
+ * @param path
+ * @param name
+ */
+int buildmap_db_remove (const char *path, const char *name) {
+   struct roadmap_db_section *root;
+
+   if (path == NULL) {
+      path = ".";
+   }
+
+   BuildmapCurrentDbName = roadmap_path_join (path, name);
+
+   if (BuildmapCurrentDbName == NULL) {
+      buildmap_error (0, "no more memory");
+      return -1;
+   }
+
+   unlink(BuildmapCurrentDbName);
+   return 0;
+}
+
+/**
  * @brief
  * @param parent
  * @param name
@@ -224,6 +247,7 @@ buildmap_db *buildmap_db_add_section (buildmap_db *parent, const char *name) {
    offset = parent->data + parent->head->size;
    aligned = (offset + 7) & (~7);
 
+   // fprintf(stderr, "buildmap_db_add_section(%s) extend (aligned %d, sz %d)\n", name, aligned, sizeof(struct roadmap_db_section));
    if (buildmap_db_extend (aligned + sizeof(struct roadmap_db_section)) < 0) {
       return NULL;
    }
@@ -288,6 +312,7 @@ int buildmap_db_add_data (buildmap_db *section, int count, int size) {
 
    section->head->size += total_size;
 
+   // fprintf(stderr, "buildmap_db_add_data(%d,%d) : extend(offset %d, aligned_size %d)\n", count, size, offset, aligned_size);
    if (buildmap_db_extend (offset + aligned_size) < 0) {
       return -1;
    }
@@ -438,16 +463,20 @@ void buildmap_db_sort (void) {
 
 /**
  * @brief save the map
+ * @return 0 on success, failure if other values.
  */
-void buildmap_db_save (void) {
+int buildmap_db_save (void) {
 
-   int i;
+   int i, r;
 
    for (i = 0; i < BuildmapModuleCount; ++i) {
       if (BuildmapModuleRegistration[i]->save != NULL) {
-         BuildmapModuleRegistration[i]->save ();
+         r = BuildmapModuleRegistration[i]->save ();
+         if (r != 0)
+		 return r;
       }
    }
+   return 0;
 }
 
 /**

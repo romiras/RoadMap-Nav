@@ -204,7 +204,7 @@ void buildmap_metadata_add_value (const char *category,
 }
 
 
-static void buildmap_metadata_save (void) {
+static int buildmap_metadata_save (void) {
 
    int i;
    int j;
@@ -259,6 +259,8 @@ static void buildmap_metadata_save (void) {
          db_values[values_cursor++] = one_attribute->values[j];
       }
    }
+
+   return 0;
 }
 
 

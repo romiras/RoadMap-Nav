@@ -166,9 +166,10 @@ static int  buildmap_county_select_format (void) {
 }
 
 
-static void buildmap_county_save (const char *name) {
+static int buildmap_county_save (const char *name) {
 
    char db_name[128];
+   int r;
 
    snprintf (db_name, 127, "usc%s.rdm", name);
 
@@ -177,9 +178,10 @@ static void buildmap_county_save (const char *name) {
       buildmap_fatal (0, "cannot create database %s", db_name);
    }
 
-   buildmap_db_save ();
-
+   r = buildmap_db_save ();
    buildmap_db_close ();
+
+   return r;
 }
 
 
@@ -231,7 +233,9 @@ static void buildmap_county_process (const char *source,
       buildmap_db_summary ();
    }
 
-   buildmap_county_save (county);
+   if (buildmap_county_save (county) != 0) {
+	   buildmap_fatal (0, "Map generation failed");
+   }
    buildmap_db_reset ();
    roadmap_hash_reset ();
 }

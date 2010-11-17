@@ -546,7 +546,7 @@ static void buildmap_range_sort (void) {
 /**
  * @brief
  */
-static void  buildmap_range_save (void) {
+static int buildmap_range_save (void) {
 
    int i;
    int k;
@@ -614,7 +614,8 @@ static void  buildmap_range_save (void) {
 
    square_info = calloc (square_count, sizeof(*square_info));
    if (square_info == NULL) {
-      buildmap_fatal (0, "no more memory");
+      buildmap_error (0, "no more memory");
+      return 1;
    }
 
    for (i = 0; i < square_count; i++) {
@@ -738,38 +739,62 @@ static void  buildmap_range_save (void) {
    /* Create the database space. */
 
    root  = buildmap_db_add_section (NULL, "range");
-   if (root == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (root == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
 
    table_street = buildmap_db_add_section (root, "bystreet");
-   if (table_street == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (table_street == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data
       (table_street, buildmap_street_count(), sizeof(RoadMapRangeByStreet));
 
    table_city = buildmap_db_add_section (root, "bycity");
-   if (table_city == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (table_city == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data
       (table_city, city_count, sizeof(RoadMapRangeByCity));
 
    table_place = buildmap_db_add_section (root, "place");
-   if (table_place == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (table_place == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data
       (table_place, RangePlaceCount, sizeof(RoadMapRangePlace));
 
    table_zip = buildmap_db_add_section (root, "byzip");
-   if (table_zip == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (table_zip == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (table_zip, zip_count, sizeof(RoadMapRangeByZip));
 
    table_addr = buildmap_db_add_section (root, "addr");
-   if (table_addr == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (table_addr == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (table_addr, RangeCount, sizeof(RoadMapRange));
 
    table_noaddr = buildmap_db_add_section (root, "noaddr");
-   if (table_noaddr == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (table_noaddr == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (table_noaddr,
                          RangeNoAddressCount, sizeof(RoadMapRangeNoAddress));
 
    table_square = buildmap_db_add_section (root, "bysquare");
-   if (table_square == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (table_square == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data
       (table_square, square_count, sizeof(RoadMapRangeBySquare));
 
@@ -806,7 +831,8 @@ static void  buildmap_range_save (void) {
       if (this_range->street != street_index) {
 
          if (street_index > this_range->street) {
-            buildmap_fatal (0, "inconsistent range order");
+            buildmap_error (0, "inconsistent range order");
+	    return 1;
          }
 
          if (street_index >= 0) {
@@ -837,10 +863,12 @@ static void  buildmap_range_save (void) {
          if (city_index >= 0) {
 
             if (i - first_range_in_city < 0) {
-               buildmap_fatal (0, "negative count");
+               buildmap_error (0, "negative count");
+	       return 1;
             }
             if (i - first_range_in_city >= 0x10000) {
-               buildmap_fatal (0, "too many street in a single city");
+               buildmap_error (0, "too many street in a single city");
+	       return 1;
             }
          }
 
@@ -881,14 +909,17 @@ static void  buildmap_range_save (void) {
    db_streets[street_index].count_range = i - first_range;
 
    if (i - first_range_in_city < 0) {
-      buildmap_fatal (0, "negative count");
+      buildmap_error (0, "negative count");
+      return 1;
    }
    if (i - first_range_in_city >= 0x10000) {
-      buildmap_fatal (0, "too many street in a single city");
+      buildmap_error (0, "too many street in a single city");
+      return 1;
    }
 
    if (street_index >= buildmap_street_count()) {
-      buildmap_fatal (0, "out of bound street");
+      buildmap_error (0, "out of bound street");
+      return 1;
    }
 
    for (i = 0; i < RangePlaceCount; i++) {
@@ -962,13 +993,15 @@ static void  buildmap_range_save (void) {
       k = buildmap_line_get_square_sorted (this_noaddr->line);
 
       if (k >= square_count) {
-         buildmap_fatal (0, "invalid square index %d", k);
+         buildmap_error (0, "invalid square index %d", k);
+	 return 1;
       }
 
       if (k != square_current) {
 
          if (k < square_current) {
-            buildmap_fatal (0, "no-address line out of order (square)");
+            buildmap_error (0, "no-address line out of order (square)");
+	    return 1;
          }
          db_square[k].noaddr_start = i;
          db_square[k].noaddr_count = 0;
@@ -980,6 +1013,7 @@ static void  buildmap_range_save (void) {
 
    free(square_info);
 
+   return 0;
 }
 
 /**

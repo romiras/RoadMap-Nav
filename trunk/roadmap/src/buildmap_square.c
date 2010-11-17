@@ -414,7 +414,7 @@ void buildmap_square_sort (void) {
 }
 
 
-static void buildmap_square_save (void) {
+static int buildmap_square_save (void) {
 
    int i;
 
@@ -430,14 +430,23 @@ static void buildmap_square_save (void) {
    buildmap_info ("saving %d squares...", SquareCount);
 
    root = buildmap_db_add_section (NULL, "square");
-   if (root == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (root == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
 
    table_global = buildmap_db_add_section (root, "global");
-   if (table_global == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (table_global == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (table_global, 1, sizeof(RoadMapGlobal));
 
    table_data = buildmap_db_add_section (root, "data");
-   if (table_data == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (table_data == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (table_data, SquareCount, sizeof(RoadMapSquare));
 
    db_global = (RoadMapGlobal *) buildmap_db_get_data (table_global);
@@ -471,6 +480,8 @@ static void buildmap_square_save (void) {
       db_square[i].position      = SortedSquare[i];
       db_square[i].count_points  = one_square->count;
    }
+
+   return 0;
 }
 
 

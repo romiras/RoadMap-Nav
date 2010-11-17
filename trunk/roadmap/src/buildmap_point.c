@@ -355,7 +355,7 @@ void buildmap_point_sort (void) {
 /**
  * @brief save points into the database file
  */
-static void buildmap_point_save (void) {
+static int buildmap_point_save (void) {
 
    int i;
    int j;
@@ -381,14 +381,23 @@ static void buildmap_point_save (void) {
    square_count = buildmap_square_get_count();
 
    root = buildmap_db_add_section (NULL, "point");
-   if (root == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (root == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
 
    table_data = buildmap_db_add_section (root, "data");
-   if (table_data == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (table_data == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (table_data, PointCount, sizeof(RoadMapPoint));
 
    table_bysquare = buildmap_db_add_section (root, "bysquare");
-   if (table_bysquare == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (table_bysquare == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data
       (table_bysquare, square_count, sizeof(RoadMapPointBySquare));
 
@@ -404,7 +413,8 @@ static void buildmap_point_save (void) {
 
       if (one_point->square != last_square) {
          if (one_point->square != last_square + 1) {
-            buildmap_fatal (0, "decreasing square order in point table");
+            buildmap_error (0, "decreasing square order in point table");
+	    return 1;
          }
          last_square = one_point->square;
          db_bysquare[last_square].first = i;
@@ -420,6 +430,8 @@ static void buildmap_point_save (void) {
       db_points[i].latitude =
          (unsigned short) (one_point->latitude - reference_latitude);
    }
+
+   return 0;
 }
 
 /**

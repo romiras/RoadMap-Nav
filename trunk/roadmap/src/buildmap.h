@@ -82,12 +82,13 @@ typedef struct buildmap_db_section buildmap_db;
 
 
 typedef void (*buildmap_db_action) (void);
+typedef int (*buildmap_db_return_action) (void);
 
 typedef struct {
 
    const char        *name;
    buildmap_db_action sort;
-   buildmap_db_action save;
+   buildmap_db_return_action save;
    buildmap_db_action summary;
    buildmap_db_action reset;
 
@@ -95,6 +96,7 @@ typedef struct {
 
 
 int buildmap_db_open (const char *path, const char *name);
+int buildmap_db_remove (const char *path, const char *name);
 
 void buildmap_db_register (const buildmap_db_module *module);
 
@@ -109,7 +111,7 @@ buildmap_db *buildmap_db_add_child (buildmap_db *parent,
 
 /* The functions that call the registered actions: */
 void buildmap_db_sort    (void);
-void buildmap_db_save    (void);
+int  buildmap_db_save    (void);
 void buildmap_db_summary (void);
 void buildmap_db_reset   (void);
 

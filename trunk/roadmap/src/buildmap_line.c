@@ -629,8 +629,9 @@ void buildmap_line_sort (void) {
 
 /**
  * @brief a collection of actions for everything all tables in the "line" database
+ * @return 0 if success, other values for failure
  */         
-static void buildmap_line_save (void) {
+static int buildmap_line_save (void) {
 
    int i;
    int j;
@@ -669,8 +670,10 @@ static void buildmap_line_save (void) {
    RoadMapLineByPoint2	*db_line_bypoint2;
    buildmap_db		*line_bypoint1_table, *line_bypoint2_table;
 
-   if (!LineCount)
-	   return;
+   if (!LineCount) {
+      buildmap_error (0, "LineCount is 0");
+      return 1;
+   }
 
    buildmap_info ("saving %d lines...", LineCount);
 
@@ -696,15 +699,17 @@ static void buildmap_line_save (void) {
       if (square != square_current) {
 
          if (square < square_current) {
-            buildmap_fatal (0, "abnormal square order: %d following %d",
+            buildmap_error (0, "abnormal square order: %d following %d",
                                square, square_current);
+	    return 1;
          }
          if (square_current >= 0) {
             /* Lets compute how much space is needed for the just finished
              * square.
              */
             if (layer_current <= 0) {
-                buildmap_fatal (0, "empty square %d has lines?", square);
+                buildmap_error (0, "empty square %d has lines?", square);
+		return 1;
             }
             layer1_count += (layer_current + 1); /* 1 slot for the end line. */
          }
@@ -714,8 +719,9 @@ static void buildmap_line_save (void) {
       }
 
       if (one_line->layer < layer_current) {
-         buildmap_fatal (0, "abnormal layer order: %d following %d",
+         buildmap_error (0, "abnormal layer order: %d following %d",
                             one_line->layer, layer_current);
+	 return 1;
       }
 
       layer_current = one_line->layer;
@@ -742,14 +748,16 @@ static void buildmap_line_save (void) {
       square = buildmap_point_get_square_sorted (one_line->record.to);
 
       if (square == one_line->square_from) {
-         buildmap_fatal (0, "non crossing line in the crossing line table");
+         buildmap_error (0, "non crossing line in the crossing line table");
+	 return 1;
       }
 
       if (square != square_current) {
 
          if (square < square_current) {
-            buildmap_fatal (0, "abnormal square order: d following %d",
+            buildmap_error (0, "abnormal square order: d following %d",
                                square, square_current);
+	    return 1;
          }
          if (square_current >= 0) {
             /* Lets compute how much space is needed for the just finished
@@ -766,8 +774,9 @@ static void buildmap_line_save (void) {
       }
 
       if (one_line->layer < layer_current) {
-         buildmap_fatal (0, "abnormal layer order: %d following %d",
+         buildmap_error (0, "abnormal layer order: %d following %d",
                             one_line->layer, layer_current);
+	 return 1;
       }
       layer_current = one_line->layer;
       one_line->square_to = square;
@@ -776,7 +785,8 @@ static void buildmap_line_save (void) {
    if (square_current >= 0) {
       /* Lets compute how much space is needed for the last square. */
       if (layer_current < 0) {
-         buildmap_fatal (0, "empty square %d has lines?", square);
+         buildmap_error (0, "empty square %d has lines?", square);
+	 return 1;
       }
       layer2_count += (layer_current + 1); /* 1 slot for the end line. */
    }
@@ -785,51 +795,84 @@ static void buildmap_line_save (void) {
    /* Create the database space */
 
    root = buildmap_db_add_section (NULL, "line");
-   if (root == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (root == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
 
    data_table = buildmap_db_add_section (root, "data");
-   if (data_table == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (data_table == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (data_table, LineCount, sizeof(RoadMapLine));
 
    data2_table = buildmap_db_add_section (root, "data2");
-   if (data2_table == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (data2_table == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (data2_table, LineCount, sizeof(RoadMapLine2));
 
    square1_table = buildmap_db_add_section (root, "bysquare1");
-   if (square1_table == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (square1_table == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (square1_table,
                          square_count, sizeof(RoadMapLineBySquare));
 
    layer1_table = buildmap_db_add_section (root, "bylayer1");
-   if (layer1_table == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (layer1_table == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (layer1_table, layer1_count, sizeof(int));
 
    square2_table = buildmap_db_add_section (root, "bysquare2");
-   if (square2_table == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (square2_table == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (square2_table,
                          square_count, sizeof(RoadMapLineBySquare));
 
    long_lines_table = buildmap_db_add_section (root, "longlines");
-   if (long_lines_table == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (long_lines_table == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (long_lines_table,
                          LongLinesCount, sizeof(RoadMapLongLine));
 
 
    layer2_table = buildmap_db_add_section (root, "bylayer2");
-   if (layer2_table == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (layer2_table == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (layer2_table, layer2_count, sizeof(int));
 
    index2_table = buildmap_db_add_section (root, "index2");
-   if (index2_table == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (index2_table == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (index2_table, LineCrossingCount, sizeof(int));
 
    buildmap_line_count_linebypoint(&LineByPoint1Count, &LineByPoint2Count);
    line_bypoint1_table = buildmap_db_add_section (root, "bypoint1");
-   if (line_bypoint1_table == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (line_bypoint1_table == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (line_bypoint1_table, LineByPoint1Count, sizeof(int));
 
    line_bypoint2_table = buildmap_db_add_section (root, "bypoint2");
-   if (line_bypoint2_table == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (line_bypoint2_table == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (line_bypoint2_table, LineByPoint2Count, sizeof(int));
 
    db_lines   = (RoadMapLine *) buildmap_db_get_data (data_table);
@@ -873,7 +916,8 @@ static void buildmap_line_save (void) {
 
             layer_sublist += (layer_current + 1);
             if (layer_sublist >= layer1_count) {
-               buildmap_fatal (0, "invalid line/bylayer1 count");
+               buildmap_error (0, "invalid line/bylayer1 count");
+	       return 1;
             }
          }
          square_current = square;
@@ -899,7 +943,8 @@ static void buildmap_line_save (void) {
       db_square1[square_current].count = layer_current;
 
       if (layer_sublist+layer_current+1 != layer1_count) {
-         buildmap_fatal (0, "invalid line/bylayer1 count");
+         buildmap_error (0, "invalid line/bylayer1 count");
+	 return 1;
       }
    }
 
@@ -934,7 +979,8 @@ static void buildmap_line_save (void) {
 
             layer_sublist += (layer_current + 1);
             if (layer_sublist >= layer2_count) {
-               buildmap_fatal (0, "invalid line/bylayer2 count");
+               buildmap_error (0, "invalid line/bylayer2 count");
+	       return 1;
             }
          }
          square_current = square;
@@ -953,13 +999,16 @@ static void buildmap_line_save (void) {
       db_square2[square_current].count = layer_current;
 
       if (layer_sublist+layer_current+1 != layer2_count) {
-         buildmap_fatal (0, "invalid line/bylayer2 count");
+         buildmap_error (0, "invalid line/bylayer2 count");
+	 return 1;
       }
    }
 
    memcpy (db_long_lines, LongLines, LongLinesCount * sizeof (RoadMapLongLine));
 
    buildmap_line_transform_linebypoint(db_line_bypoint1, db_line_bypoint2);
+
+   return 0;
 }
 
 /**

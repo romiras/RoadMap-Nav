@@ -319,7 +319,7 @@ int  buildmap_street_count (void) {
 /**
  * @brief
  */
-static void  buildmap_street_save (void) {
+static int buildmap_street_save (void) {
 
    int i;
    int j;
@@ -337,14 +337,23 @@ static void  buildmap_street_save (void) {
    buildmap_info ("saving %d streets...", StreetCount);
 
    root = buildmap_db_add_section (NULL, "street");
-   if (root == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (root == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
 
    table_name = buildmap_db_add_section (root, "name");
-   if (table_name == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (table_name == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (table_name, StreetCount, sizeof(RoadMapStreet));
 
    table_cfcc = buildmap_db_add_section (root, "type");
-   if (table_cfcc == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (table_cfcc == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (table_cfcc, StreetCount, sizeof(char));
 
    db_streets  = (RoadMapStreet *) buildmap_db_get_data (table_name);
@@ -359,6 +368,8 @@ static void  buildmap_street_save (void) {
       db_streets[i] = one_street->record;
       db_cfcc[i] = one_street->cfcc;
    }
+
+   return 0;
 }
 
 /**

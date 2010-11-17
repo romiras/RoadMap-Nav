@@ -98,26 +98,32 @@ struct opt_defs options[] = {
  * @param filename
  * @param writeit
  */
-static void buildmap_osm_save_custom (const char *filename, int writeit) {
+static int buildmap_osm_save_custom (const char *filename, int writeit) {
 
    char *parent;
+   int ret = 0;
 
    parent = roadmap_path_parent(BuildMapResult, filename);
    roadmap_path_create (parent);
    roadmap_path_free(parent);
 
    if (buildmap_db_open (BuildMapResult, filename) < 0) {
-      buildmap_fatal (0, "cannot create database %s", filename);
+      buildmap_error (0, "cannot create database %s", filename);
+      return 1;
    }
 
    if (writeit) {
         buildmap_info("writing results to %s", filename);
-        buildmap_db_save ();
+        ret = buildmap_db_save ();
    } else {
         buildmap_info("no results to write to %s", filename);
    }
 
    buildmap_db_close ();
+   if (ret != 0) {
+	   ret = buildmap_db_remove (BuildMapResult, filename);
+   }
+   return 0;
 }
 
 /**
@@ -258,7 +264,7 @@ buildmap_osm_process_one_tile
  */
 int buildmap_osm_text_process_file(char *fn)
 {
-    int         n, ret = 0;
+    int         n, ret = 0, ret2;
     FILE        *f;
     char        country[6], division[6];
     int         fips, country_num = 0, division_num = 0;
@@ -302,7 +308,9 @@ int buildmap_osm_text_process_file(char *fn)
     }
 
     buildmap_db_sort();
-    buildmap_osm_save_custom(BuildMapFileName, (ret == 0) ? 1 : 0);
+    ret2 = buildmap_osm_save_custom(BuildMapFileName, (ret == 0) ? 1 : 0);
+    if (ret2 != 0)
+	    return ret2;
 
     return ret;
      

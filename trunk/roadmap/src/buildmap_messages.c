@@ -55,7 +55,7 @@ void buildmap_message_adjust_level (int level) {
 
     BuildMapMessageLevel += level;
 
-#ifndef	_WIN32
+#ifndef _WIN32
     if (BuildMapMessageLevel >= BUILDMAP_MESSAGE_VERBOSE)
         setbuf(stdout, NULL);
 #endif
@@ -70,11 +70,12 @@ void buildmap_set_source (const char *name) {
    const char *p;
 
    if (name == NULL) {
-	   if (SourceFile)
-		   free(SourceFile);
-	   SourceFile = NULL;
-	   return;
+      if (SourceFile)
+         free(SourceFile);
+      SourceFile = NULL;
+      return;
    }
+
    /* Get the file's base name (for error display purpose). */
    p = strrchr (name, '/');
 

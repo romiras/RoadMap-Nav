@@ -103,7 +103,7 @@ int buildmap_place_add (int name, int layer, int point) {
    if (block >= BUILDMAP_BLOCK) {
       buildmap_fatal (0,
          "Underdimensioned place table (block %d, BUILDMAP_BLOCK %d)",
-	 block, BUILDMAP_BLOCK);
+         block, BUILDMAP_BLOCK);
    }
 
    if (Place[block] == NULL) {
@@ -368,7 +368,7 @@ static void buildmap_place_sort (void) {
 /**
  * @brief
  */
-static void buildmap_place_save (void) {
+static int buildmap_place_save (void) {
 
    int i;
    int j;
@@ -413,8 +413,9 @@ static void buildmap_place_save (void) {
       if (square != square_current) {
 
          if (square < square_current) {
-            buildmap_fatal (0, "abnormal square order: %d following %d",
+            buildmap_error (0, "abnormal square order: %d following %d",
                                square, square_current);
+            return 1;
          }
          if (square_current >= 0) {
             layer_count += (layer_current + 1);
@@ -425,8 +426,9 @@ static void buildmap_place_save (void) {
       }
 
       if (one_place->layer < layer_current) {
-         buildmap_fatal (0, "abnormal layer order: %d following %d",
+         buildmap_error (0, "abnormal layer order: %d following %d",
                one_place->layer, layer_current);
+         return 1;
       }
       layer_current = one_place->layer;
       one_place->square = square;
@@ -440,19 +442,31 @@ static void buildmap_place_save (void) {
    /* Create the database space */
 
    root = buildmap_db_add_section (NULL, "place");
-   if (root == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (root == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
 
    data_table = buildmap_db_add_section (root, "data");
-   if (data_table == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (data_table == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (data_table, PlaceCount, sizeof(int));
 
    square_table = buildmap_db_add_section (root, "bysquare");
-   if (square_table == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (square_table == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (square_table,
                          square_count, sizeof(RoadMapPlaceBySquare));
 
    layer_table = buildmap_db_add_section (root, "bylayer");
-   if (layer_table == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (layer_table == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (layer_table, layer_count, sizeof(int));
 
    db_places  = (int *) buildmap_db_get_data (data_table);
@@ -487,7 +501,8 @@ static void buildmap_place_save (void) {
 
             layer_sublist += layer_current;
             if (layer_sublist >= layer_count) {
-               buildmap_fatal (0, "invalid place/bylayer count");
+               buildmap_error (0, "invalid place/bylayer count");
+               return 1;
             }
          }
          square_current = square;
@@ -511,9 +526,12 @@ static void buildmap_place_save (void) {
       db_square[square_current].count = layer_current;
 
       if (layer_sublist+square_current+1 != layer_count) {
-         buildmap_fatal (0, "invalid place/bylayer count");
+         buildmap_error (0, "invalid place/bylayer count");
+         return 1;
       }
    }
+
+   return 0;
 }
 
 /**
