@@ -880,7 +880,7 @@ static void buildmap_polygon_sort (void) {
 }
 
 
-static void buildmap_polygon_save (void) {
+static int buildmap_polygon_save (void) {
 
    int i;
    int j;
@@ -904,18 +904,28 @@ static void buildmap_polygon_save (void) {
     * based on lines, instead of points).
     */
    if (PolygonLineCount > 0xffff) {
-      buildmap_fatal (0, "too many polygon lines - %d, max %d", PolygonLineCount, 0xffff);
+      buildmap_error (0, "too many polygon lines - %d, max %d", PolygonLineCount, 0xffff);
+      return 1;
    }
 
    root = buildmap_db_add_section (NULL, "polygons");
-   if (root == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (root == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
 
    head_table = buildmap_db_add_section (root, "head");
-   if (head_table == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (head_table == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (head_table, PolygonCount, sizeof(RoadMapPolygon));
 
    line_table = buildmap_db_add_section (root, "line");
-   if (line_table == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (line_table == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (line_table,
                          PolygonLineCount, sizeof(RoadMapPolygonLine));
 
@@ -934,20 +944,23 @@ static void buildmap_polygon_save (void) {
       one_polygon = one_line->polygon;
 
       if (one_polygon == NULL) {
-         buildmap_fatal (0, "invalid line was not removed");
+         buildmap_error (0, "invalid line was not removed");
+	 return 1;
       }
 
       if (one_polygon->sorted != polygon_current) {
 
          if (one_polygon->sorted < polygon_current) {
-            buildmap_fatal (0, "abnormal polygon order: %d following %d",
+            buildmap_error (0, "abnormal polygon order: %d following %d",
                                one_polygon->sorted, polygon_current);
+	    return 1;
          }
 
          if (polygon_current >= 0) {
 
             if (roadmap_polygon_get_count(db_poly) <= 1) {
-               buildmap_fatal (0, "empty polygon");
+               buildmap_error (0, "empty polygon");
+	       return 1;
             }
 
             buildmap_polygon_fill_in_drawing_order (db_poly, db_line);
@@ -962,7 +975,8 @@ static void buildmap_polygon_save (void) {
          db_poly->cfcc  = one_polygon->cfcc;
 
          if (one_polygon->count > 0xfffff) {
-            buildmap_fatal (0, "too many polygon lines (%d, max %d)", one_polygon->count, 0xfffff);
+            buildmap_error (0, "too many polygon lines (%d, max %d)", one_polygon->count, 0xfffff);
+	    return 1;
          }
          buildmap_polygon_set_count(db_poly, one_polygon->count);
 
@@ -971,8 +985,9 @@ static void buildmap_polygon_save (void) {
          if (square != square_current) {
 
             if (square < square_current) {
-               buildmap_fatal (0, "abnormal square order: %d following %d",
+               buildmap_error (0, "abnormal square order: %d following %d",
                                   square, square_current);
+	       return 1;
             }
             square_current = square;
          }
@@ -982,8 +997,9 @@ static void buildmap_polygon_save (void) {
    if (polygon_current >= 0) {
 
       buildmap_polygon_fill_in_drawing_order (db_poly, db_line);
-
    }
+
+   return 0;
 }
 
 

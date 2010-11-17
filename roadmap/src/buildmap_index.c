@@ -669,7 +669,7 @@ static void buildmap_index_sort (void) {
 }
 
 
-static void buildmap_index_save (void) {
+static int buildmap_index_save (void) {
 
    int i;
 
@@ -748,7 +748,8 @@ static void buildmap_index_save (void) {
 
       for (i = 0; i < this_authority->name_count; ++i) {
          if (name_cursor >= NameCount) {
-            buildmap_fatal (0, "invalid map count");
+            buildmap_error (0, "invalid map count");
+	    return 1;
          }
          db_name[name_cursor++] = this_authority->names[i];
       }
@@ -762,7 +763,8 @@ static void buildmap_index_save (void) {
            this_territory = this_territory->next) {
 
          if (territory_cursor >= TerritoryCount) {
-            buildmap_fatal (0, "invalid territory count");
+            buildmap_error (0, "invalid territory count");
+	    return 1;
          }
          one_territory = db_territory + territory_cursor;
 
@@ -779,7 +781,8 @@ static void buildmap_index_save (void) {
               this_map = this_map->next) {
 
             if (map_cursor >= MapCount) {
-               buildmap_fatal (0, "invalid map count");
+               buildmap_error (0, "invalid map count");
+	       return 1;
             }
             db_map[map_cursor].class = this_map->class;
             db_map[map_cursor].filename = this_map->filename_index;
@@ -793,7 +796,8 @@ static void buildmap_index_save (void) {
               this_city = this_city->next) {
 
             if (city_cursor >= CityCount) {
-               buildmap_fatal (0, "invalid city count");
+               buildmap_error (0, "invalid city count");
+	       return 1;
             }
             db_city[city_cursor++] = this_city->name;
          }
@@ -807,6 +811,8 @@ static void buildmap_index_save (void) {
       one_authority->territory_count =
          territory_cursor - one_authority->territory_first;
    }
+
+   return 0;
 }
 
 

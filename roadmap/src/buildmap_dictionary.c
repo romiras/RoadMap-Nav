@@ -442,7 +442,7 @@ static int buildmap_dictionary_save_subtree
 }
 
 
-static void  buildmap_dictionary_save_one
+static int  buildmap_dictionary_save_one
                 (struct dictionary_volume *dictionary,
                  buildmap_db *parent) {
 
@@ -471,7 +471,8 @@ static void  buildmap_dictionary_save_one
 
    child = buildmap_db_add_section (parent, dictionary->name);
    if (child == NULL) {
-      buildmap_fatal (0, "Cannot add new section %s", dictionary->name);
+      buildmap_error (0, "Cannot add new section %s", dictionary->name);
+      return 1;
    }
 
    table_tree =
@@ -507,6 +508,8 @@ static void  buildmap_dictionary_save_one
    memcpy (db_index, dictionary->string_index,
            dictionary->string_count * sizeof(unsigned int));
    memcpy (db_data, dictionary->data, dictionary->cursor);
+
+   return 0;
 }
 
 
@@ -809,22 +812,27 @@ static void buildmap_dictionary_summary (void) {
 }
 
 
-static void  buildmap_dictionary_save (void) {
+static int  buildmap_dictionary_save (void) {
 
    int i;
 
    buildmap_db *names = buildmap_db_add_section (NULL, "string");
 
-   if (names == NULL) buildmap_fatal (0, "Cannot add new section 'string'");
+   if (names == NULL) {
+      buildmap_error (0, "Cannot add new section 'string'");
+      return 1;
+   }
 
    buildmap_info ("saving dictionary...");
 
    for (i = 0; i < DictionaryVolumeCount; i++) {
 
       if (DictionaryVolume[i]->name[0] != '.') {
-         buildmap_dictionary_save_one (DictionaryVolume[i], names);
+         if (buildmap_dictionary_save_one (DictionaryVolume[i], names) != 0)
+		 return 1;
       }
    }
+   return 0;
 }
 
 

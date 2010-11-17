@@ -255,7 +255,7 @@ static void buildmap_shape_sort (void) {
 /**
  * @brief
  */
-static void buildmap_shape_save (void) {
+static int buildmap_shape_save (void) {
 
    int i;
    int j;
@@ -365,20 +365,32 @@ static void buildmap_shape_save (void) {
    /* Create the database space. */
 
    root  = buildmap_db_add_section (NULL, "shape");
-   if (root == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (root == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
 
    table_square = buildmap_db_add_section (root, "bysquare");
-   if (table_square == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (table_square == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (table_square,
                          square_count, sizeof(RoadMapShapeBySquare));
 
    table_line = buildmap_db_add_section (root, "byline");
-   if (table_line == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (table_line == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (table_line,
                          ShapeLineCount, sizeof(RoadMapShapeByLine));
 
    table_data = buildmap_db_add_section (root, "data");
-   if (table_data == NULL) buildmap_fatal (0, "Can't add a new section");
+   if (table_data == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
    buildmap_db_add_data (table_data, shape_count, sizeof(RoadMapShape));
 
    db_bysquare = (RoadMapShapeBySquare *) buildmap_db_get_data (table_square);
@@ -397,7 +409,8 @@ static void buildmap_shape_save (void) {
       if (one_shape->line != last_line) {
 
          if (last_line > one_shape->line) {
-            buildmap_fatal (0, "decreasing line order in shape table");
+            buildmap_error (0, "decreasing line order in shape table");
+	    return 1;
          }
 
          line_index += 1;
@@ -416,7 +429,8 @@ static void buildmap_shape_save (void) {
          if (square != last_square) {
 
             if (square < last_square) {
-               buildmap_fatal (0, "decreasing square order in shape table");
+               buildmap_error (0, "decreasing square order in shape table");
+	       return 1;
             }
             while (last_square < square) {
                last_square += 1;
@@ -494,15 +508,17 @@ static void buildmap_shape_save (void) {
    }
 
    if (shape_index != shape_count) {
-      buildmap_fatal (0, "inconsistent count of shapes: "
+      buildmap_error (0, "inconsistent count of shapes: "
                             "total = %d, saved = %d",
                          shape_count, shape_index+1);
+      return 1;
    }
 
    if (last_square >= square_count) {
-      buildmap_fatal (0, "inconsistent count of squares: "
+      buildmap_error (0, "inconsistent count of squares: "
                             "total = %d, saved = %d",
                          square_count, last_square+1);
+      return 1;
    }
 
    for (last_square += 1; last_square < square_count; last_square += 1) {
@@ -511,10 +527,13 @@ static void buildmap_shape_save (void) {
    }
 
    if (line_index+1 != ShapeLineCount) {
-      buildmap_fatal (0, "inconsistent count of lines: "
+      buildmap_error (0, "inconsistent count of lines: "
                             "total = %d, saved = %d",
                          ShapeLineCount, line_index+1);
+      return 1;
    }
+
+   return 0;
 }
 
 /**
