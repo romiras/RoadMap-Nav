@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright (c) 2008, Danny Backx.
+ *   Copyright (c) 2008, 2009, 2010, Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -79,13 +79,24 @@ struct opt_defs options[] = {
 
 /**
  * @brief
+ *
+ * We can get away with overwriting BuildMapResult (removal of the comma) because
+ * this always happens after scanning all the map directories.
  */
 static void buildus_save (void) {
 
    buildmap_set_source ("usdir.rdm");
 
    if (buildmap_db_open (BuildMapResult, "usdir.rdm") < 0) {
-      buildmap_fatal (0, "cannot create database '%s'", BuildMapResult);
+      char *comma = strchr(BuildMapResult, ',');
+      if (comma) {
+         *comma = '\0';
+         if (buildmap_db_open (BuildMapResult, "usdir.rdm") < 0) {
+            buildmap_fatal (0, "cannot create database '%s'", BuildMapResult);
+	 }
+	 /* *comma = ','; Don't restore, see comment above */
+      } else
+         buildmap_fatal (0, "cannot create database '%s'", BuildMapResult);
    }
 
    if (! BuildMapSilent) {
@@ -112,7 +123,7 @@ static void buildus_scan_cities (int fips) {
 
    cities = roadmap_dictionary_open ("city");
 
-   if (! cities) return; /* May not exist is all map files. */
+   if (! cities) return; /* May not exist in all map files. */
 
    us_cities = buildmap_dictionary_open ("city");
 
