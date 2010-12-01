@@ -2,10 +2,22 @@ RoadMap and OpenStreetMap map data
 
 November 2010
 
-== Using OpenStreetMap Maps ==
+
+= Maps =
+
+RoadMap is program that displays maps.
+
+Depending on how you got RoadMap, it may come prepackaged with a set of
+demo maps that may or may not be useful to you. This chapter describes
+the kinds of map data RoadMap can deal with, how to recognize and treat
+them, and how to obtain and/or preprocess them.
+
+== About RoadMap Maps ==
 
 This information is preliminary, since OSM support is
 work-in-progress.  It does work, but may change in detail.
+
+=== Locating Map Files ===
 
   - Indexed maps
 
@@ -16,6 +28,18 @@ work-in-progress.  It does work, but may change in detail.
     always a direct mapping between the coordinates on the screen where
     RoadMap is trying to display a map, and the name of the map file(s) that
     contain(s) information for that region.
+
+  - Maps without indexing : QuadTiles
+
+    Explanation of the nature of QuadTile maps is in a subsequent chapter. 
+    For now, note that QuadTile based maps have directory and file naming 
+    such that a separate indexing mechanism is not required.
+
+    A map file for QuadTile based maps is named similar to :
+	/usr/local/share/roadmap/maps/qt18/01/a0/qt01a08006.rdm
+	/usr/local/share/roadmap/maps/qt25/65/97/qt659709cd.rdm
+
+=== Map File Names ===
 
   - File name formats
 
@@ -70,6 +94,8 @@ work-in-progress.  It does work, but may change in detail.
 
     As an example, to RoadMap encoding of the 19 bit OSM quadtile id of
     251833, would be 0x3d7b9007.  (251833 is 0x3d7b9 in hex).
+
+== Obtaining Map Files ==
 
   - Fetching OpenStreetMap data by QuadTile
 

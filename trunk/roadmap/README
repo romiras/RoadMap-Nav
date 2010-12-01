@@ -1,7 +1,8 @@
 RoadMap User Manual and README
 
-February 2009
+November 2010
 
+[icons/roadmap.png]
 
 = Introduction =
 
@@ -111,6 +112,8 @@ February 2009
 %!include: Usage
 @@ runtime-help-link Configuration
 %!include: Configuration
+@@ runtime-help-link Maps
+%!include: Maps
 @@ runtime-help-link OpenStreetMap
 %!include: OpenStreetMap
 %!include: Map-Building

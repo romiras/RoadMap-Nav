@@ -3,7 +3,9 @@ RoadMap Map Building
 January 2009
 
 
-= Building Maps =
+== Building Maps ==
+
+=== Building TIGER Maps ===
 
      To build the TIGER map files from scratch:
 
@@ -65,7 +67,221 @@ January 2009
      to combine all states and counties into a giant US map.
 
 
-= Map Utilities =
+=== Building OpenStreetMap Based Maps ===
+
+*** Note : you need to work with unreleased sources (CVS snapshot 2010-11-25
+*** or more later) in order for some features to work.
+
+No matter how you build the map, it needs to end up in a directory that RoadMap
+searches. You can configure this to be any directory you like, but know
+that one of the defaults - on a Linux or Unix based system - is
+```
+	/usr/local/share/roadmap/maps
+```
+or actually, because of the /usr/local/share/roadmap/... default,
+any directory under
+```
+	/usr/local/share/roadmap
+```
+so if the directions below mention a directory maps.nl then you're free
+to actually create this as
+```
+	/usr/local/share/roadmap/maps.nl
+```
+and it should just work.
+
+==== Smaller regions : without splitter ====
+
+After downloading the map XML file, there are two basic steps in creating
+an OSM based map file : converting it into (one or more) rdm files, and
+creating an index file for every map directory.
+
+We'll assume you run these commands from the RoadMap source directory,
+in which you've performed the steps for compiling RoadMap and its tools.
+
+To convert a smallish map into a format suitable for RoadMap, use this :
+```
+buildmap_osm -m /usr/local/share/roadmap/maps.nl -i iso-nl-001.osm -o iso-nl-001.rdm
+```
+
+Note that buildmap_osm is rather strict about the file names allowed.
+
+The second step - creating the index file - consists of a single "buildus" command,
+which you need to run with the same -m <directory-name> parameter as buildmap_osm.
+
+Here's a full example :
+```
+pavilion: {1} wget -c -q http://download.geofabrik.de/osm/europe/luxembourg.osm.bz2
+pavilion: {2} bunzip2 <luxembourg.osm.bz2 >iso-lu-000.osm
+pavilion: {3} buildmap_osm -m /usr/local/share/roadmap/maps.lu -i iso-lu-000.osm -o iso-lu-000.rdm
+-- Pass 1 : 1101143 lines read (3 seconds)
+-- Pass 2 : 1101143 lines read (36 seconds)
+-- Pass 3 : 1101143 lines read (8 seconds)
+-- loading shape info (from 260935 ways) ...
+-- generating squares...
+-- sorting squares...
+-- sorting points...
+-- counting crossings...
+-- sorting lines...
+-- Pass 4 : 1101143 lines read (0 seconds)
+-- Splits 233959, ways split 21339, not split 7320
+-- sorting streets...
+-- retrieving lines and squares...
+-- sorting polygons' squares...
+-- sorting polygons...
+-- sorting polygon lines...
+-- writing results to iso-lu-000.rdm
+-- saving dictionary...
+-- saving 5 attributes...
+-- saving 416988 points...
+-- saving 279279 lines...
+-- Line By Point : 416721 points, 558497 lines
+-- saving 3687 streets...
+-- building the street search accelerator...
+-- saving 0 ranges...
+-- saving 18340 polygons...
+-- saving 376 squares...
+pavilion: {4} buildus -m /usr/local/share/roadmap/maps.lu
+-- app_a02.txt, line 3274: Processing maps from /usr/local/share/roadmap/maps.lu
+-- iso-lu-000.rdm: Country lu division 000 fips 1442000
+-- iso-lu-000.rdm: scanning the county file...
+-- iso-lu-000.rdm: County 1442000 geometry n 50180434 s 49447603 w 5739644 e 6529990
+-- sorting counties...
+-- usdir.rdm: Writing index file to directory '/usr/local/share/roadmap/maps.lu'
+-- usdir.rdm: saving dictionary...
+-- usdir.rdm: saving counties...
+pavilion: {5} ls -l /usr/local/share/roadmap/maps.lu luxembourg.osm.bz2 iso-lu-000.osm 
+-rw-rw-r-- 1 danny danny  7733578 2010-11-24 09:09 luxembourg.osm.bz2
+-rw-rw-r-- 1 danny danny 82908838 2010-11-24 21:10 iso-lu-000.osm
+
+/usr/local/share/roadmap/maps.lu:
+total 4100
+-rw-rw-r-- 1 danny danny 10768052 2010-11-24 21:11 iso-lu-000.rdm
+-rw-rw-r-- 1 danny danny   181492 2010-11-24 21:12 usdir.rdm
+```
+
+There's a limitation when you have more than one map directory, e.g. a maps.be and
+a maps.lu directory. The limitation is that only one index file (usdir.rdm) is used.
+
+So if you have multiple map directories, you will need to create one index file :
+```
+buildus -m /usr/local/share/roadmap/maps.be,/usr/local/share/roadmap/maps.lu
+```
+
+==== Using splitter ====
+
+Splitter is a Java based utility described at http://www.mkgmap.org.uk/page/tile-splitter .
+
+You can download it at http://www.mkgmap.org.uk/splitter/ , please download the link
+indicated with [.tar.gz] . It downloads as a file called splitter-r123.tar.gz (version
+number subject to change, this is the value in November 2010).
+
+The only file used from the download is the splitter.jar. Please download this in
+your roadmap-directory/src/splitter so it becomes
+	roadmap-dir/src/splitter/splitter-r123/splitter.jar
+
+If the version number is different, then this is one of the things to tweak in the
+"doit" script that I'll talk about in a second.
+
+==== Big countries : use splitter more than once ====
+
+There are a few things to keep in mind when doing that.
+
+The scripts used shouldn't clean up maps just generated for another part of the
+country (e.g. the script for Wales shouldn't delete the maps of England just
+created). Also you need to divide the range of 1000 possible divisions into the
+groups required for each region.
+
+I'll explain this with the UK as example.
+
+The UK can be downloaded from GeoFabrik in several chunks : England, Scotland, Wales.
+Without digressing about the political correctness, these are the files available at 
+http://download.geofabrik.de/osm/europe/great_britain/ .
+
+At the time of this writing, this combination gives
+```
+	input file	max-nodes	map-id
+					initial	last
+
+	england		50000		001	423
+	scotland	10000		501	790
+	wales		10000		801	931
+```
+
+You'll need to divide the range of 1000 into the chunks required for England, Scotland
+and Wales. Actually the example in the table above almost shows how not to do it :
+Wales is taking up much more of the range than actually required. By increasing
+max-nodes for Wales, it requires only 39 maps.
+
+```
+	netherlands	10000		329
+	netherlands	8000		357
+	wales		10000		131
+	wales		50000		39
+```
+
+The other thing that limits us here is density of the maps. This is not well spread.
+Things would be simpler if the density of towns, streets, etc. was the same everywhere.
+Unfortunately that is not so. Consequently, a couple of the maps generated by splitter
+may have too many elements on it, which is known to cause a
+	## too many polygon lines - 134145, max 65535
+error condition in buildmap_osm.
+
+This is known to happen if you choose max-nodes=10000 for the Netherlands. One such map
+contains 149970 polygons. With max-nodes=8000, this situation keeps occurring.
+
+If you encounter a country that has trouble with all this, then it would still be
+possible to separate it over more than one map directory. In the UK example : we could
+use a maps.eng directory containg all of England, and a maps.ws directory containing
+Wales and Scotland.
+
+==== Countries with variable density : use splitter more than once ====
+
+The map of the Netherlands is an example where some areas are more dense than others.
+This causes most of the chunks of the map to convert well, but a small fraction is
+too big, e.g. with the
+	## too many polygon lines - 134145, max 65535
+error - obviously the number before the comma is often different.
+
+To handle this, a second script is created to take just the maps that splitter
+has not made small enough, and force splitter to make them more fine grained.
+
+Such a sample script is src/splitter/nl.more/deeper.nl .
+
+To get an idea, splitting the Netherlands map with
+```
+	resolution	buildmap
+			errors
+	13		9
+	12		28
+```
+
+What I did for this ?
+1. Find the offending files
+	make -n -f Makefile.nl
+2. Link the OSM files to the subdirectory
+	ln iso-nl-{001,004,008,013, ..}.osm nl.more
+3. Initialize the START variable in the deeper.nl script
+	set START=120
+4. Run the deeper.nl script
+5. Move working maps to the right place
+	mv maps.nl/iso*rdm ../maps.nl
+6. Move areas.list files up
+	mv areas.list.nl.* ..
+
+and then, basically restart for those chunks that are still too big :
+7. Find the offending files
+	make -n -f Makefile.nl
+8. Link them into nl.more
+9. Increase the value of START in deeper.nl so you don't overwrite
+   files from the previous pass.
+	set START=240
+10. Rerun the deeper.nl script
+
+99. Rebuild the index of the map directory
+	buildus -d .. -m maps.nl
+
+== Overview of Map Utilities ==
 
    RoadMap comes with a small set of utility programs and scripts which
    are used to build and maintain the map data files that roadmap uses.
