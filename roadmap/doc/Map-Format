@@ -1,6 +1,6 @@
 RoadMap Quickstart
 
-January 2009
+November 2010
 
 
 = Map Details =
@@ -68,8 +68,8 @@ January 2009
      stored in each map file.
 
 
-     (See the file README.osm included with thre RoadMap source for
-     information about file naming for OpenStreetMap files.)
+     (See the section on OpenStreetMap in this documentation to find out
+     about RoadMap support for OpenStreetMap data.)
 
      As indicated in several other places, the RoadMap map files (extension
      .rdm) are organized by administrative territories, such s a county per
@@ -88,6 +88,13 @@ January 2009
      of five digits: the first two digits identify the state and the last
      three digits identify the county within the state.
 
+     Maps derived from OpenStreetMap have this file name convention :
+```
+      iso-<country>-<section>.rdm
+```
+     in which "country" is the two-character ISO country code, and "section"
+     is a three-digit sequence number for the maps.
+
      As for now, there is a single index file, named usdir.rdm. This file
      must be in the same directory as the map files.
 
@@ -96,14 +103,6 @@ January 2009
      The rdm files are binary files and uses the local conventions for byte
      order and C structure layout. 
      
-     [ //Future//:  In order to make it possible to share map files between
-     different systems, an ASCII format is also defined, with the suffix
-     .rdx; the rdmxchange program translates from one format to the other. 
-     Note that the data stored in the rdx files is strictly equivalent to the
-     one stored in the rdm files, and the organization of this data is very
-     specific to the RoadMap application.  The rdx format was not designed to
-     exchange data with other applications.  ]
-
      These two types of files, the map and index files, contain very different
      data but share the same general organization: these files contain
      multiple data tables organized in a tree fashion.

@@ -46,7 +46,7 @@ April 2009
    algorithm, it makes the strangest moves :-)
 
 
-= Maps for Navigation =
+== Maps for Navigation ==
 
   In order to support navigation, several extensions were made to the
   RoadMap map format :
