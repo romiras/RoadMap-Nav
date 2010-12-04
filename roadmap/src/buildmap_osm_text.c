@@ -904,7 +904,7 @@ buildmap_osm_text_way_end(char *data)
                 static int cenid = 0;
                 int line;
 
-		buildmap_info ("Way %d is an area, %d polygon lines", in_way, nWayNodes);
+		// buildmap_info ("Way %d is an area, %d polygon lines", in_way, nWayNodes);
                 /*
                  * Detect an AREA -> create a polygon
                  */
