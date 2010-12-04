@@ -495,6 +495,16 @@ buildmap_osm_text_way_pass1(char *data)
 	return 0;
 }
 
+/**< @brief count polygon lines early */
+static int EarlyPolygonCount = 0;
+static int EarlyPolygonNodeCounter = 0;
+
+static void
+buildmap_osm_nd_counter(void)
+{
+	EarlyPolygonNodeCounter++;
+}
+
 /**
  * @brief to figure out early (in pass 1) whether this is an interesting way
  * @param data
@@ -504,6 +514,15 @@ static int
 buildmap_osm_text_way_end_pass1(char *data)
 {
 	WayIsInteresting(in_way, WayNotInteresting);
+
+	/* To count polygon lines early ?? */
+        if (WayFlags & AREA) {
+		// buildmap_info ("Early - Way %d is an area", in_way);
+		EarlyPolygonCount += EarlyPolygonNodeCounter;
+	}
+	EarlyPolygonNodeCounter = 0;
+	/* End count polygon lines */
+
 	buildmap_osm_text_reset_way();
 	return 0;
 }
@@ -630,12 +649,29 @@ buildmap_osm_text_nd(char *data)
 
         ix = buildmap_osm_text_point_get(node);
         if (ix < 0) {
+#if 0
+		/*
+		 * This started out as a consistency check, but output of
+		 * splitter has a massive amount of these : 
+		 * a way (an area like a lake) that is cut in two because of
+		 * the boundaries splitter introduces will turn up in several
+		 * maps. The strangeness from splitter is that the ways are
+		 * all fully defined, but the nodes aren't all present.
+		 *
+		 * So here we take care not to discard those ways (areas).
+		 *
+		 * It might be a good idea to enable this just when the output
+		 * is created by splitter, e.g. by putting an if statement
+		 * around the lines of code #if-fed out below.
+		 */
+
                 /* Inconsistent OSM file, this node is not defined */
 		/* Only count if we didn't already know this */
 		if (WayInvalid == 0)
 			WaysMissingNode++;
                 WayInvalid = 1;
 		buildmap_verbose("Invalid way %d due to missing node %d", in_way, node);
+#endif
                 return 0;
         }
         lon = buildmap_point_get_longitude(ix);
@@ -868,6 +904,7 @@ buildmap_osm_text_way_end(char *data)
                 static int cenid = 0;
                 int line;
 
+		buildmap_info ("Way %d is an area, %d polygon lines", in_way, nWayNodes);
                 /*
                  * Detect an AREA -> create a polygon
                  */
@@ -1303,6 +1340,11 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
 		ret += buildmap_osm_text_way_pass1(p);
 		NumWays++;
                 continue;
+#if 1
+        } else if (strncasecmp(p, "nd", 2) == 0) {
+                buildmap_osm_nd_counter();
+                continue;
+#endif
         } else if (strncasecmp(p, "/way", 4) == 0) {
 		ret += buildmap_osm_text_way_end_pass1(p);
                 continue;
@@ -1321,6 +1363,7 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
     (void) time(&t[passid]);
     buildmap_info("Pass %d : %d lines read (%d seconds)",
 		    passid, LineNo, t[passid] - t[passid - 1]);
+    buildmap_info("Early polygon count %d", EarlyPolygonCount);
     passid++;
 
     /*
@@ -1516,9 +1559,6 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
     (void) time(&t[passid]);
     buildmap_info("Pass %d : %d lines read (%d seconds)",
 		    passid, LineNo, t[passid] - t[passid - 1]);
-    buildmap_info("Ways %d, interesting %d, discarded (missing node) %d",
-	    NumWays, interestingWays, WaysMissingNode);
-    buildmap_info("Number of nodes : %d, interesting %d", NumNodes, nNodeTable);
 
     passid++;
 #endif
@@ -1528,6 +1568,9 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
     buildmap_osm_text_ways_shapeinfo();
 
     (void) time(&t[passid]);
+    buildmap_info("Ways %d, interesting %d, discarded (missing node) %d",
+	    NumWays, interestingWays, WaysMissingNode);
+    buildmap_info("Number of nodes : %d, interesting %d", NumNodes, nNodeTable);
     buildmap_info("Pass %d : %d lines read (%d seconds)",
 		    passid, LineNo, t[passid] - t[passid - 1]);
     passid++;
