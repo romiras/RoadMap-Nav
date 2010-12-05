@@ -184,9 +184,9 @@ static const char *RoadMapPathIcons[] = {
 
 /* The default path for the skin files (the "skin" path): */
 static const char *RoadMapPathSkin[] =  {
-	"&\\skins\\default\\day",
-	"&\\skins\\default",
-	NULL
+   "&\\skins\\default\\day",
+   "&\\skins\\default",
+   NULL
 };
 static const char RoadMapPathSkinPreferred[] = "&\\skins";
 
@@ -413,10 +413,64 @@ static char *roadmap_path_expand (const char *item, size_t length) {
    return expanded;
 }
 
+#ifdef ANDROID
+
+#define FTW_F   1
+#define FTW_D   2
+
+/*
+ * Android lookalike of the linux ftw function
+ *
+ * This does just what we need, by no means complete.
+ * Note that this can be tweaked much more (e.g. don't do anything for files)
+ * to improve startup time.
+ */
+int ftw(const char *path,
+        int (*fn)(const char *fpath, const struct stat *sb, int typeflag),
+        int nfds)
+{
+   struct dirent *dp;
+   DIR           *dirp;
+   int           len;
+
+   dirp = opendir(path);
+   len = strlen(path);
+
+   /* Use the directory passed as well ... */
+   (*fn)(path, NULL, FTW_D);
+
+   /*
+    * Single pass over the directory,
+    * not sure if this obeys the ftw directory-first behaviour
+    */
+   while (dirp && (dp = readdir(dirp))) {
+      char *p = malloc(len + strlen(dp->d_name) + 2);
+
+      strcpy(p, path);
+      strcat(p, "/");
+      strcat(p, dp->d_name);
+
+      if (dp->d_type & DT_DIR) {
+            /* No infinite recursion, please */
+         if (strcmp(dp->d_name, ".") != 0 && strcmp(dp->d_name, "..") != 0) {
+            (void) ftw(p, fn, nfds);
+
+            /* Don't call (*fn), ftw() will start by doing this */
+         }
+      } else if (dp->d_type & DT_REG) {
+         (*fn)(p, NULL, FTW_F);
+      }
+
+      free(p);
+   }
+   if (dirp)
+      closedir(dirp);
+   return 0;
+}
+#endif
 
 /* Path lists operations. -------------------------------------------------- */
 
-#ifndef ANDROID
 /* bah.  globals.  too bad ftw() doesn't take a "void *cookie" argument */
 static RoadMapList *RoadMapPathFTWDirList;
 static int RoadMapPathFTWPathLen;
@@ -442,13 +496,17 @@ static int roadmap_path_ftw_cb
 
    return 0;
 }
-#endif
 
+/**
+ * @brief add path to list, also keep track of /... construction causing file tree walk
+ * @param list RoadMapList to which we're appending
+ * @param path this gets appended
+ */
 static void roadmap_path_addlist(RoadMapList *list, char *path)
 {
-#ifndef ANDROID
    int len;
    len = strlen(path);
+
    if (len > 4 && strcmp(&path[len-4], "/...") == 0) {
       path[len-4] = '\0';
       RoadMapPathFTWDirList = list;
@@ -464,22 +522,6 @@ static void roadmap_path_addlist(RoadMapList *list, char *path)
       pathitem->path = path;
       roadmap_list_append(list, &pathitem->link);
    }
-#else
-   /* Android : ignore the /... stuff */
-   int len;
-   len = strlen(path);
-   if (len > 4 && strcmp(&path[len-4], "/...") == 0) {
-      path[len-4] = '\0';
-   }
-   {
-      RoadMapPathItem *pathitem;
-      pathitem = malloc(sizeof(RoadMapPathItem));
-      roadmap_check_allocated(pathitem);
-
-      pathitem->path = path;
-      roadmap_list_append(list, &pathitem->link);
-   }
-#endif
 }
 
 /**
@@ -694,7 +736,7 @@ char **roadmap_path_list (const char *path, const char *extension) {
       /* Don't allow file names ending in ~, they're likely to be backup files */
       int l = strlen(entry->d_name);
       if (entry->d_name[l-1] == '~')
-	      continue;
+         continue;
 
       if (length > 0) {
          
@@ -702,11 +744,11 @@ char **roadmap_path_list (const char *path, const char *extension) {
 
          if (! strcmp (match, extension)) {
             *(cursor++) = strdup (entry->d_name);
-	 roadmap_log (ROADMAP_WARNING, "--> %s", entry->d_name);
+         roadmap_log (ROADMAP_WARNING, "--> %s", entry->d_name);
          }
       } else {
          *(cursor++) = strdup (entry->d_name);
-	 roadmap_log (ROADMAP_WARNING, "--> %s", entry->d_name);
+         roadmap_log (ROADMAP_WARNING, "--> %s", entry->d_name);
       }
    }
    *cursor = NULL;
@@ -792,10 +834,10 @@ const char *roadmap_path_temporary (void) {
  */
 static void roadmap_path_cleanup_recursive (RoadMapPathList p)
 {
-	if (p == NULL)
-		return;
-	roadmap_path_cleanup_recursive (p->next);
-	free(p);
+   if (p == NULL)
+         return;
+   roadmap_path_cleanup_recursive (p->next);
+   free(p);
 }
 
 /**
@@ -803,10 +845,10 @@ static void roadmap_path_cleanup_recursive (RoadMapPathList p)
  */
 void roadmap_path_shutdown (void)
 {
-	roadmap_path_cleanup_recursive (RoadMapPaths);
-	RoadMapPaths = NULL;
+   roadmap_path_cleanup_recursive (RoadMapPaths);
+   RoadMapPaths = NULL;
 
-	RoadMapUser = NULL;	// this only points into a structure, free() happens elsewhere
-	RoadMapTrips = NULL;	// this only points into a structure, free() happens elsewhere
-	RoadMapPathHome = NULL;	// getenv() result or a constant : don't free
+   RoadMapUser = NULL;     // this only points into a structure, free() happens elsewhere
+   RoadMapTrips = NULL;    // this only points into a structure, free() happens elsewhere
+   RoadMapPathHome = NULL; // getenv() result or a constant : don't free
 }
