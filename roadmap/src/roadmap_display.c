@@ -185,18 +185,15 @@ static RoadMapPen roadmap_display_new_pen
     return RoadMapMessageContour;
 }
 
+static int RoadMapDisplayPensCreated = 0;
 
 static void roadmap_display_create_pens (void) {
 
-    static int RoadMapDisplayPensCreated = 0;
-
     RoadMapSign *sign;
-
 
     if (RoadMapDisplayPensCreated) return;
 
     RoadMapDisplayPensCreated = 1;
-
 
     RoadMapMessageContour = roadmap_canvas_create_pen ("message.contour");
     roadmap_canvas_set_foreground ("black");
@@ -552,7 +549,6 @@ int roadmap_display_activate (const char *title,
     roadmap_message_set ('N', properties.street);
     roadmap_message_set ('C', properties.city);
 
-
     if (! roadmap_message_format (text, sizeof(text), format)) {
         roadmap_log_pop ();
         *street = sign->street;
@@ -796,6 +792,8 @@ int roadmap_display_is_refresh_needed (void) {
 void roadmap_display_initialize (void) {
 
     RoadMapSign *sign;
+
+    RoadMapDisplayPensCreated = 0;
 
     roadmap_config_declare
         ("preferences", &RoadMapConfigDisplayDuration, "10");
