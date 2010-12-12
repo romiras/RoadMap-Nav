@@ -185,7 +185,7 @@ void roadmap_canvas_get_text_extents (const char *text, int size, int *width,
 	jstring		js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, text);
 	int		r;
 
-	r = (*RoadMapJniEnv)->CallIntMethod(RoadMapJniEnv, PanelThiz, mid, js);
+	r = (*RoadMapJniEnv)->CallIntMethod(RoadMapJniEnv, PanelThiz, mid, js, size);
 	if (width)
 		*width = r;
 
