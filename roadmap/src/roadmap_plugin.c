@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2005 Ehud Shabtai
- *   Copyright (c) 2008, 2009, Danny Backx.
+ *   Copyright (c) 2008, 2009, 2010, Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -96,6 +96,10 @@ int roadmap_plugin_register (RoadMapPluginHooks *hook) {
 
    for (i=1; i<MAX_PLUGINS; i++) {
       
+      /* Register a plugin only once */
+      if (hooks[i].plugin == hook)
+         return i;
+
       if (hooks[i].plugin == NULL) {
          hooks[i].plugin= hook;
 	 hooks[i].initialized = 0;
