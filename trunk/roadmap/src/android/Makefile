@@ -4,7 +4,7 @@
 # Requires the NDK
 #
 
-ADB=	adb -e
+ADB=	adb
 #
 # Produce a build timestamp
 #
@@ -31,6 +31,36 @@ HEADERS =
 TARGETS = roadmap.apk
 # TARGETS += demomaps.apk
 
+#
+# I used this with Android 2.3
+#
+
+NDKHOME=	/home/danny/src/android/android-ndk-r5
+NDK_LEVEL=	9
+NDK_ARCH=	arm
+NDK_NAME=	arm-eabi-4.4.0
+NDK_PREFIX=	linux-x86
+NDK_SYSROOT=	${NDKHOME}/platforms/android-${NDK_LEVEL}/arch-${NDK_ARCH}
+NDK_CC=		${NDKHOME}/toolchains/${NDK_NAME}/prebuilt/${NDK_SYSTEM}/bin/${NDK_PREFIX}gcc --sysroot=${NDK_SYSROOT}
+NDK_LDFLAGS=	'-Wl,--fix-cortex-a8'
+
+SDKHOME=	/home/danny/src/android/android-sdk-linux_86
+SDK_ANDV=	android-9
+SDKPLAT=	${SDKHOME}/platforms/${SDK_ANDV}
+NDK_CFLAGS=	-I$(NDKHOME)/platforms/android-${NDK_LEVEL}/arch-${NDK_ARCH}/usr/include \
+		-DANDROID -fno-short-enums -g
+NDK_LDFLAGS=	-nostdlib -Wl,-shared,-Bsymbolic -Wl,--no-undefined -Wl,-z,noexecstack
+JAVA=		/usr/share/java
+JAVAC_FLAGS=	-cp ${JAVA}/jaxp_parser_impl.jar:${JAVA}/xml-commons-apis.jar:${JAVA}/antlr.jar:${JAVA}/ant/ant-antlr.jar:${JAVA}/regexp.jar:${JAVA}/ant/ant-apache-regexp.jar:${JAVA}/jakarta-commons-logging.jar:${JAVA}/ant/ant-commons-logging.jar:${JAVA}/javamail.jar:${JAVA}/jaf.jar:${JAVA}/ant/ant-javamail.jar:${JAVA}/jsch.jar:${JAVA}/ant/ant-jsch.jar:/usr/lib/jvm/java/lib/tools.jar:${SDKPLAT}/android.jar -sourcepath gen:src -bootclasspath ${SDKPLAT}/android.jar
+SRCNAME=	RoadMap
+CLSES=		${DIRHIER}/RoadMap.class ${DIRHIER}/Panel.class ${DIRHIER}/Pen.class
+DX=		${SDKHOME}/platform-tools/dx
+AAPT=		${SDKHOME}/platform-tools/aapt
+ZIPALIGN=	${SDKHOME}/tools/zipalign
+ZIP_PARAM=	-f 4
+
+DIRHIER=	net/sourceforge/projects/roadmap
+
 # --- The real targets --------------------------------------------
 
 all:: $(TARGETS)
@@ -40,43 +70,26 @@ depends:
 
 -include .depends.mk
 
-roadmap.apk:	libs/armeabi/librmnative.so AndroidManifest.xml classes.dex \
+roadmap.apk:	libs/armeabi/librmnative.so AndroidManifest.xml bin/classes.dex \
 	libs/armeabi/libexpat-1.so 
-	rm -f bin/${SRCNAME}.ap_
-	${SDKPLAT}/tools/aapt package -m -J gen -M AndroidManifest.xml -S res -I ${SDKPLAT}/android.jar -F bin/${SRCNAME}.ap_
-	apkbuilder roadmap.apk -z bin/${SRCNAME}.ap_ -f classes.dex -nf libs
-#	-f demomaps/usc06075.rdm -f demomaps/usc81002.rdm -f demomaps/usdir.rdm
-# apkbuilder roadmap.apk -nf . -rj . -f librmnative.so -f classes.dex -f AndroidManifest.xml
-# apkbuilder roadmap.apk -z bin/${SRCNAME}.ap_ -f librmnative.so -f classes.dex
+	rm -f roadmap-1.apk roadmap-2.apk roadmap-3.apk roadmap.apk
 #
+# Scripting tested with Android 2.3 toolchain
+# Note apkbuilder says it's deprecated, but there's no alternative and it just works.
+#
+	${AAPT} package -f --debug-mode -M AndroidManifest.xml -S res -I ${SDKPLAT}/android.jar -F roadmap-1.apk
+	apkbuilder roadmap-2.apk -u -z roadmap-1.apk  -f bin/classes.dex -rf src -nf libs
+	${ZIPALIGN} ${ZIP_PARAM} roadmap-2.apk roadmap-3.apk
+	jarsigner -verbose -keystore ${HOME}/.android/debug.keystore -storepass android -signedjar $@ roadmap-3.apk androiddebugkey
 
 libs/armeabi/libexpat-1.so:	/opt/android/lib/libexpat-1.so
 	cp /opt/android/lib/libexpat-1.so libs/armeabi/libexpat-1.so
 
-#
-# I used this with Android 2.1
-#
-
-NDKHOME=	/home/danny/src/android/android-ndk-r4
-SDKHOME=	/home/danny/src/android/android-sdk-linux_86
-SDKPLAT=	${SDKHOME}/platforms/android-8
-NDK_CFLAGS=	-I$(NDKHOME)/build/platforms/android-5/arch-arm/usr/include \
-		-DANDROID -fno-short-enums -g
-NDK_LDFLAGS=	-nostdlib -Wl,-shared,-Bsymbolic -Wl,--no-undefined -Wl,-z,noexecstack
-JAVA=		/usr/share/java
-JAVAC_FLAGS=	-cp ${JAVA}/jaxp_parser_impl.jar:${JAVA}/xml-commons-apis.jar:${JAVA}/antlr.jar:${JAVA}/ant/ant-antlr.jar:${JAVA}/regexp.jar:${JAVA}/ant/ant-apache-regexp.jar:${JAVA}/jakarta-commons-logging.jar:${JAVA}/ant/ant-commons-logging.jar:${JAVA}/javamail.jar:${JAVA}/jaf.jar:${JAVA}/ant/ant-javamail.jar:${JAVA}/jsch.jar:${JAVA}/ant/ant-jsch.jar:/usr/lib/jvm/java/lib/tools.jar:${SDKPLAT}/android.jar -sourcepath gen:src -bootclasspath ${SDKPLAT}/android.jar
-SRCNAME=	RoadMap
-CLSES=		${DIRHIER}/RoadMap.class ${DIRHIER}/Panel.class ${DIRHIER}/Pen.class
-
-DIRHIER=	net/sourceforge/projects/roadmap
-
-classes.dex:	${CLSES}
-	# ${SDKPLAT}/tools/dx --dex --output=$@ ${DIRHIER}
-	${SDKPLAT}/tools/dx --dex --output=$@ ${DIRHIER}/*.class
-# ${SDKPLAT}/tools/dx --dex --output=$@ ${DIRHIER}/${SRCNAME}.class
+bin/classes.dex:	${CLSES}
+	${DX} --dex --output=$@ ${DIRHIER}/*.class
 
 gen/net/sourceforge/projects/roadmap/R.java: AndroidManifest.xml Makefile
-	aapt package -m -J gen -M AndroidManifest.xml -S res -I ${SDKPLAT}/android.jar
+	${AAPT} package -m -J gen -M AndroidManifest.xml -S res -I ${SDKPLAT}/android.jar
 
 ${DIRHIER}/RoadMap.class:	src/${DIRHIER}/RoadMap.java gen/net/sourceforge/projects/roadmap/R.java
 	javac ${JAVAC_FLAGS} -d . src/${DIRHIER}/RoadMap.java
@@ -97,13 +110,20 @@ RMLIBS=	../libguiroadmap.a ../libroadmap.a ../gpx/libgpx.a ../unix/libosroadmap.
 	-L/opt/android/lib -lexpat-1
 RMDLIBS=	../libguiroadmap.a ../libroadmap.a ../gpx/libgpx.a ../unix/libosroadmap.a
 
-RMASRC=		roadmap_canvas.c roadmap_dialog.c roadmap_fileselection.c \
-		roadmap_keyboard.c roadmap_main.c roadmap_messagebox.c \
-		roadmap_progress.c roadmap_androidgps.c \
-		../win32/roadmap_colors.c
+RMASRC=		roadmap_canvas.c \
+		roadmap_dialog.c \
+		roadmap_fileselection.c \
+		roadmap_keyboard.c \
+		roadmap_main.c \
+		roadmap_messagebox.c \
+		roadmap_progress.c \
+		roadmap_androidgps.c \
+		../win32/roadmap_colors.c \
+		roadmap_sound.c \
+		roadmap_menu.c
 
-libs/armeabi/gdbserver:	${NDKHOME}/build/prebuilt/linux-x86/arm-eabi-4.4.0/bin/gdbserver
-	cp ${NDKHOME}/build/prebuilt/linux-x86/arm-eabi-4.4.0/bin/gdbserver libs/armeabi/gdbserver
+libs/armeabi/gdbserver:	${NDKHOME}/toolchains/arm-eabi-4.4.0/prebuilt/gdbserver
+	cp ${NDKHOME}/toolchains/arm-eabi-4.4.0/prebuilt/gdbserver libs/armeabi/gdbserver
 
 RMANDROID=	${RMASRC:.c=.o}
 
@@ -113,20 +133,19 @@ libs/armeabi/librmnative.so:	${RMANDROID} ${RMDLIBS}
 		${RMANDROID} \
 		${RMLIBS} \
 		-lgcc \
-		-L${NDKHOME}/build/platforms/android-5/arch-arm/usr/lib -llog -lc -lm
-#		${NDKHOME}/build/platforms/android-8/arch-arm/usr/lib/crtbegin_dynamic.o \
-#		${NDKHOME}/build/platforms/android-8/arch-arm/usr/lib/crtend_android.o
+		-L${NDKHOME}/platforms/android-${NDK_LEVEL}/arch-${NDK_ARCH}/usr/lib -llog -lc -lm
 
 clean:
 	rm -f *.o *.a *.so .depends.mk *.class *.apk
 	rm -f *~ jni/*~ src/${DIRHIER}/*~
-	rm -f classes.dex
+	rm -f bin/classes.dex
 	rm -f gen/${DIRHIER}/R.java
 	rm -f bin/${SRCNAME}.ap_
 	rm -f libs/armeabi/librmnative.so libs/armeabi/libexpat-1.so
 	rm -f ${SRCNAME}.class
 	rm -f ${DIRHIER}/*.class
 	rm -f libs/armeabi/gdbserver
+	rm -f roadmap-1.apk roadmap-2.apk roadmap-3.apk
 
 install: roadmap.apk libs/armeabi/gdbserver
 	${ADB} install -r roadmap.apk
