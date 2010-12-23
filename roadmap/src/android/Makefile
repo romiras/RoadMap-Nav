@@ -4,7 +4,7 @@
 # Requires the NDK
 #
 
-ADB=	adb
+ADB=	adb -e
 #
 # Produce a build timestamp
 #
@@ -71,7 +71,7 @@ depends:
 -include .depends.mk
 
 roadmap.apk:	libs/armeabi/librmnative.so AndroidManifest.xml bin/classes.dex \
-	libs/armeabi/libexpat-1.so 
+	libs/armeabi/libexpat-1.so libs/armeabi/gdbserver libs/armeabi/gdb.setup
 	rm -f roadmap-1.apk roadmap-2.apk roadmap-3.apk roadmap.apk
 #
 # Scripting tested with Android 2.3 toolchain
@@ -125,6 +125,10 @@ RMASRC=		roadmap_canvas.c \
 libs/armeabi/gdbserver:	${NDKHOME}/toolchains/arm-eabi-4.4.0/prebuilt/gdbserver
 	cp ${NDKHOME}/toolchains/arm-eabi-4.4.0/prebuilt/gdbserver libs/armeabi/gdbserver
 
+libs/armeabi/gdb.setup:
+	echo "set solib-search-path libs/armeabi" >$@
+	echo "" >>$@
+
 RMANDROID=	${RMASRC:.c=.o}
 
 libs/armeabi/librmnative.so:	${RMANDROID} ${RMDLIBS}
@@ -146,6 +150,7 @@ clean:
 	rm -f ${DIRHIER}/*.class
 	rm -f libs/armeabi/gdbserver
 	rm -f roadmap-1.apk roadmap-2.apk roadmap-3.apk
+	rm -f libs/armeabi/gdb.setup
 
 install: roadmap.apk libs/armeabi/gdbserver
 	${ADB} install -r roadmap.apk
