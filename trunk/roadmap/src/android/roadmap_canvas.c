@@ -130,44 +130,6 @@ static void roadmap_canvas_convert_points (jfloatArray apoints,
     free(tmp);
 }
 
-#if 0
-/*
- * @brief convert a list of points, but make sure to duplicate all but the first and last points
- * because RoadMap and Android have different semantics here.
- */
-static void roadmap_canvas_convert_lines (jfloatArray apoints,
-		RoadMapGuiPoint *points, int count)
-{
-    int		i, j;
-    float	*tmp = (float *)malloc(4 * sizeof(float) * count);
-
-    /* first entry : only once */
-    tmp[0] = points->x;
-    tmp[1] = points->y;
-    points++;
-
-    for (i=1, j=2; i<count-1; i++, points++) {
-        tmp[j++] = points->x;
-        tmp[j++] = points->y;
-        tmp[j++] = points->x;
-        tmp[j++] = points->y;
-    }
-
-    /* last entry : only once */
-    tmp[j++] = points->x;
-    tmp[j++] = points->y;
-
-    (*RoadMapJniEnv)->SetFloatArrayRegion(RoadMapJniEnv, apoints, 0, 4 * count - 4, tmp);
-    free(tmp);
-}
-
-static void roadmap_canvas_convert_ints (jintArray acenters,
-		int *centers, int count)
-{
-	(*RoadMapJniEnv)->SetIntArrayRegion(RoadMapJniEnv, acenters, 0, count, centers);
-}
-#endif
-
 /**
  * @brief
  * @param text
@@ -409,8 +371,6 @@ void roadmap_canvas_draw_multiple_lines
 	int		j, ix_lines, ix_tmp, ix_points, nlines, npoints;
 	float		*tmp;
 	
-	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "draw_multiple_lines(%d)", count);
-
 	/*
 	 * Loop over the input, cut it up in chunks so we only use buffers of size
 	 * RM_MAXLINES.
@@ -428,7 +388,6 @@ void roadmap_canvas_draw_multiple_lines
 
 	for (i=0, ix_lines=0, ix_tmp=0, ix_points=0, nlines=0, npoints=0; i<count; i++) {
 		count_of_points = lines[i];
-		// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "draw_multiple_lines{%d -> %d}", i, count_of_points);
 
 		/*
 		 * Add current line to the buffer. Initial point : only once.
@@ -449,7 +408,6 @@ void roadmap_canvas_draw_multiple_lines
 			 * (A low level line is what I called a pair of points above.)
 			 */
 			if (ix_tmp >= RM_MAXLINES - 6) {
-				// int k; for (k=0; k<npoints; k+=4) __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "Line %d (%3.0f,%3.0f)-(%3.0f,%3.0f)", k/4, tmp[k], tmp[k+1], tmp[k+2], tmp[k+3]);
 				(*RoadMapJniEnv)->SetFloatArrayRegion(RoadMapJniEnv, apoints,
 						0, npoints, tmp);
 				(*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, PanelThiz, mid,
@@ -481,7 +439,6 @@ void roadmap_canvas_draw_multiple_lines
 		 * high level lines.
 		 */
 		if (ix_tmp >= RM_MAXLINES - 6) {
-			// int k; for (k=0; k<npoints; k+=4) __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "Line %d (%3.0f,%3.0f)-(%3.0f,%3.0f)", k/4, tmp[k], tmp[k+1], tmp[k+2], tmp[k+3]);
 			(*RoadMapJniEnv)->SetFloatArrayRegion(RoadMapJniEnv, apoints,
 					0, npoints, tmp);
 			(*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, PanelThiz, mid,
@@ -501,7 +458,6 @@ void roadmap_canvas_draw_multiple_lines
 	/*
 	 * Finish up, shove out remaining data.
 	 */
-	// int k; for (k=0; k<npoints; k+=4) __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "Line %d (%3.0f,%3.0f)-(%3.0f,%3.0f)", k/4, tmp[k], tmp[k+1], tmp[k+2], tmp[k+3]);
 	(*RoadMapJniEnv)->SetFloatArrayRegion(RoadMapJniEnv, apoints, 0, npoints, tmp);
 	(*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, PanelThiz, mid,
 			npoints, apoints);
