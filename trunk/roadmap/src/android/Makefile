@@ -56,8 +56,14 @@ SRCNAME=	RoadMap
 CLSES=		${DIRHIER}/RoadMap.class ${DIRHIER}/Panel.class ${DIRHIER}/Pen.class
 DX=		${SDKHOME}/platform-tools/dx
 AAPT=		${SDKHOME}/platform-tools/aapt
+APKBUILDER=	${SDKHOME}/tools/apkbuilder
 ZIPALIGN=	${SDKHOME}/tools/zipalign
 ZIP_PARAM=	-f 4
+#
+# Note jarsigner is not an Android but a Java tool, so it's in the JDK,
+# not in Android SDK or NDK.
+#
+JARSIGNER=	jarsigner
 
 DIRHIER=	net/sourceforge/projects/roadmap
 
@@ -70,17 +76,26 @@ depends:
 
 -include .depends.mk
 
-roadmap.apk:	libs/armeabi/librmnative.so AndroidManifest.xml bin/classes.dex \
-	libs/armeabi/libexpat-1.so libs/armeabi/gdbserver libs/armeabi/gdb.setup
-	rm -f roadmap-1.apk roadmap-2.apk roadmap-3.apk roadmap.apk
-#
-# Scripting tested with Android 2.3 toolchain
-# Note apkbuilder says it's deprecated, but there's no alternative and it just works.
-#
-	${AAPT} package -f --debug-mode -M AndroidManifest.xml -S res -I ${SDKPLAT}/android.jar -F roadmap-1.apk
-	apkbuilder roadmap-2.apk -u -z roadmap-1.apk  -f bin/classes.dex -rf src -nf libs
+roadmap.apk:	roadmap-3.apk
+	-rm -f $@
+	${JARSIGNER} -verbose -keystore ${HOME}/.android/debug.keystore -storepass android -signedjar $@ roadmap-3.apk androiddebugkey
+
+roadmap-3.apk:	roadmap-2.apk
+	-rm -f $@
 	${ZIPALIGN} ${ZIP_PARAM} roadmap-2.apk roadmap-3.apk
-	jarsigner -verbose -keystore ${HOME}/.android/debug.keystore -storepass android -signedjar $@ roadmap-3.apk androiddebugkey
+
+#
+# Note Android 2.3 (SDK v9) apkbuilder says it's deprecated but it still works
+# and reply to inquiry in forums says there's no alternative.
+#
+roadmap-2.apk:	roadmap-1.apk
+	-rm -f $@
+	${APKBUILDER} roadmap-2.apk -u -z roadmap-1.apk  -f bin/classes.dex -rf src -nf libs
+
+roadmap-1.apk: libs/armeabi/librmnative.so AndroidManifest.xml bin/classes.dex \
+	libs/armeabi/libexpat-1.so libs/armeabi/gdbserver libs/armeabi/gdb.setup
+	-rm -f $@
+	${AAPT} package -f --debug-mode -M AndroidManifest.xml -S res -I ${SDKPLAT}/android.jar -F roadmap-1.apk
 
 libs/armeabi/libexpat-1.so:	/opt/android/lib/libexpat-1.so
 	cp /opt/android/lib/libexpat-1.so libs/armeabi/libexpat-1.so
