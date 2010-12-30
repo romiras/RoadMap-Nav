@@ -95,7 +95,7 @@ roadmap-2.apk:	roadmap-1.apk
 roadmap-1.apk: libs/armeabi/librmnative.so AndroidManifest.xml bin/classes.dex \
 	libs/armeabi/libexpat-1.so libs/armeabi/gdbserver libs/armeabi/gdb.setup
 	-rm -f $@
-	${AAPT} package -f --debug-mode -M AndroidManifest.xml -S res -I ${SDKPLAT}/android.jar -F roadmap-1.apk
+	${AAPT} package -f -M AndroidManifest.xml -S res -I ${SDKPLAT}/android.jar -F roadmap-1.apk
 
 libs/armeabi/libexpat-1.so:	/opt/android/lib/libexpat-1.so
 	cp /opt/android/lib/libexpat-1.so libs/armeabi/libexpat-1.so
