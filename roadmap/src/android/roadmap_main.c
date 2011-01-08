@@ -134,7 +134,7 @@ void roadmap_main_set_keyboard (RoadMapKeyInput callback)
 
 /**
  * @brief Create a new menu.
- * Not used on Android, except ...
+ * On Android, this doesn't do much except assigning a unique number.
  *
  * @return returned value must be non-null for menus to work (see roadmap_factory.c)
  */
@@ -144,7 +144,7 @@ RoadMapMenu roadmap_main_new_menu (const char *title)
 	jmethodID	mid = TheMethod(cls, "CreateMenu", "(Ljava/lang/String;)I");
 	jstring		js;
 
-//	__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_main_new_menu(%s)", title);
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_main_new_menu(%s)", title);
 
 	js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, title);
 	int i = (*RoadMapJniEnv)->CallIntMethod(RoadMapJniEnv, RoadMapThiz, mid, js);
@@ -161,6 +161,7 @@ void roadmap_main_free_menu (RoadMapMenu menu)
 
 void roadmap_main_add_menu (RoadMapMenu menu, const char *label)
 {
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_main_add_menu(%d,%s)", (int)menu, label);
 	/*
 	int		m = (int)menu;
 	jclass		cls = TheRoadMapClass();
@@ -177,12 +178,13 @@ void roadmap_main_add_menu (RoadMapMenu menu, const char *label)
 
 void roadmap_main_popup_menu (RoadMapMenu menu, const RoadMapGuiPoint *position)
 {
-//	__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_main_popup_menu FIX ME");
+	__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_main_popup_menu FIX ME");
 }
 
 
 struct callback {
 	RoadMapCallback	callback;
+	char	*label;			// only for debug
 } callbacks[150] /* FIX ME make dynamic */;
 
 void roadmap_main_add_menu_item (RoadMapMenu menu,
@@ -190,8 +192,10 @@ void roadmap_main_add_menu_item (RoadMapMenu menu,
                                  const char *tip,
                                  RoadMapCallback callback)
 {
-	if (label == NULL)
+	if (label == NULL) {
+		// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_main_add_menu_item(%d,NULL,cb %p)", menu, callback);
 		return;
+	}
 
 	int		m = (int)menu;
 	jclass		cls = TheRoadMapClass();
@@ -201,9 +205,10 @@ void roadmap_main_add_menu_item (RoadMapMenu menu,
 	js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, label);
 	int i = (*RoadMapJniEnv)->CallIntMethod(RoadMapJniEnv, RoadMapThiz, mid, m, js);
 
-//	__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_main_add_menu_item(%d,%s,cb %p) -> %d", m, label, callback, i);
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_main_add_menu_item(%d,%s,cb %p) -> %d", m, label, callback, i);
 
 	callbacks[i].callback = callback;
+	callbacks[i].label = strdup(label);	// only for debug
 }
 
 /**
@@ -215,12 +220,23 @@ void roadmap_main_add_menu_item (RoadMapMenu menu,
  */
 int roadmap_main_callback(int item)
 {
-	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_main_callback(%d)", item);
 	if (callbacks[item].callback) {
+//		__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_main_callback(%d,%s) %p", item, callbacks[item].label, callbacks[item].callback);
 		(*(callbacks[item].callback))();
 		return 1;
 	}
+//	__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_main_callback(%d,%s) %p -> 0", item, callbacks[item].label, callbacks[item].callback);
 	return 0;
+}
+
+/**
+ * @brief
+ * @return 1 if ok, 0 if not found
+ */
+int
+Java_net_sourceforge_projects_roadmap_RoadMap_MenuCallback(JNIEnv* env, jobject thiz, int id)
+{
+	return roadmap_main_callback(id);
 }
 
 void roadmap_main_add_separator (RoadMapMenu menu)
@@ -507,8 +523,10 @@ Java_net_sourceforge_projects_roadmap_RoadMap_roadmapStart(JNIEnv* env, jobject 
 	char	*argv[] = { "roadmap", NULL };
 	int	argc = 1;
 
+roadmap_log(ROADMAP_ERROR, "RoadMap_roadmapStart");
 	roadmap_option(argc, argv, 0, NULL);
 	roadmap_start(argc, argv);
+roadmap_log(ROADMAP_ERROR, "RoadMap_roadmapStart (end)");
 
 	return (*env)->NewStringUTF(env, "Hello");
 }
@@ -540,6 +558,9 @@ void
 Java_net_sourceforge_projects_roadmap_RoadMap_JniStart(JNIEnv* env, jobject thiz)
 {
 	RoadMapJniEnv = env;
+
+	__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "RoadMap->JniStart");
+
 	RoadMapJniClass = (*env)->NewGlobalRef(env, 
 		(*env)->FindClass(env, "net/sourceforge/projects/roadmap/RoadMap"));
 	RoadMapThiz = (jobject)(*env)->NewGlobalRef(env, thiz);
@@ -596,16 +617,15 @@ Java_net_sourceforge_projects_roadmap_RoadMap_KickRedraw(JNIEnv* env, jobject th
 #endif
 
 /**
- * @brief
+ * @brief Hard exit
  * @return 1 if ok, 0 if not found
  */
-int
-Java_net_sourceforge_projects_roadmap_RoadMap_MenuCallback(JNIEnv* env, jobject thiz, int id)
+void
+Java_net_sourceforge_projects_roadmap_RoadMap_HardExit(JNIEnv* env, jobject thiz, int rc)
 {
-	extern int roadmap_main_callback(int);
-
-	return roadmap_main_callback(id);
+	exit(rc);
 }
+
 /**
  * @brief Terminate RoadMap
  */
@@ -626,4 +646,10 @@ void roadmap_main_exit (void)
 	cls = TheRoadMapClass();
 	mid = TheMethod(cls, "Finish", "()V");
 	(*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, RoadMapThiz, mid);
+}
+
+void roadmap_android_test(void)
+{
+	char *p = NULL;
+	*p = 'a';
 }
