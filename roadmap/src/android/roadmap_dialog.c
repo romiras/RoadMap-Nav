@@ -263,6 +263,8 @@ static RoadMapDialogItem roadmap_dialog_new_item (const char *frame, const char 
 
    parent = roadmap_dialog_get (RoadMapDialogCurrent, frame);
    child  = roadmap_dialog_get (parent, name);
+   child->widget_type = ROADMAP_WIDGET_CONTAINER; /* Safe default. */
+
 // roadmap_log(ROADMAP_WARNING, "roadmap_dialog_new_item(%s,%s) parent %d child %d", frame, name, parent->w, child ? child->w : -1);
 
    if (parent->w == 0) {
@@ -383,6 +385,8 @@ void roadmap_dialog_new_entry (const char *frame, const char *name) {
    /* Return value is the index of the text field in the container widget */
    child->w = w;
 #endif
+
+   child->widget_type = ROADMAP_WIDGET_ENTRY;
 //   roadmap_log(ROADMAP_WARNING, "roadmap_dialog_new_entry(%s,%s) child->w %d w %d", frame, name, child->w, w);
 }
 
@@ -645,20 +649,24 @@ void roadmap_dialog_select (const char *dialog)
 }
 
 
-#if 0
 static char *ReturnStringDataHack = NULL;
 
 void Java_net_sourceforge_projects_roadmap_RoadMap_ReturnStringDataHack(JNIEnv* env, jobject thiz, jstring js)
 {
 	ReturnStringDataHack = (*env)->GetStringUTFChars(env, js, NULL);
 }
-#endif
 
 /**
- * @brief Look up which selection has been made in this dialog
+ * @brief Look up which selection has been made in this dialog, or retrieve the contents of a text entry field, or get the data we stored here.
  * @param frame used to determine the dialog
  * @param name used to determine the dialog
  * @return pointer to the data passed back
+ *
+ * Note the data is retrieved from the user interface only if the widget is ROADMAP_WIDGET_ENTRY.
+ * Also in that case we know it's a string.
+ *
+ * In other cases, we just pass pointers along from memory, and we're not sure about the data
+ * type (they're sometimes pointers to structures).
  */
 void *roadmap_dialog_get_data (const char *frame, const char *name)
 {
@@ -668,26 +676,40 @@ void *roadmap_dialog_get_data (const char *frame, const char *name)
    this_frame  = roadmap_dialog_get (RoadMapDialogCurrent, frame);
    this_item   = roadmap_dialog_get (this_frame, name);
 
-   if (RoadMapDialogCurrent->w == 0 && this_item->w == 0) {
-      roadmap_log(ROADMAP_WARNING, "roadmap_dialog_get_data(%s,%s) null", frame, name);
-      return NULL;
+   if (this_item->widget_type == ROADMAP_WIDGET_ENTRY) {
+      if (RoadMapDialogCurrent->w == 0 && this_item->w == 0) {
+         roadmap_log(ROADMAP_WARNING, "roadmap_dialog_get_data(%s,%s) null", frame, name);
+         return NULL;
+      }
+
+      jclass	cls = TheRoadMapClass();
+      jmethodID	mid = TheMethod(cls, "DialogGetData", "(II)V");
+
+      (*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, RoadMapThiz, mid,
+         RoadMapDialogCurrent->w,
+         this_item->w);
+
+      this_item->value = ReturnStringDataHack;
    }
-#if 0
-   jclass	cls = TheRoadMapClass();
-   jmethodID	mid = TheMethod(cls, "DialogGetData", "(II)V");
 
-   (*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, RoadMapThiz, mid,
-      RoadMapDialogCurrent->w,
-      this_item->w);
-
-   this_item->value = ReturnStringDataHack;
-#endif
    roadmap_log(ROADMAP_WARNING, "roadmap_dialog_get_data(%s,%s) -> {%p,%s}", frame, name, this_item->value, this_item->value);
 
    return (void *)this_item->value;
 }
 
 
+/**
+ * @brief Store some data. See notes below.
+ * @param frame used to determine the dialog
+ * @param name used to determine the dialog
+ * @return pointer to the data passed back
+ *
+ * Note the data is sent to the user interface only if the widget is ROADMAP_WIDGET_ENTRY or
+ * ROADMAP_WIDGET_LABEL. In those cases we know it's string data.
+ *
+ * In other cases, we just pass pointers along from memory, and we're not sure about the data
+ * type (they're sometimes pointers to structures).
+ */
 void  roadmap_dialog_set_data (const char *frame, const char *name,
                                const void *data) {
    RoadMapDialogItem this_frame, this_item;
@@ -697,16 +719,25 @@ void  roadmap_dialog_set_data (const char *frame, const char *name,
 
    // roadmap_log(ROADMAP_WARNING, "roadmap_dialog_set_data(%s,%s) cur %d fr %d it %d", frame, name, RoadMapDialogCurrent->w, this_frame->w, this_item->w);
 
-   this_item->value = (char *)data;
+   switch (this_item->widget_type) {
 
-   jclass		cls = TheRoadMapClass();
-   jmethodID		mid = TheMethod(cls, "DialogSetData", "(IILjava/lang/String;)V");
-   jstring		js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, (const char *)data);
+   case ROADMAP_WIDGET_ENTRY:
+   case ROADMAP_WIDGET_LABEL:
+   {
+      jclass		cls = TheRoadMapClass();
+      jmethodID		mid = TheMethod(cls, "DialogSetData", "(IILjava/lang/String;)V");
+      jstring		js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, (const char *)data);
 
-   (*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, RoadMapThiz, mid,
+      (*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, RoadMapThiz, mid,
 	   /* dialog id */ RoadMapDialogCurrent->w,
 	   /* row id in the dialog */ this_item->w,
 	   js);
+      break;
+
+   }
+   }
+
+   this_item->value = (char *)data;
 }
 
 void roadmap_dialog_new_progress (const char *frame, const char *name)
