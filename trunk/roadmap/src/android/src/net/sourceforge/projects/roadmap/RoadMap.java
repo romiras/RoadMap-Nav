@@ -1,3 +1,30 @@
+/*
+ * LICENSE:
+ *
+ *   Copyright (c) 2010, 2011 Danny Backx
+ *
+ *   This file is part of RoadMap.
+ *
+ *   RoadMap is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   RoadMap is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with RoadMap; if not, write to the Free Software
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+/**
+ * @file
+ * @brief Stuff to support the application on Android
+ * @ingroup android
+ */
 package net.sourceforge.projects.roadmap;
 
 import android.os.Bundle;
@@ -18,11 +45,17 @@ import android.os.Message;
 
 import android.widget.Button;
 import android.widget.ImageButton;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.EditText;
 import android.widget.Toast;
 import android.widget.ScrollView;
+import android.widget.ListView;
+import android.widget.ArrayAdapter;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
+
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 
 import android.location.Location;
 import android.location.LocationListener;
@@ -44,6 +77,12 @@ import android.content.DialogInterface;
 import android.view.ViewGroup;
 import android.util.AttributeSet;
 import android.view.Gravity;
+
+import android.media.SoundPool;
+import android.media.AudioManager;
+import java.util.HashMap;
+
+import android.media.MediaPlayer;
 
 public class RoadMap extends Activity
 {
@@ -69,18 +108,20 @@ public class RoadMap extends Activity
 	public native void AndroidgpsSatellites(int sequence,
 			int id, int elevation, int azimuth,
 			int strength, int active);
-	public native void RoadMapStart();
-	public native void RoadMapStartWindow();
 	public native int MenuCallback(int item);
 	public native void CallPeriodic(int index);
 	public native void ToolbarCallback(int cb);
+	public native void HardExit(int rc);
+	public native void DialogSpecialCallback(int dlg, int btn);
+	public native void ReturnStringDataHack(String s);
+	public native void RoadMapDialogChosen(int position, long id);
 
 	@Override
 	public void onCreate(Bundle state)
 	{
 		super.onCreate(state);
 
-		Log.e("RoadMap", "onCreate(" + state + ")");
+//		Log.e("RoadMap", "onCreate(" + state + ")");
 
 		ll = new LinearLayout(this);
 		ll.setOrientation(LinearLayout.VERTICAL);
@@ -240,10 +281,18 @@ public class RoadMap extends Activity
 				/* getAltitude() returns m */
 				alt = (int) (location.getAltitude() * 1000000),
 				/* getSpeed() returns m/s, this calculation
-				 * turns it into knots, see roadmap_gpsd2.c */
-				speed = (int) (1944 * location.getSpeed() / 1000),
+				 * turns it into knots, see roadmap_gpsd2.c .
+				 * Still need to divide by 1000, see below.
+				 * */
+				speed = (int) (1944 * location.getSpeed()),
 				/* getBearing returns degrees East of true North */
 				steering = (int) location.getBearing();
+
+			/*
+			 * Hopefully cutting the calculation in two
+			 * is enough to avoid precision loss.
+			 */
+			speed /= 1000;
 
 			// The code in roadmap_gps.c requires 'A' as status.
 			// See roadmap_gps_update_reception().
@@ -290,6 +339,19 @@ public class RoadMap extends Activity
 	public void MessageBox(String title, String message)
 	{
 		Toast.makeText(thiz, message, 5000).show();
+	}
+
+	public void MessageBoxWait(String title, String message)
+	{
+		new AlertDialog.Builder(thiz)
+			.setTitle("Fatal error")
+			.setMessage(message)
+			.setNeutralButton("Dismiss", new DialogInterface.OnClickListener() {
+				public void onClick(DialogInterface dlg, int ok) {
+					HardExit(1);
+				}
+			})
+			.show();
 	}
 
 	public void Finish()
@@ -504,6 +566,16 @@ public class RoadMap extends Activity
 	ToolbarCacheEntry	toolBar[] = new ToolbarCacheEntry[maxToolbarCache];
 	int			nToolbarCache = 0;
 
+	void JToolbarCallback(int i)
+	{
+		try {
+			ToolbarCallback(i);
+		} catch (Exception e) {
+			e.printStackTrace();
+			Log.e("RoadMap", "Stack trace " + e.toString());
+		};
+	}
+
 	OnClickListener mToolbarClick = new OnClickListener() {
 		public void onClick(View v)
 		{
@@ -511,7 +583,8 @@ public class RoadMap extends Activity
 
 			for (i=0; i<nToolbarCache; i++)
 				if (v == toolBar[i].view) {
-					ToolbarCallback(i);
+					// ToolbarCallback(i);
+					JToolbarCallback(i);
 					return;
 				}
 			// FIX ME No button found, should we throw an exception ?
@@ -565,23 +638,26 @@ public class RoadMap extends Activity
 	final int	maxdialogs = 50;
 
 	class Dialogs {
-		String		name;
-		LinearLayout	ll, row;
-		AlertDialog	ad;
+		String			name;
+		LinearLayout		ll, row;
+		AlertDialog		ad;
+		AlertDialog.Builder	db;
+		String			button0, button1, button2;
+		int			rowid;
+//		int			nrows, maxrows;
+//		LinearLayout		rows[];
 	};
 	Dialogs dialogs[] = new Dialogs[maxdialogs];
 
 	protected Dialog onCreateDialog(int dlg_id)
 	{
-		Log.e("RoadMap", "onCreateDialog(" + dlg_id + ")");
+//		Log.e("RoadMap", "onCreateDialog(" + dlg_id + ")");
 
 		if (dlg_id <= 0 || dlg_id >= dialog_id) {
-			// Log.e("RoadMap", "onCreateDialog -> null 1");
 			return null;
 		}
 
 		if (dialogs[dlg_id] != null && dialogs[dlg_id].ad != null) {
-			// Log.e("RoadMap", "onCreateDialog -> null 2");
 			return dialogs[dlg_id].ad;
 		}
 
@@ -589,15 +665,36 @@ public class RoadMap extends Activity
 			AlertDialog.Builder     db = new AlertDialog.Builder(this);
 			ScrollView		sv;
 
-			// Log.e("RoadMap", "onCreateDialog build");
+			/* We need the "final" clause to pass the right value */
+			final int id = dlg_id;
 
 			db.setMessage(dialogs[dlg_id].name)
 				.setCancelable(true)
-				.setNegativeButton("Close",
+				.setPositiveButton(dialogs[dlg_id].button0,
 					new DialogInterface.OnClickListener() {
-						public void onClick(DialogInterface dialog, int id)
+						public void onClick(DialogInterface dialog, int btn)
 						{
-							dialog.cancel();
+							DialogSpecialCallback(id, 0);
+						}
+					}
+				);
+			db.setMessage(dialogs[dlg_id].name)
+				.setCancelable(true)
+				.setNeutralButton(dialogs[dlg_id].button1,
+					new DialogInterface.OnClickListener() {
+						public void onClick(DialogInterface dialog, int btn)
+						{
+							DialogSpecialCallback(id, 1);
+						}
+					}
+				);
+			db.setMessage(dialogs[dlg_id].name)
+				.setCancelable(true)
+				.setNegativeButton(dialogs[dlg_id].button2,
+					new DialogInterface.OnClickListener() {
+						public void onClick(DialogInterface dialog, int btn)
+						{
+							DialogSpecialCallback(id, 2);
 						}
 					}
 				);
@@ -610,6 +707,7 @@ public class RoadMap extends Activity
 			sv.addView(ll);
 
 			dialogs[dlg_id].ad = d;
+			dialogs[dlg_id].db = db;
 
 			return d;
 		}
@@ -626,10 +724,13 @@ public class RoadMap extends Activity
 		dialogs[dialog_id] = new Dialogs();
 		dialogs[dialog_id].name = name;
 		dialogs[dialog_id].ll = new LinearLayout(this);
+		dialogs[dialog_id].rowid = 0;
 		dialogs[dialog_id].ll.setOrientation(LinearLayout.VERTICAL);
 
 		if (dialogs[parent] != null) {
 			// Log.e("RoadMap", "Add button {" + name + "} in dlg " + parent + " (" + dialogs[parent].name + ")");
+
+			/* Put a button in the parent dialog ! */
 			Button b = new Button(thiz);
 			b.setText(name);
 			dialogs[parent].ll.addView(b);
@@ -643,10 +744,98 @@ public class RoadMap extends Activity
 					}
 			});
 		} else {
-			Log.e("RoadMap", "CreateDialog(" + name + ") - no parent ??");
+//			Log.e("RoadMap", "CreateDialog(" + name + ") - no parent ??");
 		}
 
 		return dialog_id++;
+	}
+
+	/*
+	 * 2nd parameter is the reference to the parent dialog
+	 */
+	public int CreateHeading(String name, int id)
+	{
+//		Log.e("RoadMap", "CreateHeading(" + name + "," + id + ")");
+
+		try {
+			/*
+			LinearLayout	row = new LinearLayout(this);
+			row.setOrientation(LinearLayout.HORIZONTAL);
+			dialogs[id].ll.addView(row);
+			dialogs[id].row = row;
+			*/
+
+			TextView b = new TextView(thiz);
+			b.setText(name);
+			dialogs[id].ll.addView(b);
+			// dialogs[id].row.addView(b);
+			b.setGravity(Gravity.LEFT);
+		} catch (Exception e) {
+			Log.e("RoadMap", "CreateHeading(" + id + "," + name + ") exception " + e);
+			return 0;
+		}
+		return 1;
+	}
+
+	/*
+	 * Add an object that shows a label
+	 * Precede this by creating a "row" object - currently moved to CreateHeading.
+	 */
+	public int DialogAddLabel(int id, String name)
+	{
+//		Log.e("RoadMap", "DialogAddLabel(" + id + "," + name + ")");
+		try {
+			LinearLayout	row = new LinearLayout(this);
+			row.setOrientation(LinearLayout.HORIZONTAL);
+			dialogs[id].ll.addView(row);
+			dialogs[id].row = row;
+
+			// Button b = new Button(thiz);
+			TextView b = new TextView(thiz);
+			b.setText(name);
+			dialogs[id].row.addView(b);
+
+			// b.setGravity(Gravity.RIGHT);
+			// LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+			// 	ViewGroup.LayoutParams.FILL_PARENT,
+			// 	ViewGroup.LayoutParams.WRAP_CONTENT);
+			// lp.weight = 1.0f;
+			// b.setLayoutParams(lp);
+		} catch (Exception e) {
+			Log.e("RoadMap", "DialogAddLabel(" + id + "," + name + ") exception " + e);
+		}
+		return 1;
+	}
+
+	/*
+	 * @return the index of the text field in the container widget
+	 */
+	public int DialogAddTextEntry(int id, String name)
+	{
+		try {
+			EditText tv = new EditText(thiz);
+
+			tv.setGravity(Gravity.FILL_HORIZONTAL);
+			tv.setLayoutParams(new ViewGroup.LayoutParams(
+				ViewGroup.LayoutParams.FILL_PARENT,
+				ViewGroup.LayoutParams.WRAP_CONTENT));
+
+			LinearLayout	row = dialogs[id].row;
+
+			row.addView(tv);
+			int r = dialogs[id].ll.indexOfChild(row);
+
+			// dialogs[id].ll.addView(tv);
+			// int r = dialogs[id].ll.indexOfChild(tv);
+
+			/* Change text size */
+			tv.setTextSize(10);
+//			Log.e("RoadMap", "DialogAddTextEntry(" + id + "," + name + ") EditText " + tv + " row " + row + " added -> ix " + r);
+			return r;
+		} catch (Exception e) {
+			Log.e("RoadMap", "DialogAddTextEntry(" + id + "," + name + ") exception " + e);
+			return -1;
+		}
 	}
 
 	public void ShowDialog(int id)
@@ -655,43 +844,151 @@ public class RoadMap extends Activity
 	}
 
 	/*
-	 * Add an object that shows a label
-	 * Precede this by creating a "row" object
+	 * Special buttons - the ones that belong to the dialog, and appear at the bottom.
+	 *
+	 * Note this happens before onCreateDialog so note the button names but do no more.
+	 * Also : depends on order of the calls in RoadMap.
 	 */
-	public int DialogAddButton(int id, String name)
+	public int DialogAddSpecialButton(int id, String name, int btn)
 	{
-		// Log.e("RoadMap", "DialogAddButton(" + id + "," + name + ")");
+		try {
+			switch (btn) {
+			case 0:	dialogs[id].button0 = name;
+				break;
+			case 1:	dialogs[id].button1 = name;
+				break;
+			case 2:	dialogs[id].button2 = name;
+				break;
+			}
+			return 0;
+		} catch (Exception e) {
+			Log.e("RoadMap", "DialogAddSpecialButton(" + id + "," + name + ") exception " + e);
+			return 0;
+		}
+	}
+
+	/*
+	 * Manipulate field contents
+	 */
+	public void DialogSetData(int id, int rownr, String value)
+	{
+		try {
+			LinearLayout	ll = null, row;
+			EditText	tv = null;
+
+			/* Assume EditText is a direct child of LinearLayout
+			ll = dialogs[id].ll;
+			tv = (EditText)ll.getChildAt(rownr);
+			tv.setText(value);
+			*/
+
+			/* Assume EditText is in a row, so grandchild of LinearLayout */
+			ll = dialogs[id].ll;
+			/*
+			 * The textView is always child #1, child 0 is the label in the row.
+			 */
+			row = (LinearLayout)ll.getChildAt(rownr);
+			tv = (EditText)row.getChildAt(1);
+			tv.setText(value);
+
+		} catch (Exception e) {
+			Log.e("RoadMap", "DialogSetData(" + id + "," + rownr + "," + value + ") " + e);
+		}
+	}
+
+	public void DialogGetData(int id, int rownr)
+	{
+		try {
+			LinearLayout	ll = dialogs[id].ll;
+
+			/*
+			 * See above, TextView is #1.
+			 */
+			LinearLayout	row = (LinearLayout)ll.getChildAt(rownr);
+			EditText	tv = (EditText)row.getChildAt(1);
+
+			/*
+			EditText	tv = (EditText)ll.getChildAt(rownr);
+			/*
+			 * Instead of returning data in a parameter, we're calling C instead.
+			 * So after returning from this function, the data we want to pass is
+			 * in a global variable that we write into with this call.
+			 */
+			ReturnStringDataHack(tv.getText().toString());
+		} catch (Exception e) {
+			ReturnStringDataHack("");
+		}
+	}
+
+	/*
+	 * Create ListView
+	 */
+	public void DialogCreateList(int id)
+	{
 		try {
 			LinearLayout	row = new LinearLayout(this);
 			row.setOrientation(LinearLayout.HORIZONTAL);
 
 			dialogs[id].ll.addView(row);
 			dialogs[id].row = row;
+//			Log.e("RoadMap", "DialogCreateList(" + id + ")");
+			ListView	lv = new ListView(thiz);
+//			Log.e("RoadMap", "DialogCreateList(" + id + "), row " + dialogs[id].row);
+			dialogs[id].row.addView(lv);
 
-			Button b = new Button(thiz);
-			b.setText(name);
-			row.addView(b);
-			b.setGravity(Gravity.LEFT);
+			// lv.setOnItemClickListener(new AdapterView.OnItemClickListener() { });
+			lv.setOnItemClickListener(listener);
 		} catch (Exception e) {
-			Log.e("RoadMap", "DialogAddButton(" + id + "," + name + ") exception " + e);
-		}
-		return 1;
+			Log.e("RoadMap", "DialogCreateList(" + id + ") : exception " + e);
+		};
 	}
 
-	public int DialogAddTextEntry(int id, String name)
-	{
-		try {
-			EditText tv = new EditText(thiz);
-			tv.setGravity(Gravity.FILL_HORIZONTAL);
-			// tv.setLayoutGravity(Gravity.FILL_HORIZONTAL);
-			tv.setLayoutParams(new ViewGroup.LayoutParams(
-				ViewGroup.LayoutParams.FILL_PARENT,
-				ViewGroup.LayoutParams.WRAP_CONTENT));
-			LinearLayout	row = dialogs[id].row;
-			row.addView(tv);
-		} catch (Exception e) {
-			Log.e("RoadMap", "DialogAddTextEntry(" + id + "," + name + ") exception " + e);
+	OnItemClickListener listener = new OnItemClickListener() {
+		public void onItemClick(AdapterView <?> parent, View view, int position, long id) {
+			Log.e("RoadMap", "OnItemClickListener(" + position + "," + id + ")");
+			RoadMapDialogChosen(position, id);
 		}
-		return 1;
+	};
+
+	/*
+	 * Set a list contents
+	 */
+	public void DialogSetListContents(int id, String[] list)
+	{
+
+//		Log.e("RoadMap", "DialogSetListContents(" + id + "," + list + " count " + list.length + ")");
+//		int	i;
+//		for (i=0; i<list.length; i++) {
+//			Log.e("RoadMap", "\t" + i + " - " + list[i]);
+//		}
+			
+		try {
+			ListView lv = (ListView)dialogs[id].row.getChildAt(0);
+//			Log.e("RoadMap", "  ListView " + lv);
+			lv.setAdapter(new ArrayAdapter<String>(thiz,
+				android.R.layout.simple_list_item_1,
+				list));
+		} catch (Exception e) {
+			Log.e("RoadMap", "DialogSetListContents -> exception " + e);
+		}
+	}
+
+	/*
+	 * Sound
+	 */
+	public int PlaySound(String fn)
+	{
+		MediaPlayer	mp;
+
+		try {
+			mp = new MediaPlayer();
+			mp.setDataSource(fn);
+			mp.prepare();
+			mp.start();
+		} catch (Exception e) {
+			Log.e("RoadMap", "PlaySound exception " + e);
+			return -1;
+		};
+		return 0;
 	}
 }

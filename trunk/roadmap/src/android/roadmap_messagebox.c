@@ -87,7 +87,18 @@ void *roadmap_messagebox_wait (const char *title, const char *message)
 {
 }
 
+/**
+ * @brief show a message, then terminate
+ * All of the real action is in Java, except the hard exit, which is in roadmap_main.c
+ */
 void roadmap_messagebox_die (const char *title, const char *message)
 {
-	exit(1);
+	jclass          cls = TheRoadMapClass();
+	jmethodID       mid = TheMethod(cls, "MessageBoxWait", "(Ljava/lang/String;Ljava/lang/String;)V");
+	jstring         jstitle, jsmessage;
+
+	jstitle = title ? (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, title) : NULL;
+	jsmessage = message ? (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, message) : NULL;
+
+	(*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, RoadMapThiz, mid, jstitle, jsmessage);
 }

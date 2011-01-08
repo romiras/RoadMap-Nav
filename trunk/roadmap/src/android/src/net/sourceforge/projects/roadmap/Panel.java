@@ -39,6 +39,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Typeface;
 
 import java.lang.Exception;
 
@@ -192,9 +193,14 @@ class Panel
 	public void DrawString(int x, int y, int corner, int size, String text)
 	{
 		try {
+//			Typeface face = Typeface.createFromAsset(getAssets(),
+//				"fonts/HandmadeTypewriter.ttf");
+			Typeface face = Typeface.create("sans", 0 /* NORMAL */);
+
 			paint = pen.GetPaint();
 
 			paint.setTextSize(size);
+			paint.setTypeface(face);
 
 			// Copy from gtk2/roadmap_canvas.c:roadmap_canvas_draw_string()
 			int width = (int)paint.measureText(text);
