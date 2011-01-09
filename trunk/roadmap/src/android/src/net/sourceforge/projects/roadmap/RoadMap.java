@@ -966,7 +966,7 @@ public class RoadMap extends Activity
 			ListView lv = (ListView)dialogs[id].row.getChildAt(0);
 //			Log.e("RoadMap", "  ListView " + lv);
 			lv.setAdapter(new ArrayAdapter<String>(thiz,
-				android.R.layout.simple_list_item_1,
+				R.layout.list_item,	// smaller than the big default
 				list));
 		} catch (Exception e) {
 			Log.e("RoadMap", "DialogSetListContents -> exception " + e);
