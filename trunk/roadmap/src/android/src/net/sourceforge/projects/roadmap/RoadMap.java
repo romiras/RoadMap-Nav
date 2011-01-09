@@ -306,15 +306,15 @@ public class RoadMap extends Activity
 		public void onGpsStatusChanged(int event) {
 			GpsStatus	status;
 
-//		Cannot resolve this symbol !! FIX ME
-//			if (event != GPS_EVENT_SATELLITE_STATUS) return;
+			if (event != GpsStatus.GPS_EVENT_SATELLITE_STATUS)
+				return;
 
 			status = mgr.getGpsStatus(null);
-			// int maxsat = status.getMaxSatellites();
+
 			Iterable<GpsSatellite> iter = status.getSatellites();
 
 			int	active = 0, nsats = 0;
-			// int	id = 0;
+
 			for (GpsSatellite sat : iter) {
 				nsats++;
 				if (sat.usedInFix())
