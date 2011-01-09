@@ -289,8 +289,9 @@ public class RoadMap extends Activity
 				steering = (int) location.getBearing();
 			int	sgpstime;
 
-			/* Convert time units between Android and Unix */
-			/* Unix counts in seconds since the Epoch, Android in ms. */
+			/* Convert time units between the Android GPS interface and Unix.
+			 * Unix counts in seconds since the Epoch, this particular Android
+			 * provides ms since the Epoch. */
 			sgpstime = (int)(gpstime / 1000);
 
 			/*
