@@ -275,8 +275,8 @@ public class RoadMap extends Activity
 			/* */
 
 				/* getTime() returns UTC of this fix in ms since 1/1/1970 */
-			int	gpstime = (int) location.getTime(),
-				lat = (int) (location.getLatitude() * 1000000),
+			long	gpstime = location.getTime();
+			int	lat = (int) (location.getLatitude() * 1000000),
 				lon = (int) (location.getLongitude() * 1000000),
 				/* getAltitude() returns m */
 				alt = (int) (location.getAltitude() * 1000000),
@@ -287,6 +287,11 @@ public class RoadMap extends Activity
 				speed = (int) (1944 * location.getSpeed()),
 				/* getBearing returns degrees East of true North */
 				steering = (int) location.getBearing();
+			int	sgpstime;
+
+			/* Convert time units between Android and Unix */
+			/* Unix counts in seconds since the Epoch, Android in ms. */
+			sgpstime = (int)(gpstime / 1000);
 
 			/*
 			 * Hopefully cutting the calculation in two
@@ -296,7 +301,7 @@ public class RoadMap extends Activity
 
 			// The code in roadmap_gps.c requires 'A' as status.
 			// See roadmap_gps_update_reception().
-			HereAmI('A', gpstime, lat, lon, alt, speed, steering);
+			HereAmI('A', sgpstime, lat, lon, alt, speed, steering);
 		}
 
 	};
