@@ -886,6 +886,12 @@ buildmap_osm_text_way_end(char *data)
                 return 0;
         }
 
+	if (nWayNodes < 1) {
+		WayNotInteresting = 1;
+                buildmap_osm_text_reset_way();
+                return 0;
+	}
+
         RoadMapString rms_dirp = str2dict(DictionaryPrefix, "");
         RoadMapString rms_dirs = str2dict(DictionarySuffix, "");
         RoadMapString rms_type = str2dict(DictionaryType, "");
