@@ -3,6 +3,7 @@
  * LICENSE:
  *
  *   (c) Copyright 2003 Latchesar Ionkov
+ *   Copyright (c) 2011, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -126,4 +127,7 @@ void *roadmap_dialog_get_data (const char *frame, const char *name) {
 void roadmap_dialog_set_data (const char *frame, const char *name,
                               const void *data) {
    currentDialog->setEntryValue(frame, name, data);
+}
+
+void roadmap_dialog_shutdown (void) {
 }

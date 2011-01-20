@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright (c) 2008, Danny Backx.
+ *   Copyright (c) 2008, 2011, Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -821,3 +821,7 @@ void  roadmap_dialog_set_progress (const char *frame, const char *name, int prog
 #warning implement roadmap_dialog_set_progress
 }
 
+
+void roadmap_dialog_shutdown (void)
+{
+}

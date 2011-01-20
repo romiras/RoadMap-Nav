@@ -521,6 +521,11 @@ void roadmap_start_request_repaint_map (int priority) {
 
 /* The RoadMap menu and toolbar items: ----------------------------------- */
 
+#ifdef ANDROID
+extern void roadmap_android_test();
+extern void roadmap_sound_test();
+#endif
+
 /* This table lists all the RoadMap actions that can be initiated
  * fom the user interface (a sort of symbol table).
  * Any other part of the user interface (menu, toolbar, etc..)
@@ -859,6 +864,12 @@ static RoadMapAction RoadMapStartActions[] = {
    {"listplugins", "List plugins", NULL, NULL,
 	   "List the RoadMap plugins", NULL, roadmap_start_list_all_plugins},
 
+#ifdef ANDROID
+   {"soundtest", "Sound test", NULL, NULL,
+	   "Test Android Sound", NULL, roadmap_sound_test},
+   {"androidtest", "Android Test", NULL, NULL,
+	   "Test Android Sound", NULL, roadmap_android_test},
+#endif
    {NULL, NULL, NULL, NULL, NULL, NULL, NULL}
 };
 
@@ -1748,9 +1759,11 @@ void roadmap_start_exit (void)
 #endif
     roadmap_config_save (0);
     roadmap_screen_shutdown();
-    roadmap_display_shutdown  ();
+    roadmap_dialog_shutdown ();
+    roadmap_history_shutdown ();
+    roadmap_display_shutdown ();
     roadmap_gps_shutdown ();
-    roadmap_factory_shutdown();
+    roadmap_factory_shutdown ();
     roadmap_config_shutdown ();
     roadmap_sprite_shutdown ();
     roadmap_layer_shutdown ();

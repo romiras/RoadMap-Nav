@@ -5,6 +5,7 @@
  *   Copyright 2002 Pascal F. Martin
  *   Copyright 2008 Morten Bek Ditlevsen
  *   Copyright 2008 Avi Romano
+ *   Copyright (c) 2011, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -814,7 +815,8 @@ int roadmap_canvas_is_chording()
    return (ChordingPoints[0].x > -1);
 }
 
-
+void roadmap_canvas_shutdown (void) {
+}
 
 
 @implementation RoadMapCanvasView

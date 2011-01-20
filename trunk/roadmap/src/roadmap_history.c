@@ -1,8 +1,8 @@
-/* roadmap_history.c - manage the roadmap address history.
- *
+/*
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
+ *   Copyright (c) 2011, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -19,10 +19,11 @@
  *   You should have received a copy of the GNU General Public License
  *   along with RoadMap; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
- * SYNOPSYS:
- *
- *   See roadmap_history.h
+ */
+
+/**
+ * @file
+ * @brief roadmap_history.c - manage the roadmap address history.
  */
 
 #include <string.h>
@@ -56,6 +57,7 @@ static int RoadMapHistoryChanged = 0;
 static int RoadMapHistoryCount = 0;
 static struct roadmap_history_log_entry *RoadMapLatest = NULL;
 static struct roadmap_history_log_entry *RoadMapOldest = NULL;
+static int loaded = 0;
 
 
 static void roadmap_history_remove_entry
@@ -195,8 +197,6 @@ void roadmap_history_initialize (void) {
 
 void roadmap_history_load (void) {
 
-   static int loaded = 0;
-
    FILE *file;
    char *p;
    char  line[1024];
@@ -233,6 +233,19 @@ void roadmap_history_load (void) {
    RoadMapHistoryChanged = 0;
 }
 
+/**
+ * @brief reinitialize to the state at program startup
+ */
+void roadmap_history_shutdown (void) {
+   roadmap_history_purge (0);
+
+   /* Several of these should already be ok because of the purge above. */
+   RoadMapHistoryChanged = 0;
+   RoadMapHistoryCount = 0;
+   RoadMapLatest = NULL;
+   RoadMapOldest = NULL;
+   loaded = 0;
+}
 
 void roadmap_history_declare (char category, int argv) {
 
@@ -342,7 +355,10 @@ void roadmap_history_get (char category, void *cursor, char *argv[]) {
    roadmap_history_get_from_entry (cursor, argc, argv);
 }
 
-
+/**
+ * @brief clean up the history, leaving only part of it
+ * @param count leave this many entries in the history
+ */
 void roadmap_history_purge (int count) {
 
    struct roadmap_history_log_entry *entry;
@@ -355,7 +371,9 @@ void roadmap_history_purge (int count) {
    }
 }
 
-
+/**
+ * @brief save to file
+ */
 void roadmap_history_save (void) {
 
    FILE *file;

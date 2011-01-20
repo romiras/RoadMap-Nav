@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2005 Ehud Shabtai
- *   Copyright (c) 2008, 2009 Danny Backx
+ *   Copyright (c) 2008, 2009, 2011 Danny Backx
  *
  *   Based on an implementation by Pascal F. Martin.
  *   This file is part of RoadMap.

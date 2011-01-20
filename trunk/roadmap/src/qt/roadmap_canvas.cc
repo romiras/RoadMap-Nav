@@ -3,6 +3,7 @@
  * LICENSE:
  *
  *   (c) Copyright 2003 Latchesar Ionkov
+ *   Copyright (c) 2011, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -198,3 +199,5 @@ void roadmap_canvas_save_screenshot (const char* filename) {
    pixmap.save (name, "PNG");
 }
 
+void roadmap_canvas_shutdown (void) {
+}
