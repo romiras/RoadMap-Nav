@@ -621,10 +621,12 @@ Java_net_sourceforge_projects_roadmap_RoadMap_DialogSpecialCallback(JNIEnv* env,
 {
 	RoadMapDialogItem	dlgp;
 
+	roadmap_log(ROADMAP_WARNING, "DialogSpecialCallback(%d,%d)", dlg, btn);
+
 	dlgp = roadmap_dialog_get_nr(NULL, dlg);
 
 	if (dlgp && dlgp->callbacks && dlgp->callbacks[btn])
-		dlgp->callbacks[btn](dlgp->name, dlgp);
+		dlgp->callbacks[btn](dlgp->name, dlgp->context);
 }
 
 /**
@@ -649,15 +651,26 @@ void roadmap_dialog_select (const char *dialog)
 }
 
 
+/**< Not sure how to return a string as return value from a function in JNI, so
+ * using this workaround (call the other way, pass string as an argument) to bypass.
+ */
 static char *ReturnStringDataHack = NULL;
 
+/**
+ * @brief function to return string data
+ * @param env JNI standard environment pointer
+ * @param thiz JNI standard object from which we're being called
+ * @param js the string we're getting from Java
+ */
 void Java_net_sourceforge_projects_roadmap_RoadMap_ReturnStringDataHack(JNIEnv* env, jobject thiz, jstring js)
 {
 	ReturnStringDataHack = (*env)->GetStringUTFChars(env, js, NULL);
 }
 
 /**
- * @brief Look up which selection has been made in this dialog, or retrieve the contents of a text entry field, or get the data we stored here.
+ * @brief Look up which selection has been made in this dialog, or retrieve the contents
+ * of a text entry field, or get the data we stored here.
+ *
  * @param frame used to determine the dialog
  * @param name used to determine the dialog
  * @return pointer to the data passed back
@@ -740,20 +753,37 @@ void  roadmap_dialog_set_data (const char *frame, const char *name,
    this_item->value = (char *)data;
 }
 
+/**
+ * @brief
+ * @param frame
+ * @param name
+ *
+ * Note not implemented in gtk2/ either, only used from navigate plugin
+ */
 void roadmap_dialog_new_progress (const char *frame, const char *name)
 {
-	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_new_progress(%s,%s)", frame, name);
 #warning implement roadmap_dialog_new_progress
 }
 
+/**
+ * @brief
+ * @param frame
+ * @param name
+ * @param progress
+ *
+ * Note not implemented in gtk2/ either, only used from navigate plugin
+ */
 void  roadmap_dialog_set_progress (const char *frame, const char *name, int progress)
 {
-	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_set_progress(%s,%s,%d)", frame, name, progress);
 #warning implement roadmap_dialog_set_progress
 }
 
-void roadmap_dialog_shutdown(void)
+/**
+ * @brief reinitialize this module
+ */
+void roadmap_dialog_shutdown (void)
 {
+	/* FIX ME memory leak */
 	RoadMapDialogWindows = NULL;
 	RoadMapDialogCurrent = NULL;
 }

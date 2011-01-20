@@ -858,7 +858,7 @@ INT_PTR CALLBACK DialogFunc(HWND hDlg, UINT message, WPARAM wParam,
 	{
 	case WM_INITDIALOG:
 		{
-#ifdef SHIDIM_FLAGS
+#if defined(SHIDIM_FLAGS) && defined(HAVE_AYGSHELL)
 			SHINITDLGINFO shidi;
 			RoadMapDialogItem dialog;
 			RoadMapDialogItem frame;
@@ -1004,7 +1004,7 @@ INT_PTR CALLBACK TabDialogFunc(HWND hDlg, UINT message, WPARAM wParam,
 	switch (message) {
 	case WM_INITDIALOG:
 	{
-#ifdef SHIDIM_FLAGS
+#if defined(SHIDIM_FLAGS) && defined(HAVE_AYGSHELL)
 		SHINITDLGINFO sid;
 		PROPSHEETPAGE *psp;
 		RoadMapDialogItem frame;
@@ -1023,6 +1023,7 @@ INT_PTR CALLBACK TabDialogFunc(HWND hDlg, UINT message, WPARAM wParam,
 #endif /* SHIDIM_FLAGS */
 	return (INT_PTR)TRUE;
 	}
+#if defined(HAVE_AYGSHELL)
 	case WM_SETTINGCHANGE:
 	{
 		SIPINFO si;
@@ -1050,6 +1051,7 @@ INT_PTR CALLBACK TabDialogFunc(HWND hDlg, UINT message, WPARAM wParam,
 		wParam = 0;
 	}
 		/* fall through to resize */
+#endif
 	case WM_SIZE:
 	{
 		HDC dc;

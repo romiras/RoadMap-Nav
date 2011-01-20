@@ -4,6 +4,7 @@
  *
  *   Copyright 2002 Pascal F. Martin
  *   Copyright 2008 Morten Bek Ditlevsen
+ *   Copyright (c) 2011, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -759,4 +760,7 @@ void  roadmap_dialog_set_data (const char *frame, const char *name,
       break;
    }
    this_item->value = (char *)data;
+}
+
+void roadmap_dialog_shutdown (void) {
 }
