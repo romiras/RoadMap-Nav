@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright 2010, 2011, Danny Backx.
+ *   Copyright 2010, Danny Backx.
  *
  *   This file is part of RoadMap.
  *
