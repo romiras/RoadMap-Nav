@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright (c) 2009 Danny Backx.
+ *   Copyright (c) 2009, 2010, 2011 Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "roadmap_types.h"
 #include "roadmap_path.h"
