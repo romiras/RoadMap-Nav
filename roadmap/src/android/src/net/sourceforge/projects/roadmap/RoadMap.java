@@ -84,6 +84,8 @@ import java.util.HashMap;
 
 import android.media.MediaPlayer;
 
+import android.app.ProgressDialog;
+
 public class RoadMap extends Activity
 {
 	private LocationManager mgr = null;
@@ -447,13 +449,18 @@ public class RoadMap extends Activity
 			else
 				parent = menuCache[i].menu;
 
-			try {
+			Log.e("RoadMap", "onCreateOptionsMenu -> " + i
+				+ " [" + menuCache[i].label
+				+ "] in bar : " + menuCache[i].inbar);
+			if (menuCache[i].inbar != 0) {
+			    try {
 				menuCache[i].menu = parent.addSubMenu(menuCache[i].label);
-			} catch (Exception e) {
+			    } catch (Exception e) {
 				Log.e("RoadMap", "AddSubMenu {" + i
 						+ "} (" + parent + ","
 						+ menuCache[i].label + ") : exception " + e);
 				return false;
+			    }
 			}
 		}
 
@@ -464,6 +471,15 @@ public class RoadMap extends Activity
 			else {
 				int iparent = menuItemCache[i].parent;
 				parent = menuCache[iparent].menu;
+
+				if (parent == null) {
+					/*
+					 * this probably means menuCache[iparent].inbar == 0
+					 * so this menu is not mentioned in the user specified
+					 * roadmap.menus file.
+					 */
+					continue;
+				}
 			}
 
 			try {
@@ -502,6 +518,7 @@ public class RoadMap extends Activity
 		int	parent;
 		Menu	menu;
 		String	label;
+		int	inbar;
 		// more FIX ME
 	};
 
@@ -519,7 +536,17 @@ public class RoadMap extends Activity
 		menuCache[nMenuCache] = new MenuCacheEntry();
 		menuCache[nMenuCache].parent = 0 /* m */;
 		menuCache[nMenuCache].label = s;
+		menuCache[nMenuCache].inbar = 0;
 		return nMenuCache++;
+	}
+
+	/**
+	 * @brief indicate that this menu should be in the menu bar.
+	 * @param ix the index returned by CreateMenu()
+	 */
+	public void AttachMenuToBar(int ix)
+	{
+		menuCache[ix].inbar = 1;
 	}
 
 	class MenuItemCacheEntry {
@@ -956,27 +983,44 @@ public class RoadMap extends Activity
 		}
 	};
 
+	DialogInterface.OnClickListener listener2 = new DialogInterface.OnClickListener() {
+		public void onClick(DialogInterface dialog, int which) {
+			Log.e("RoadMap", "OnClickListener(" + which + ")");
+			// RoadMapDialogChosen(position, id);
+		}
+	};
+
 	/*
 	 * Set a list contents
 	 */
 	public void DialogSetListContents(int id, String[] list)
 	{
+/* Not sure how this should work
+		AlertDialog.Builder     db = dialogs[id].db;
 
-//		Log.e("RoadMap", "DialogSetListContents(" + id + "," + list + " count " + list.length + ")");
-//		int	i;
-//		for (i=0; i<list.length; i++) {
-//			Log.e("RoadMap", "\t" + i + " - " + list[i]);
-//		}
-			
+		ArrayAdapter<String>	adapter = new ArrayAdapter<String>(thiz,
+			R.layout.list_item,
+			list);
+		db.setAdapter(adapter, listener2);
+		dialogs[id].ad.getListView().invalidateViews();
+/* */
+
+/* This does work but looks like overkill.
+ *
+ * Requires DialogCreateList() to create an additional widget...
+ * which may not be necessary
+ */
 		try {
 			ListView lv = (ListView)dialogs[id].row.getChildAt(0);
-//			Log.e("RoadMap", "  ListView " + lv);
+
 			lv.setAdapter(new ArrayAdapter<String>(thiz,
+//				android.R.layout.simple_list_item_1,
 				R.layout.list_item,	// smaller than the big default
 				list));
 		} catch (Exception e) {
 			Log.e("RoadMap", "DialogSetListContents -> exception " + e);
 		}
+/* */
 	}
 
 	/*
@@ -996,5 +1040,23 @@ public class RoadMap extends Activity
 			return -1;
 		};
 		return 0;
+	}
+
+	/*
+	 * Progress bar
+	 */
+	Thread	progressThread;
+	Dialog	progressDialog;
+
+	public void StartProgressBar()
+	{
+	}
+
+	public void EndProgressBar()
+	{
+	}
+
+	public void SetProgress(int percent)
+	{
 	}
 }

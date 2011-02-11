@@ -94,7 +94,7 @@ roadmap-2.apk:	roadmap-1.apk
 
 roadmap-1.apk: libs/armeabi/librmnative.so AndroidManifest.xml bin/classes.dex \
 	libs/armeabi/libexpat-1.so libs/armeabi/gdbserver libs/armeabi/gdb.setup \
-	res/values/strings.xml res/layout/list_item.xml
+	res/values/strings.xml res/values/style.xml res/layout/list_item.xml
 	-rm -f $@
 	${AAPT} package -f -M AndroidManifest.xml -S res -I ${SDKPLAT}/android.jar -F roadmap-1.apk
 
@@ -102,9 +102,11 @@ libs/armeabi/libexpat-1.so:	/opt/android/lib/libexpat-1.so
 	cp /opt/android/lib/libexpat-1.so libs/armeabi/libexpat-1.so
 
 bin/classes.dex:	${CLSES}
+	-mkdir -p bin
 	${DX} --dex --output=$@ ${DIRHIER}/*.class
 
 gen/net/sourceforge/projects/roadmap/R.java: AndroidManifest.xml Makefile
+	-mkdir -p gen
 	${AAPT} package -m -J gen -M AndroidManifest.xml -S res -I ${SDKPLAT}/android.jar
 
 ${DIRHIER}/RoadMap.class:	src/${DIRHIER}/RoadMap.java gen/net/sourceforge/projects/roadmap/R.java
@@ -135,8 +137,7 @@ RMASRC=		roadmap_canvas.c \
 		roadmap_progress.c \
 		roadmap_androidgps.c \
 		../win32/roadmap_colors.c \
-		roadmap_sound.c \
-		roadmap_menu.c
+		roadmap_sound.c
 
 libs/armeabi/gdbserver:	${NDKHOME}/toolchains/arm-eabi-4.4.0/prebuilt/gdbserver
 	cp ${NDKHOME}/toolchains/arm-eabi-4.4.0/prebuilt/gdbserver libs/armeabi/gdbserver
@@ -148,6 +149,7 @@ libs/armeabi/gdb.setup:
 RMANDROID=	${RMASRC:.c=.o}
 
 libs/armeabi/librmnative.so:	${RMANDROID} ${RMDLIBS}
+	-mkdir -p libs/armeabi
 	arm-eabi-gcc --Wl,-soname,librmnative.so -o libs/armeabi/librmnative.so \
 		${NDK_CFLAGS} ${NDK_LDFLAGS} \
 		${RMANDROID} \
