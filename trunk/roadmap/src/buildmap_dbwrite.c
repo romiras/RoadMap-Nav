@@ -206,7 +206,6 @@ int buildmap_db_open (const char *path, const char *name) {
  * @param name
  */
 int buildmap_db_remove (const char *path, const char *name) {
-   struct roadmap_db_section *root;
 
    if (path == NULL) {
       path = ".";
