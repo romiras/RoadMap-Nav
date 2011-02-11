@@ -3,6 +3,7 @@
 	package="net.sourceforge.projects.roadmap"
 	android:installLocation="internalOnly"
 	android:versionCode="1"
+	android:theme="@style/RoadMapStyle"
 	android:versionName="1.0">
 	<uses-sdk android:minSdkVersion="3" />
 	<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>

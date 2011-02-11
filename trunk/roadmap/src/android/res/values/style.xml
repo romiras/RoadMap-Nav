@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (c) 2011, Danny Backx -->
+<resources>
+<style name="RoadMapStyle">
+    <item name="android:layout_width">match_parent</item>
+    <item name="android:layout_height">wrap_content</item>
+    <item name="android:divider">#FF0000</item>
+    <item name="android:dividerHeight">2px</item>
+    <item name="android:textAppearance">?android:attr/textAppearanceSmall</item>
+    <item name="android:textSize">10sp</item>
+</style>
+</resources>

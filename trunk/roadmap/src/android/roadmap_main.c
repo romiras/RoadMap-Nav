@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright 2010 Danny Backx
+ *   Copyright 2010, 2011, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -144,7 +144,7 @@ RoadMapMenu roadmap_main_new_menu (const char *title)
 	jmethodID	mid = TheMethod(cls, "CreateMenu", "(Ljava/lang/String;)I");
 	jstring		js;
 
-	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_main_new_menu(%s)", title);
+	roadmap_log (ROADMAP_WARNING, "roadmap_main_new_menu(%s)", title);
 
 	js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, title);
 	int i = (*RoadMapJniEnv)->CallIntMethod(RoadMapJniEnv, RoadMapThiz, mid, js);
@@ -158,34 +158,39 @@ void roadmap_main_free_menu (RoadMapMenu menu)
 //	__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_main_free_menu FIX ME");
 }
 
-
+/**
+ * @brief this is a companion to roadmap_main_new_menu.
+ *	The other function creates a menu that you can use e.g. in popup definitions.
+ *	This one indicates that it should be in the menu bar.
+ * @param menu the return value of the corresponding roadmap_main_new_menu call
+ * @param label the same title as in roadmap_main_new_menu()
+ */
 void roadmap_main_add_menu (RoadMapMenu menu, const char *label)
 {
-	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_main_add_menu(%d,%s)", (int)menu, label);
-	/*
+	roadmap_log (ROADMAP_WARNING, "roadmap_main_add_menu(%d,%s) /* FIX ME */", (int)menu, label);
 	int		m = (int)menu;
 	jclass		cls = TheRoadMapClass();
-	jmethodID	mid = TheMethod(cls, "AddSubMenu", "(ILjava/lang/String;)I");
-	jstring		js;
+	jmethodID	mid = TheMethod(cls, "AttachMenuToBar", "(I)V");
 
 	__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_main_add_menu(%d,%s)", m, label);
 
-	js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, label);
-	int i = (*RoadMapJniEnv)->CallIntMethod(RoadMapJniEnv, RoadMapThiz, mid, m, js);
-	*/
+	(*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, RoadMapThiz, mid, m);
 }
 
 
 void roadmap_main_popup_menu (RoadMapMenu menu, const RoadMapGuiPoint *position)
 {
-	__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_main_popup_menu FIX ME");
+	roadmap_log (ROADMAP_WARNING, "roadmap_main_popup_menu(%d) FIX ME");
 }
 
 
-struct callback {
+static struct callback {
 	RoadMapCallback	callback;
 	char	*label;			// only for debug
-} callbacks[150] /* FIX ME make dynamic */;
+} *callbacks;
+
+static int	ncallbacks = 0,
+		maxcallbacks = 0;
 
 void roadmap_main_add_menu_item (RoadMapMenu menu,
                                  const char *label,
@@ -207,8 +212,22 @@ void roadmap_main_add_menu_item (RoadMapMenu menu,
 
 	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_main_add_menu_item(%d,%s,cb %p) -> %d", m, label, callback, i);
 
-	callbacks[i].callback = callback;
-	callbacks[i].label = strdup(label);	// only for debug
+	if (i >= maxcallbacks) {
+		maxcallbacks += 100;
+		callbacks = realloc(callbacks, sizeof(struct callback) * maxcallbacks);
+
+		roadmap_log (ROADMAP_WARNING, "roadmap_main_add_menu_item %d", maxcallbacks);
+	}
+
+	if (i < maxcallbacks) {	/* This should now always be true */
+		callbacks[i].callback = callback;
+		callbacks[i].label = strdup(label);	// only for debug
+
+		if (ncallbacks < i+1)
+			ncallbacks = i+1;
+	} else {
+		roadmap_log (ROADMAP_WARNING, "Internal error : roadmap_main_add_menu_item %d > %d", maxcallbacks, i);
+	}
 }
 
 /**
@@ -216,10 +235,22 @@ void roadmap_main_add_menu_item (RoadMapMenu menu,
  * @param item the index that this menu entry was given, to be used in our table
  *  (Note: Android doesn't seem to provide a simple way to pass some info so we
  *   need to add yet another table.)
- * @return feedback for the onOptionsMenuSelected -> 1 for true, 0 for false.
+ * @return feedback for the onOptionsMenuSelected -> 1 if we processed this, 0 if the call should still be handled.
  */
 int roadmap_main_callback(int item)
 {
+	if (item == 0) {
+		roadmap_log (ROADMAP_WARNING, "roadmap_main_callback(0) -> return");
+		return 0;
+	}
+
+	if (item >= ncallbacks) {
+		roadmap_log (ROADMAP_WARNING, "roadmap_main_callback(%d), but ncallbacks %d", item, ncallbacks);
+		return 0;
+	}
+
+	roadmap_log (ROADMAP_WARNING, "roadmap_main_callback(%d)", item);
+
 	if (callbacks[item].callback) {
 //		__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_main_callback(%d,%s) %p", item, callbacks[item].label, callbacks[item].callback);
 		(*(callbacks[item].callback))();

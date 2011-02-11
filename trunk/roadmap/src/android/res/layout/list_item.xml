@@ -5,5 +5,8 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:textAppearance="?android:attr/textAppearanceSmall"
+    android:divider="#FF0000"
+    android:dividerHeight="2px"
+    android:textSize="16sp"
+    android:maxHeight="?android:attr/listPreferredItemHeight"
 />
-<!--    android:minHeight="?android:attr/listPreferredItemHeight" -->
