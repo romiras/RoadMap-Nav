@@ -49,18 +49,28 @@ static RoadMapGpsdSatellite  RoadmapGpsd2SatelliteListener = NULL;
 static RoadMapGpsdDilution   RoadmapGpsd2DilutionListener = NULL;
 
 RoadMapSocket gpsd3_socket;
-struct gps_data_t	*gpsdp;
+#if GPSD_API_MAJOR_VERSION == 5
+struct gps_data_t	gpsd_e, *gpsdp = &gpsd_e;
+#else
+struct gps_data_t	*gpsdp = NULL;
+#endif
 
 RoadMapSocket roadmap_gpsd3_connect (const char *name) {
-#ifdef ROADMAP_USES_LIBGPS
+#if defined(ROADMAP_USES_LIBGPS) && defined(GPSD_API_MAJOR_VERSION)
+#if GPSD_API_MAJOR_VERSION == 5
+   if (gps_open(name, "2947", gpsdp) < 0)
+      return ROADMAP_INVALID_SOCKET;
+   gps_stream(gpsdp, WATCH_JSON, NULL);
+#else
    gpsdp = gps_open(name, "2947");
    if (gpsdp == NULL)
       return ROADMAP_INVALID_SOCKET;
    gps_stream(gpsdp, WATCH_NMEA, NULL);
-   return (RoadMapSocket)gpsdp->gps_fd;
-#else
-   return 0;
 #endif
+   return (RoadMapSocket)gpsdp->gps_fd;
+#else /* ! (defined(ROADMAP_USES_LIBGPS) && defined(GPSD_API_MAJOR_VERSION)) */
+   return ROADMAP_INVALID_SOCKET;
+#endif /* defined(ROADMAP_USES_LIBGPS) && defined(GPSD_API_MAJOR_VERSION) */
 }
 
 void roadmap_gpsd3_subscribe_to_navigation (RoadMapGpsdNavigation navigation) {
