@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright (c) 2009 Danny Backx.
+ *   Copyright (c) 2009, 2011, Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -162,7 +162,7 @@ static BuildMapPoint *buildmap_point_get (int pointid) {
    BuildMapPoint *this_point;
 
    if ((pointid < 0) || (pointid > PointCount)) {
-      buildmap_fatal (0, "invalid point index %d", pointid);
+      buildmap_fatal (0, "buildmap_point_get : invalid point index %d", pointid);
    }
 
    this_point = Point[pointid/BUILDMAP_BLOCK] + (pointid % BUILDMAP_BLOCK);
@@ -225,7 +225,7 @@ int buildmap_point_get_square_sorted (int point) {
       buildmap_fatal (0, "points have not been sorted yet");
    }
    if ((point < 0) || (point > PointCount)) {
-      buildmap_fatal (0, "invalid point index %d", point);
+      buildmap_fatal (0, "buildmap_point_get_square_sorted : invalid point index %d", point);
    }
 
    return buildmap_point_get(SortedPoint[point])->square;
@@ -242,7 +242,7 @@ int  buildmap_point_get_longitude_sorted (int point) {
       buildmap_fatal (0, "points have not been sorted yet");
    }
    if ((point < 0) || (point > PointCount)) {
-      buildmap_fatal (0, "invalid point index %d", point);
+      buildmap_fatal (0, "buildmap_point_get_longitude_sorted : invalid point index %d", point);
    }
 
    return buildmap_point_get(SortedPoint[point])->longitude;
