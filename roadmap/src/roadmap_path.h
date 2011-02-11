@@ -3,6 +3,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
+ *   Copyright (c) 2011, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -146,6 +147,7 @@ int roadmap_path_is_directory (const char *name);
 const char *roadmap_path_skip_separator (const char *name);
 
 const char *roadmap_path_temporary (void);
+void roadmap_path_shutdown (void);
 
 #endif // INCLUDE__ROADMAP_PATH__H
 
