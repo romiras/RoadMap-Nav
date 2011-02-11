@@ -199,11 +199,11 @@ char *roadmap_county_filename(char *buf, int fips) {
 }
 
 /**
- * @brief
- * @param position
- * @param fips
- * @param count
- * @return
+ * @brief produce a list of FIPS codes that the given position is in
+ * @param position this is the position
+ * @param fips points to a list which we need to fill up
+ * @param count size of the list (cannot exceed this)
+ * @return the number of FIPS codes found
  */
 int roadmap_county_by_position
        (const RoadMapPosition *position, int *fips, int count) {
