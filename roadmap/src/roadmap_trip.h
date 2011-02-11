@@ -3,6 +3,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
+ *   Copyright 2011 Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -81,6 +82,7 @@ void  roadmap_trip_show_2ndnextpoint(void);
 void  roadmap_trip_new (void);
 
 void  roadmap_trip_initialize (void);
+void  roadmap_trip_shutdown (void);
 
 /* In the two primitives that follow, the name is either NULL (i.e.
  * open a dialog to let the user enter one), or an explicit name.
@@ -147,4 +149,7 @@ void roadmap_trip_unset_route_focii (void);
 #define TRIP_NUM_PLACEMENTS           3
 #define TRIP_NUM_ROUTE_PLACEMENTS     6
 
+
+void roadmap_trip_departure_waypoint(void);
+void roadmap_trip_destination_waypoint(void);
 #endif // INCLUDE__ROADMAP_TRIP__H

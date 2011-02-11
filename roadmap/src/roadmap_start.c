@@ -1,7 +1,7 @@
 /*
  * LICENSE:
  *
- *   (c) Copyright 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+ *   (c) Copyright 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011
  *	 Pascal F. Martin, Paul Fox, Ehud Shabtai, Danny Backx,
  *	 and others.
  *
@@ -87,6 +87,7 @@
 #include "roadmap_layer.h"
 #include "roadmap_sunrise.h"
 #include "roadmap_lang.h"
+#include "roadmap_dialog.h"
 
 #include "roadmap_start.h"
 
@@ -1757,6 +1758,7 @@ void roadmap_start_exit (void)
 #ifndef HAVE_TRIP_PLUGIN
     roadmap_trip_preserve_focus();
 #endif
+    roadmap_trip_shutdown ();
     roadmap_config_save (0);
     roadmap_screen_shutdown();
     roadmap_dialog_shutdown ();
