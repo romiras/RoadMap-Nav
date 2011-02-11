@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright (c) 2008, Danny Backx.
+ *   Copyright (c) 2008, 2011, Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -61,6 +61,7 @@ typedef void (*RoadMapDialogCallback) (const char *name, void *context);
 
 
 int roadmap_dialog_activate (const char *name, void *context);
+void roadmap_dialog_shutdown (void);
 void roadmap_dialog_hide (const char *name);
 void roadmap_dialog_new_label (const char *frame, const char *name);
 void roadmap_dialog_new_entry (const char *frame, const char *name);
@@ -87,6 +88,7 @@ void *roadmap_dialog_get_data (const char *frame, const char *name);
 void  roadmap_dialog_set_data (const char *frame, const char *name,
                                const void *data);
 void  roadmap_dialog_protect  (const char *frame, const char *name);
+void roadmap_dialog_shutdown (void);
 
 #ifdef LANG_SUPPORT
 #include "roadmap_lang.h"

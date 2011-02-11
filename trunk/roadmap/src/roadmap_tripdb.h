@@ -1,7 +1,7 @@
 /*
  * LICENSE:
  *
- *   Copyright (c) 2008, 2009 Danny Backx
+ *   Copyright (c) 2008, 2009, 2010, 2011 Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -31,9 +31,7 @@
 #include "roadmap_gpx.h"
 
 extern RoadMapList	RoadMapTripWaypointHead;
-extern RoadMapList	RoadMapTripRouteHead;
 extern RoadMapList	RoadMapTripTrackHead;
-extern route_head	*RoadMapCurrentRoute;
 extern waypoint		*RoadMapTripDest;
 
 /*
@@ -79,5 +77,7 @@ void roadmap_tripdb_waypoint_iter (const waypoint *waypointp);
 void roadmap_tripdb_initialize (void);
 void roadmap_tripdb_remove_point (const char *name);
 void roadmap_tripdb_clear(void);
+
+void roadmap_tripdb_complete (void);
 
 #endif

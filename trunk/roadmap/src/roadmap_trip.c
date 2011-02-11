@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002,2005 Pascal F. Martin, Paul G. Fox
- *   Copyright (c) 2008, 2009 Danny Backx
+ *   Copyright (c) 2008, 2009, 2011 Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -111,7 +111,7 @@ static RoadMapConfigDescriptor RoadMapConfigTripGPSFocusReleaseDelay =
 extern route_head *RoadMapTrack;
 
 /* route following flags */
-route_head *RoadMapCurrentRoute = NULL;
+static route_head *RoadMapCurrentRoute = NULL;
 static int RoadMapRouteInProgress = 0;
 static int RoadMapRouteIsReversed = 0;
 
@@ -242,7 +242,7 @@ static char *RoadMapTripWaypointFocusName = NULL;
 static time_t RoadMapTripGPSTime = 0;
 
 RoadMapList RoadMapTripWaypointHead;
-RoadMapList RoadMapTripRouteHead;
+static RoadMapList RoadMapTripRouteHead;
 RoadMapList RoadMapTripTrackHead;
 
 static RoadMapList RoadMapTripLostRoutesHead;
@@ -1410,7 +1410,7 @@ static void roadmap_trip_activate (void)
 }
 
 static void roadmap_trip_clear (void) {
- 
+
 	waypt_flush_queue (&RoadMapTripWaypointHead);
 	route_flush_queue (&RoadMapTripRouteHead);
 	route_flush_queue (&RoadMapTripTrackHead);
@@ -2619,7 +2619,6 @@ void roadmap_trip_new (void)
 	roadmap_screen_refresh ();
 }
 
-
 const char *roadmap_trip_path_relative_to_trips(const char *filename) {
     const char *p;
     int pl;
@@ -2844,6 +2843,7 @@ static int roadmap_trip_load_file (const char *name, int silent, int merge) {
  */
 int roadmap_trip_load (int silent, int merge)
 {
+    roadmap_log (ROADMAP_DEBUG, "roadmap_trip_load(%d,%d)", silent, merge);
 	const char *name = roadmap_trip_current();
 
 	if (!name || !name[0])
@@ -3662,6 +3662,35 @@ void roadmap_trip_initialize (void)
 
 }
 
+void roadmap_trip_shutdown (void)
+{
+	// route_del (RoadMapCurrentRoute);
+	RoadMapCurrentRoute = NULL;
+	RoadMapRouteInProgress = 0;
+	RoadMapRouteIsReversed = 0;
+
+	RoadMapTripRefresh = 1;
+	RoadMapTripFocusChanged = 1;
+	RoadMapTripFocusMoved = 1;
+
+	RoadMapTripUntitled = 1;
+	RoadMapTripModified = 0;
+	RoadMapTripRouteLinesPen = NULL;
+
+	RoadMapTripFocus = NULL;
+	RoadMapTripLastSetPoint = NULL;
+
+	RoadMapTripStart = NULL;
+	RoadMapTripNext = NULL;
+
+	RoadMapTripWaypointFocusName = NULL;
+
+	RoadMapTripGPSTime = 0;
+
+	RoadMapTripDefaultPosition.longitude = ROADMAP_INITIAL_LONGITUDE;
+	RoadMapTripDefaultPosition.latitude =  ROADMAP_INITIAL_LATITUDE;
+}
+
 #ifdef HAVE_NAVIGATE_PLUGIN
 /**
  * @brief Copy the position of the selection into the internal variable named in the parameter
@@ -3800,3 +3829,12 @@ void roadmap_trip_destination_waypoint (void)
 	roadmap_trip_waypoint_select_navigation_waypoint(PERSONAL_WAYPOINTS, 1);
 }
 #endif
+
+/**
+ * @brief call this after having added all waypoints and ways
+ */
+void roadmap_trip_complete (void)
+{
+	roadmap_tripdb_complete ();
+	RoadMapCurrentRoute = (route_head *)ROADMAP_LIST_FIRST(&RoadMapTripRouteHead);
+}

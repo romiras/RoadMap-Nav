@@ -97,14 +97,14 @@ void roadmap_trip_add_waypoint_iter (RoadMapPosition pos)
 /**
  * @brief call this after having added all waypoints and ways
  */
-void roadmap_trip_complete (void)
+void roadmap_tripdb_complete (void)
 {
+	roadmap_log(ROADMAP_WARNING, "roadmap_tripdb_complete(), %d segments", RoadMapTripNumSegments);
 #if 0
         ROADMAP_LIST_MOVE(&TripWaypointHead, &tmp_waypoint_list);
         ROADMAP_LIST_MOVE(&TripRouteHead, &tmp_route_list);
         ROADMAP_LIST_MOVE(&TripTrackHead, &tmp_track_list);
 #endif
-	RoadMapCurrentRoute = (route_head *)ROADMAP_LIST_FIRST(&RoadMapTripRouteHead);
 }
 
 /**
