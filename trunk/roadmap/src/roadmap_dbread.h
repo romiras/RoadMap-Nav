@@ -1,5 +1,4 @@
-/* roadmap_dbread.h - General API for accessing a RoadMap map file.
- *
+/*
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
@@ -21,16 +20,24 @@
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+/**
+ * @file
+ * @brief General API for accessing a RoadMap map file.
+ */
+
 #ifndef INCLUDED__ROADMAP_DBREAD__H
 #define INCLUDED__ROADMAP_DBREAD__H
 
 #include "roadmap_db.h"
 
+/**
+ * @brief
+ */
 struct roadmap_db_tree {
-   struct roadmap_db_tree    *parent;
-   struct roadmap_db_tree    *first;   /* .. child. */
-   struct roadmap_db_tree    *last;    /* .. child. */
-   struct roadmap_db_tree    *next;    /* .. sibling. */
+   struct roadmap_db_tree    *parent;  /**< parent */
+   struct roadmap_db_tree    *first;   /**< .. child. */
+   struct roadmap_db_tree    *last;    /**< .. child. */
+   struct roadmap_db_tree    *next;    /**< .. sibling. */
    struct roadmap_db_section *head;
    int level;
 
@@ -88,4 +95,3 @@ void roadmap_db_close (const char *path, const char *name);
 void roadmap_db_end   (void);
 
 #endif // INCLUDED__ROADMAP_DBREAD__H
-
