@@ -1,5 +1,4 @@
-/* roadmap_db.h - general format of tables in the RoadMap map files.
- *
+/*
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
@@ -21,18 +20,26 @@
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+/**
+ * @file
+ * @brief General format of tables in the RoadMap map files.
+ */
+
 #ifndef _ROADMAP_DB__H_
 #define _ROADMAP_DB__H_
 
 #define ROADMAP_DB_TYPE   ".rdm"
 
+/**
+ * @brief entry in a RoadMap map file
+ */
 struct roadmap_db_section {
 
-   char name[12];
-   int  first;
-   int  next;
-   int  size;
-   int  count;  /* .. of records, when applicable. */
+   char name[12];	/**< */
+   int  first;		/**< */
+   int  next;		/**< */
+   int  size;		/**< */
+   int  count;		/**< .. of records, when applicable. */
 };
 
 #endif // _ROADMAP_DB__H_

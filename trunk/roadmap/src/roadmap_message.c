@@ -2,6 +2,8 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
+ *   Copyright 2007 Paul G. Fox
+ *   Copyright 2008 Danny Backx
  *
  *   This file is part of RoadMap.
  *
