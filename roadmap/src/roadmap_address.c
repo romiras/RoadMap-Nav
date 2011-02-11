@@ -87,7 +87,11 @@ static void roadmap_address_done (RoadMapGeocode *selected) {
    roadmap_screen_refresh ();
 }
 
-
+/**
+ * @brief called when the user has selected an address
+ * @param name string with the street name (not used)
+ * @param data pointer passed from calling environment (not used)
+ */
 static void roadmap_address_selected (const char *name, void *data) {
 
    RoadMapGeocode *selected;
