@@ -526,7 +526,7 @@ static int roadmap_factory_user_action_labels
 }
 
 /**
- * @brief
+ * @brief Define popup menus, only for use by user supplied menu config
  * @param menu
  * @param title
  */
@@ -638,7 +638,7 @@ static const char *roadmap_factory_set_tip
  * @brief
  * @param item
  * @param actions
- * @param doing_menus
+ * @param doing_menus is 1 if we actually define menus, 0 if only supplying popups for use in user supplied menu file
  * @param use_tips
  */
 void roadmap_factory_config_menu
@@ -770,12 +770,11 @@ void roadmap_factory_config_toolbar
 static void roadmap_factory_handle_plugin_actions_menu
 	    (RoadMapAction *actions, const char **menu)
 {
-	int use_tips;
+   int use_tips;
 
-	roadmap_log(ROADMAP_DEBUG, 
-	    "roadmap_factory_handle_plugin_actions_menu");
-	use_tips = roadmap_config_match (&RoadMapConfigGeneralTooltips, "yes");
-	roadmap_factory_config_menu(menu, actions, 1, use_tips);
+   roadmap_log(ROADMAP_DEBUG, "roadmap_factory_handle_plugin_actions_menu");
+   use_tips = roadmap_config_match (&RoadMapConfigGeneralTooltips, "yes");
+   roadmap_factory_config_menu(menu, actions, 1, use_tips);
 }
 
 /**
