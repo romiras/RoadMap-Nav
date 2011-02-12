@@ -3,6 +3,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
+ *   Copyright (c) 2011, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -39,5 +40,6 @@ void roadmap_history_get (char category, void *cursor, char *argv[]);
 
 void roadmap_history_purge (int count);
 void roadmap_history_save  (void);
+void roadmap_history_shutdown (void);
 
 #endif // INCLUDE__ROADMAP_HISTORY__H
