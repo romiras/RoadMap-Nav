@@ -119,7 +119,7 @@ depends:
 -include .depends.mk
 
 CABFILES=	wroadmap.exe \
-		distribution/libexpat-1.dll \
+		distribution/libexpat.dll \
 		distribution/font.ttf \
 		distribution/roadmap.screenobjects \
 		distribution/roadmap.toolbar \

@@ -15,8 +15,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  *
- * $Header: /home/danny/src/roadmap/backup/work/roadmap/src/win32/CEDevice.h,v 1.2 2009-02-09 19:39:17 dannybackx Exp $
- *
  */
 
 #ifndef CEDEVICE

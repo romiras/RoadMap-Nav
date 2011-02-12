@@ -232,7 +232,7 @@ BOOL InitInstance(HINSTANCE hInstance, LPTSTR lpCmdLine)
 	
 	g_hInst = hInstance; // Store instance handle in our global variable
 	
-#ifdef UNDER_CE
+#if defined(UNDER_CE) && defined(HAVE_AYGSHELL)
 	SHInitExtraControls();
 #endif
 	
@@ -381,7 +381,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	HDC hdc;
 	BOOL create_menu;
 
-#ifdef UNDER_CE
+#if defined(UNDER_CE) && defined(HAVE_AYGSHELL)
 	static SHACTIVATEINFO s_sai;
 #endif
 	
@@ -427,7 +427,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 #endif
       create_menu = TRUE;
 
-#ifdef UNDER_CE
+#if defined(UNDER_CE) && defined(HAVE_AYGSHELL)
 		SHMENUBARINFO mbi;
 		
 		memset(&mbi, 0, sizeof(SHMENUBARINFO));
@@ -454,6 +454,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				SendMessage(RoadMapMainMenuBar, (UINT) TB_DELETEBUTTON, 0, 0);
 			}
 		}
+#elif defined(UNDER_CE)
 #else
 		if (create_menu) {
 		      RoadMapMainMenuBar = CreateMenu ();
@@ -461,7 +462,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 #endif
 		
-#ifdef UNDER_CE                
+#if defined(UNDER_CE) && defined(HAVE_AYGSHELL)
 		// Initialize the shell activate info structure
 		memset(&s_sai, 0, sizeof (s_sai));
 		s_sai.cbSize = sizeof (s_sai);
@@ -611,7 +612,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		else return DefWindowProc(hWnd, message, wParam, lParam);
 		break;
 		
-#ifdef UNDER_CE
+#if defined(UNDER_CE) && defined(HAVE_AYGSHELL)
 	case WM_ACTIVATE:
       		if ((LOWORD(wParam)!=WA_INACTIVE) && RoadMapMainFullScreen) {
         		SHFullScreen (RoadMapMainWindow,
@@ -710,7 +711,7 @@ void roadmap_main_toggle_full_screen (void)
 	// TODO: implement
 	return;
 #else
-#ifdef UNDER_CE
+#if defined(UNDER_CE) && defined(HAVE_AYGSHELL)
       RECT rc;
       int menu_height = 0;
 

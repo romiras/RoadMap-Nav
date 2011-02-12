@@ -3816,7 +3816,7 @@ void roadmap_trip_waypoint_select_navigation_waypoint (void *which, int destinat
  */
 void roadmap_trip_departure_waypoint (void)
 {
-	roadmap_trip_waypoint_select_navigation_waypoint(PERSONAL_WAYPOINTS, 0);
+   roadmap_trip_waypoint_select_navigation_waypoint(PERSONAL_WAYPOINTS, 0);
 }
 
 /**
@@ -3826,7 +3826,7 @@ void roadmap_trip_departure_waypoint (void)
  */
 void roadmap_trip_destination_waypoint (void)
 {
-	roadmap_trip_waypoint_select_navigation_waypoint(PERSONAL_WAYPOINTS, 1);
+   roadmap_trip_waypoint_select_navigation_waypoint(PERSONAL_WAYPOINTS, 1);
 }
 #endif
 
@@ -3835,6 +3835,8 @@ void roadmap_trip_destination_waypoint (void)
  */
 void roadmap_trip_complete (void)
 {
-	roadmap_tripdb_complete ();
-	RoadMapCurrentRoute = (route_head *)ROADMAP_LIST_FIRST(&RoadMapTripRouteHead);
+#ifdef HAVE_NAVIGATE_PLUGIN
+   roadmap_tripdb_complete ();
+#endif
+   RoadMapCurrentRoute = (route_head *)ROADMAP_LIST_FIRST(&RoadMapTripRouteHead);
 }

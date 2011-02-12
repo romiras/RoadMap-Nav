@@ -1242,3 +1242,7 @@ void roadmap_dialog_set_resolution(const int height, const int width)
 
 	MAX_ROW_HEIGHT = (height > 320) ? 40 : 20;
 }
+
+void roadmap_dialog_shutdown (void)
+{
+}
