@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright (c) 2009 Danny Backx.
+ *   Copyright (c) 2008, 2009, 2010, 2011 Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -332,7 +332,7 @@ static int buildmap_street_save (void) {
    buildmap_db *table_cfcc;
 
 
-   if (!StreetCount) return;
+   if (!StreetCount) return 0;
 
    buildmap_info ("saving %d streets...", StreetCount);
 
