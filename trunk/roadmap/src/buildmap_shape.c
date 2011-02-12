@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright (c) 2009 Danny Backx.
+ *   Copyright (c) 2008, 2009, 2010, 2011 Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -281,7 +281,7 @@ static int buildmap_shape_save (void) {
    buildmap_db *table_data;
 
 
-   if (!ShapeCount) return;
+   if (!ShapeCount) return 0;
 
    buildmap_info ("saving %d shapes...", ShapeCount);
 

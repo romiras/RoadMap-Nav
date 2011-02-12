@@ -2,6 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
+ *   Copyright (c) 2008, 2010, 2011 Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -606,10 +607,10 @@ static int buildmap_range_save (void) {
 
    buildmap_info ("building the street search accelerator...");
 
-   if (!RangeCount && !RangeNoAddressCount) return;
+   if (!RangeCount && !RangeNoAddressCount) return 0;
 
    square_count = buildmap_square_get_count();
-   if (!square_count) return;
+   if (!square_count) return 0;
 
 
    square_info = calloc (square_count, sizeof(*square_info));
