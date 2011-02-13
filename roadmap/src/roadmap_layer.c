@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2003 Pascal F. Martin
- *   Copyright (c) 2008, 2009, 2010, Danny Backx.
+ *   Copyright (c) 2008, 2009, 2010, 2011, Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -719,7 +719,7 @@ static void roadmap_layer_load_file (const char *class_file) {
     const char *class_config = roadmap_config_new (class_file, 0);
     const char *class_name;
 
-    roadmap_log (ROADMAP_WARNING, "roadmap_layer_load_file(%s)", class_file);
+    roadmap_log (ROADMAP_DEBUG, "roadmap_layer_load_file(%s)", class_file);
     if (class_config == NULL) {
        roadmap_log (ROADMAP_FATAL, "cannot access class file %s", class_file);
     }
@@ -769,7 +769,7 @@ static void roadmap_layer_load_file (const char *class_file) {
                   ((polygons_count + lines_count) * sizeof(RoadMapLayer)), 1);
     roadmap_check_allocated(new_class);
 
-    roadmap_log (ROADMAP_WARNING, "Class [%s] lines %d polygons %d",
+    roadmap_log (ROADMAP_DEBUG, "Class [%s] lines %d polygons %d",
 		    class_name, lines_count, polygons_count);
 
     new_class->name = class_name;
@@ -929,7 +929,7 @@ static void roadmap_layer_load_file (const char *class_file) {
 		    RoadMapNavigationMode, ROADMAP_MAX_NAVIGATION_MODES);
     if (RoadMapNavigationModeCount <= 0) return;
 
-    roadmap_log (ROADMAP_WARNING, "RoadMapNavigationModeCount %d", RoadMapNavigationModeCount);
+    roadmap_log (ROADMAP_DEBUG, "RoadMapNavigationModeCount %d", RoadMapNavigationModeCount);
 
     for (i = 0; i < (int)RoadMapNavigationModeCount; ++i) {
 
@@ -943,7 +943,7 @@ static void roadmap_layer_load_file (const char *class_file) {
                                 "Navigation", RoadMapNavigationMode[i],
                                 navigation_layers, ROADMAP_MAX_LAYERS);
 
-       roadmap_log (ROADMAP_WARNING, "Navigation %d [%s] -> %d modes",
+       roadmap_log (ROADMAP_DEBUG, "Navigation %d [%s] -> %d modes",
 		       i, RoadMapNavigationMode[i], layers_count);
 
        for (j = layers_count - 1; j >= 0; --j) {

@@ -3719,7 +3719,7 @@ void roadmap_trip_set_selection (const int lon, const int lat)
  * @param name name of a position (Departure, GPS, Destination, ..)
  * @return the position requested
  */
-const RoadMapPosition *roadmap_trip_get_position (const char *name)
+/* const */ RoadMapPosition *roadmap_trip_get_position (const char *name)
 {
 	int i;
 	RoadMapConfigDescriptor     *fp;

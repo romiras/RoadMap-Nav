@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2006 Ehud Shabtai
- *   Copyright (c) 2008, 2009 by Danny Backx.
+ *   Copyright (c) 2008, 2009, 2011 by Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -67,6 +67,11 @@
 #include "navigate_cost.h"
 #include "navigate_route.h"
 #include "navigate.h"
+#include "navigate_visual.h"
+#include "navigate_simple.h"
+#ifdef ROADMAP_NAVIGATE_SHOOTINGSTAR
+#include "navigate_shst.h"
+#endif
 
 #define ROUTE_PEN_WIDTH 4
 
@@ -85,33 +90,29 @@ RoadMapConfigDescriptor NavigateConfigLastPos =
 RoadMapConfigDescriptor NavigateConfigNavigating =
                   ROADMAP_CONFIG_ITEM("Navigation", "Is navigating");
 
-int NavigateEnabled = 0;
-int NavigatePluginID = -1;
+static int NavigateEnabled = 0;         /**< is navigation currently enabled */
 static int NavigateTrackEnabled = 0;
-static int NavigateTrackFollowGPS = 0;
+// static int NavigateTrackFollowGPS = 0;
 static RoadMapPen NavigatePen[2];
 static RoadMapPen NavigatePenEst[2];
 
 static void navigate_update (RoadMapPosition *position, PluginLine *current);
-static void navigate_get_next_line
-          (PluginLine *current, int direction, PluginLine *next);
+// static void navigate_get_next_line (PluginLine *current, int direction, PluginLine *next);
 
-static RoadMapCallback NextMessageUpdate;
-
-static int NavigateDistanceToDest;
-static int NavigateETA;
-static int NavigateDistanceToTurn;
-static int NavigateETAToTurn;
+// static int NavigateDistanceToDest;
+// static int NavigateETA;
+// static int NavigateDistanceToTurn;
+// static int NavigateETAToTurn;
 static int NavigateFlags;
 
-static NavigateSegment NavigateSegments[MAX_NAV_SEGMENTS];
+// static NavigateSegment NavigateSegments[MAX_NAV_SEGMENTS];
 static int NavigateNumSegments = 0;
-static int NavigateCurrentSegment = 0;
+// static int NavigateCurrentSegment = 0;
 static PluginLine NavigateDestination = PLUGIN_LINE_NULL;
-static int NavigateDestPoint;
+// static int NavigateDestPoint;
 static RoadMapPosition NavigateDestPos;
-static RoadMapPosition NavigateSrcPos;
-static int NavigateNextAnnounce;
+// static RoadMapPosition NavigateSrcPos;
+// static int NavigateNextAnnounce;
 
 /**
  * @brief new style structure for navigation info
@@ -119,8 +120,8 @@ static int NavigateNextAnnounce;
 NavigateStatus		status;
 
 /**
- * @brief
- * @return
+ * @brief recalculate the route (implemented in navigate_route.c)
+ * @return status
  */
 static int navigate_recalc_route ()
 {
@@ -447,6 +448,9 @@ void navigate_format_messages(void)
 /**
  * @brief gets a GPS position update
  * @param position
+ * @param line
+ * @param street
+ * @param street_has_changed our caller already figured out whether we're in another street than before
  */
 #define	HYST	15
 void navigate_update_position (const RoadMapPosition *position,
@@ -457,7 +461,7 @@ void navigate_update_position (const RoadMapPosition *position,
 	static RoadMapPosition	old, cur;
 	int			x, y;
 	static int		firsttime = 1;
-	int			doit;
+	int			need_recalc = 0, r;
 	static int		skip = 0;	/**< count #times < HYST */
 
 	if (position == 0)
@@ -466,10 +470,12 @@ void navigate_update_position (const RoadMapPosition *position,
 	if (firsttime) {
 		roadmap_log (ROADMAP_WARNING, "navigate_update_position(%d %d) initial",
 				position->longitude, position->latitude);
+		need_recalc = 1;
 	}
+	firsttime = 0;
 
 	if (position->longitude == oldpos.longitude && position->latitude == oldpos.latitude) {
-		firsttime = 0;
+		roadmap_log (ROADMAP_WARNING, "navigate_update_position return samepos");
 		return;
 	}
 
@@ -502,28 +508,31 @@ void navigate_update_position (const RoadMapPosition *position,
 #endif
 
 	/* If we find that we need to re-evaluate the route, set this to 1 */
-	doit = 0;
-	if (firsttime)
-		doit = 1;
+	if (street_has_changed)
+		need_recalc = 1;
+	/* If the current line is outside the current route ... */
+	if (line && ! navigate_line_in_route (&status, line->line_id))
+		need_recalc = 1;
 
-	if (line && ! navigate_line_in_route (&status, line->line_id)) {
-		navigate_recalc_route();
+	/* Recalculate the route under conditions determined above */
+	roadmap_log (ROADMAP_WARNING, "navigate_update_position recalc %d", need_recalc);
+	if (need_recalc) {
+		r = navigate_recalc_route();
 	}
 
 	oldpos = *position;
 	old = cur;
-	firsttime = 0;
 }
 
+#if 0
 /**
  * @brief
  * @param current
  * @param direction
  * @param next
  */
-void navigate_get_next_line (PluginLine *current, int direction, PluginLine *next)
+static void navigate_get_next_line (PluginLine *current, int direction, PluginLine *next)
 {
-#if 0
    int new_instruction = 0;
 
    if (!NavigateTrackEnabled) {
@@ -636,8 +645,8 @@ void navigate_get_next_line (PluginLine *current, int direction, PluginLine *nex
    }
 
    return;
-#endif
 }
+#endif
 
 /**
  * @brief
@@ -705,7 +714,9 @@ void navigate_initialize (void)
 
 	/* Initialize the algorithms */
 	navigate_simple_initialize ();
+#ifdef ROADMAP_NAVIGATE_SHOOTINGSTAR
 	navigate_shst_initialize ();
+#endif
 
 	navigate_set (1);
 
@@ -752,7 +763,7 @@ int navigate_calc_route ()
 	int			flags;
 	NavigateIteration	*p;
 
-	const char *focus = roadmap_trip_get_focus_name ();
+	// const char *focus = roadmap_trip_get_focus_name ();
 
 	if (!(fp = roadmap_trip_get_position ("Departure"))) {
 		roadmap_log (ROADMAP_DEBUG, "navigate_calc_route: no departure");
@@ -777,7 +788,9 @@ int navigate_calc_route ()
 	status = navigate_route_get_initial (&from_line, from_pos,
 			&NavigateDestination, NavigateDestPos);
 
-	roadmap_log(ROADMAP_DEBUG, "navigate_calc_route: time %d", track_time);
+	track_time = status.last->cost.time;
+
+	roadmap_log(ROADMAP_WARNING, "navigate_calc_route: time %d", track_time);
 
 	if (status.current == 0 || status.current->cost.distance <= 0) {
 		roadmap_dialog_hide ("Route calc");
@@ -966,10 +979,10 @@ void navigate_update_progress (int progress)
 }
 
 /**
- * @brief
- * @param stp
- * @param line
- * @return
+ * @brief figure out whether the line passed is on the route
+ * @param stp current navigation status (= list of lines)
+ * @param line a line identifier
+ * @return 1 if the line is on this route, 0 if not
  */
 int navigate_line_in_route (NavigateStatus *stp, int line)
 {

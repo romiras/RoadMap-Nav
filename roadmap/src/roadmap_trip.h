@@ -3,7 +3,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright 2011 Danny Backx
+ *   Copyright (c) 2011 Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -152,4 +152,6 @@ void roadmap_trip_unset_route_focii (void);
 
 void roadmap_trip_departure_waypoint(void);
 void roadmap_trip_destination_waypoint(void);
+
+RoadMapPosition *roadmap_trip_get_position (const char *name);
 #endif // INCLUDE__ROADMAP_TRIP__H

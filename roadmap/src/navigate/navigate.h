@@ -146,4 +146,6 @@ void navigate_format_messages (void);
 void navigate_update_position (const RoadMapPosition *,
 		const PluginLine *, const PluginStreet *, const int);
 // plugin_update_position navigate_update_position;
+int navigate_line_in_route (NavigateStatus *stp, int line);
+
 #endif /* INCLUDE__NAVIGATE_H */
