@@ -1,7 +1,7 @@
 /*
  * LICENSE:
  *
- *   Copyright (c) 2008, 2009 by Danny Backx.
+ *   Copyright (c) 2008, 2009, 2011 by Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -58,8 +58,15 @@ void navigate_algorithm_register(NavigateAlgorithm *algo)
 	nAlgorithms++;
 }
 
+/**
+ * @brief recalculate the route
+ * @param stp pointer to current route
+ * @return 0 for success
+ */
 int navigate_route_recalc (NavigateStatus *stp)
 {
+   roadmap_log (ROADMAP_WARNING, "navigate_route_recalc");
+   return 0;
 }
 
 /**
@@ -82,6 +89,8 @@ NavigateStatus navigate_route_get_initial (PluginLine *from_line,
 	int			i, ok;
 	NavigateIteration	*p;
 	NavigateStatus	status, rev;
+
+	roadmap_log (ROADMAP_WARNING, "navigate_route_get_initial");
 
 	if (! Algo)
 		return (NavigateStatus) {NULL, NULL, NULL, 0, 0};
@@ -143,6 +152,8 @@ NavigateStatus navigate_route_get_initial (PluginLine *from_line,
 	if (! ok)
 		roadmap_log (ROADMAP_WARNING, "Max #iterations reached (%d).",
 				Algo->max_iterations);
+	else
+	   roadmap_log (ROADMAP_WARNING, "navigate_route_get_initial, %d iterations", status.iteration);
 
 	return status;
 }

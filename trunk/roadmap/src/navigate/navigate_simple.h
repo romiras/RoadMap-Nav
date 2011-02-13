@@ -1,7 +1,7 @@
 /*
  * LICENSE:
  *
- *   Copyright (c) 2008, 2009, Danny Backx
+ *   Copyright (c) 2008, 2009, 2011, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -32,6 +32,8 @@
 #include "navigate.h"
 
 #define GRAPH_IGNORE_TURNS 1
+
+void navigate_simple_initialize(void);
 
 int navigate_simple_get_segments (PluginLine *from_line,
                                  RoadMapPosition from_pos,

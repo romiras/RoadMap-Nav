@@ -79,7 +79,7 @@ int roadmap_plugin_register (RoadMapPluginHooks *hook) {
 
    int i;
 
-   roadmap_log(ROADMAP_WARNING, "roadmap_plugin_register(%s)", hook->name);
+   roadmap_log(ROADMAP_DEBUG, "roadmap_plugin_register(%s)", hook->name);
    if (PluginCount == 0) {
 	   for (i=1; i<MAX_PLUGINS; i++) {
 		   hooks[i].initialized = 0;
