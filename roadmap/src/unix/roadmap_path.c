@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright (c) 2008, 2010, Danny Backx.
+ *   Copyright (c) 2008, 2010, 2011, Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -744,11 +744,9 @@ char **roadmap_path_list (const char *path, const char *extension) {
 
          if (! strcmp (match, extension)) {
             *(cursor++) = strdup (entry->d_name);
-         roadmap_log (ROADMAP_WARNING, "--> %s", entry->d_name);
          }
       } else {
          *(cursor++) = strdup (entry->d_name);
-         roadmap_log (ROADMAP_WARNING, "--> %s", entry->d_name);
       }
    }
    *cursor = NULL;
