@@ -201,7 +201,7 @@ int buildmap_db_open (const char *path, const char *name) {
 }
 
 /**
- * @bref remove the output file, it is bad
+ * @brief remove the output file, it is bad
  * @param path
  * @param name
  */

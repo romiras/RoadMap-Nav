@@ -154,8 +154,8 @@ int buildmap_point_add (int longitude, int latitude) {
 
 /**
  * @brief get the id of a point
- * @param point the point to query
- * @return id
+ * @param pointid the id of the point to query
+ * @return 
  */
 static BuildMapPoint *buildmap_point_get (int pointid) {
 
@@ -172,7 +172,7 @@ static BuildMapPoint *buildmap_point_get (int pointid) {
 
 /**
  * @brief get the square of a point
- * @param point the point to query
+ * @param pointid the point to query
  * @return square
  */
 int buildmap_point_get_square (int pointid) {
@@ -182,7 +182,7 @@ int buildmap_point_get_square (int pointid) {
 
 /**
  * @brief get the longitude of a point
- * @param point the point to query
+ * @param pointid the point to query
  * @return longitude
  */
 int buildmap_point_get_longitude (int pointid) {
@@ -192,7 +192,7 @@ int buildmap_point_get_longitude (int pointid) {
 
 /**
  * @brief get the latitude of a point
- * @param point the point to query
+ * @param pointid the point to query
  * @return latitude
  */
 int buildmap_point_get_latitude  (int pointid) {
@@ -202,8 +202,8 @@ int buildmap_point_get_latitude  (int pointid) {
 
 /**
  * @brief get the id of a point
- * @param point the point to query
- * @return id
+ * @param pointid the point to query
+ * @return
  */
 int buildmap_point_get_sorted (int pointid) {
 
@@ -217,7 +217,7 @@ int buildmap_point_get_sorted (int pointid) {
 /**
  * @brief get the square of a sorted point
  * @param point the point to query
- * @return square
+ * @return
  */
 int buildmap_point_get_square_sorted (int point) {
 

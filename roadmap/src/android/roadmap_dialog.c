@@ -715,7 +715,7 @@ void *roadmap_dialog_get_data (const char *frame, const char *name)
  * @brief Store some data. See notes below.
  * @param frame used to determine the dialog
  * @param name used to determine the dialog
- * @param pointer to the data passed back
+ * @param data pointer to the data passed back
  *
  * Note the data is sent to the user interface only if the widget is ROADMAP_WIDGET_ENTRY or
  * ROADMAP_WIDGET_LABEL. In those cases we know it's string data.

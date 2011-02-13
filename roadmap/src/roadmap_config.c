@@ -823,7 +823,7 @@ const char *roadmap_config_get (RoadMapConfigDescriptor *descriptor) {
 
 /**
  * @brief get the value from a configuration item
- * @param pointer to the descriptor
+ * @param descriptor pointer to the descriptor
  * @return the value
  */
 int roadmap_config_get_integer(RoadMapConfigDescriptor *descriptor) {
@@ -1005,7 +1005,7 @@ void  roadmap_config_set_position
 
 /**
  * @brief reload a part of the configuration
- * @param s names the configuration to be reloaded
+ * @param name names the configuration to be reloaded
  */
 void roadmap_config_reload(const char *name)
 {
