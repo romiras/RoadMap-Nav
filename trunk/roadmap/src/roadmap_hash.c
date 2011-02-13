@@ -51,7 +51,7 @@ static void roadmap_hash_free (RoadMapHash *hash) {
 
 /**
  * @brief
- * @parma name
+ * @param name
  * @param size
  * @return
  */
