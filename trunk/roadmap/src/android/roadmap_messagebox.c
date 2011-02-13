@@ -22,8 +22,8 @@
  */
 
 /**
- * @brief
- * @file manage the roadmap dialogs used for user info.
+ * @file
+ * @brief manage the roadmap dialogs used for user info.
  */
 
 #include <stdlib.h>

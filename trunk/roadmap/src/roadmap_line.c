@@ -472,7 +472,7 @@ int roadmap_line_long (int index, int *line_id, RoadMapArea *area, int *cfcc) {
 
 /**
  * @brief determine the layer that some line is in
- * @param line_id the line whose layer we want to query
+ * @param line the line whose layer we want to query
  * @return the layer
  */
 int roadmap_line_get_layer (int line)
@@ -498,7 +498,7 @@ int roadmap_line_get_layer (int line)
 
 /**
  * @brief determine the layer that some line is in
- * @param line_id the line whose layer we want to query
+ * @param line the line whose layer we want to query
  * @return the layer
  */
 int roadmap_line_get_oneway (int line)

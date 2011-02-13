@@ -136,10 +136,8 @@ void opt_free(struct opt *opts)
 }
 
 /**
- * Retrieve the value of an option.
- * @param opts internal state
+ * @brief Retrieve the value of an option.
  * @param opt option to retrieve value for
- * @param fmt format of returned option (currently "int" or "str")
  * @param val pointer to variable of correct type to hold value
  * @return Zero on success, non-zero on error.
  *
@@ -311,9 +309,9 @@ static int opt_init(struct opt_defs *options)
 }
 
 /**
- * Parse argv and extract options.
+ * @brief Parse argv and extract options.
  *
- * @param opts pointer to structure to populate with options
+ * @param options pointer to structure to populate with options
  * @param argc number of elements in argv -- changes on return
  * @param argv argv array as passed to main() -- changes on return
  * @param mixed can options and positional arguments be intermixed?
