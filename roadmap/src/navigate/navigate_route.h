@@ -25,6 +25,7 @@
 /**
  * @file
  * @brief navigate_route.h - generic navigate functions
+ * @ingroup NavigatePlugin
  */
 
 #ifndef _NAVIGATE_ROUTE_H_
@@ -52,6 +53,8 @@ NavigateStatus navigate_route_get_initial (PluginLine *from_line,
 					   RoadMapPosition from_pos,
 					   PluginLine *to_line,
 					   RoadMapPosition to_pos);
+
+int navigate_route_recalc (NavigateStatus *);
 
 #endif /* _NAVIGATE_ROUTE_H_ */
 

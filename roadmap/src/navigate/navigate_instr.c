@@ -25,6 +25,7 @@
 /**
  * @file
  * @brief calculate navigation instructions
+ * @ingroup NavigatePlugin
  */
 
 #include <stdlib.h>

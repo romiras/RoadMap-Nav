@@ -24,6 +24,7 @@
 /**
  * @file
  * @brief implement navigation bar
+ * @ingroup NavigatePlugin
  */
 
 #include <stdlib.h>

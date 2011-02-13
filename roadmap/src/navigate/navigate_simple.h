@@ -23,6 +23,7 @@
 /**
  * @file
  * @brief API of the "simple" route calculation
+ * @ingroup NavigatePlugin
  */
 
 #ifndef _NAVIGATE_SIMPLE_H_

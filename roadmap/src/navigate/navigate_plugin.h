@@ -1,9 +1,8 @@
-/**
- * @file navigate_plugin.h - Editor plugin interfaces
- *
+/*
  * LICENSE:
  *
  *   Copyright 2005 Ehud Shabtai
+ *   Copyright (c) 2009, 2011 Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -20,6 +19,12 @@
  *   You should have received a copy of the GNU General Public License
  *   along with RoadMap; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+/**
+ * @file
+ * @brief navigate_plugin.h - Editor plugin interfaces
+ * @ingroup NavigatePlugin
  */
 
 #ifndef INCLUDE__NAVIGATE_PLUGIN__H

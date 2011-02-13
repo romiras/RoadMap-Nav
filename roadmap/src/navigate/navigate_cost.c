@@ -24,6 +24,7 @@
 /**
  * @file
  * @brief cost calculations
+ * @ingroup NavigatePlugin
  */
 
 #include <stdio.h>
@@ -72,7 +73,7 @@ static time_t start_time;
  * @brief determine a penalty for taking some kind of road
  * @param line_id
  * @param layer
- * @param prev_line_id
+ * @param prev_line
  * @return
  */
 static int calc_penalty (int line_id, int layer, int prev_line)
