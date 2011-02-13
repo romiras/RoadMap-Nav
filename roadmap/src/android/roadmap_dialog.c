@@ -715,7 +715,7 @@ void *roadmap_dialog_get_data (const char *frame, const char *name)
  * @brief Store some data. See notes below.
  * @param frame used to determine the dialog
  * @param name used to determine the dialog
- * @return pointer to the data passed back
+ * @param pointer to the data passed back
  *
  * Note the data is sent to the user interface only if the widget is ROADMAP_WIDGET_ENTRY or
  * ROADMAP_WIDGET_LABEL. In those cases we know it's string data.
@@ -723,7 +723,7 @@ void *roadmap_dialog_get_data (const char *frame, const char *name)
  * In other cases, we just pass pointers along from memory, and we're not sure about the data
  * type (they're sometimes pointers to structures).
  */
-void  roadmap_dialog_set_data (const char *frame, const char *name,
+void roadmap_dialog_set_data (const char *frame, const char *name,
                                const void *data) {
    RoadMapDialogItem this_frame, this_item;
 
