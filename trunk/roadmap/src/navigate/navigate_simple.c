@@ -22,6 +22,7 @@
 /**
  * @file 
  * @brief simple (shortest path) route calculation
+ * @ingroup NavigatePlugin
  */
 
 #include <stdio.h>
@@ -121,29 +122,32 @@ int navigate_simple_lines_closeby(int point, PluginLine *lines, const int maxlin
  */
 static int navigate_simple_algo_cost(NavigateIteration *iter)
 {
-	int	cost;
-
 	if (iter == 0)
 		return 0;
 	if (iter->segment == 0)
 		return 0;
-	cost = navigate_cost_time(iter->next->segment->line.line_id,
+
+	iter->next->segment->time = navigate_cost_time(iter->next->segment->line.line_id,
 		iter->next->segment->line_direction,
 		iter->segment->time,
 		iter->segment->line.line_id,
 		iter->segment->line_direction);
 
-	iter->next->segment->time = cost;
 //	iter->next->segment->heuristic = iter->next->segment->dist_from_destination;
-	iter->next->segment->heuristic =
-		iter->next->segment->dist_from_destination
-		+ iter->next->segment->time;
+
+#if 1
+	iter->next->segment->heuristic = iter->next->segment->dist_from_destination + iter->next->segment->time;
+#endif
+#if 0
+	iter->next->segment->heuristic = iter->next->segment->dist_from_destination;
+#endif
+
 	roadmap_log (ROADMAP_DEBUG, "navigate_simple_algo_cost(cost %d, dist_from_dest %d) -> %d",
-			cost,
+			iter->next->segment->time,
 			iter->next->segment->dist_from_destination,
 			iter->next->segment->heuristic);
 
-	return cost;
+	return iter->next->segment->time;
 }
 
 /**
@@ -230,6 +234,7 @@ static int navigate_simple_algo_step(NavigateAlgorithm *algo, NavigateStatus *st
 			continue;
 		}
 
+#if 0
 		/* Oneway street ? */
 		if (roadmap_line_get_oneway(lines[i].line_id) == ROADMAP_LINE_DIRECTION_ONEWAY) {
 			roadmap_log (ROADMAP_WARNING, "Not taking oneway street %d (%s)",
@@ -249,7 +254,7 @@ static int navigate_simple_algo_step(NavigateAlgorithm *algo, NavigateStatus *st
 				stp->current->segment->line.line_id);
 			continue;
 		}
-
+#endif
 		stp->current->next->segment->line = lines[i];
 		newpt2 = roadmap_line_from_point(lines[i].line_id);
 		if (point == newpt2) {
@@ -404,7 +409,7 @@ static int navigate_simple_algo_end(NavigateStatus *stp)
 NavigateAlgorithm SimpleAlgo = {
 	"Simple navigation",		/**< name of this algorithm */
 	0,				/**< cannot go both ways */
-	500,				/**< max #iterations */
+	1000,				/**< max #iterations */
 	navigate_simple_algo_cost,	/**< cost function */
 	navigate_simple_algo_step,	/**< step function */
 	navigate_simple_algo_end	/**< end function */

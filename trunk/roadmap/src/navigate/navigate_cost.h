@@ -23,6 +23,7 @@
 /**
  * @file
  * @brief navigate_cost.h - generic navigate cost functions
+ * @ingroup NavigatePlugin
  */
 
 #ifndef _NAVIGATE_COST_H_

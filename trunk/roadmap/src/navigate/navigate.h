@@ -24,6 +24,7 @@
 /**
  * @file
  * @brief navigate.h - main plugin file
+ * @ingroup NavigatePlugin
  */
 
 #ifndef INCLUDE__NAVIGATE_H
@@ -142,4 +143,7 @@ int navigate_override_pen (int line,
 
 void navigate_adjust_layer (int layer, int thickness, int pen_count);
 void navigate_format_messages (void);
+void navigate_update_position (const RoadMapPosition *,
+		const PluginLine *, const PluginStreet *, const int);
+// plugin_update_position navigate_update_position;
 #endif /* INCLUDE__NAVIGATE_H */

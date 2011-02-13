@@ -23,6 +23,7 @@
 /**
  * @file 
  * @brief entry points for route calculation, to become a user centric plugin mechanism 
+ * @ingroup NavigatePlugin
  */
 
 #include <stdio.h>
@@ -39,6 +40,8 @@
 #include "navigate_route.h"
 
 static NavigateAlgorithm *Algo = NULL;
+static int nAlgorithms = 0;
+static int alloc = 0;
 
 /**
  * @brief register an algorithm
@@ -46,7 +49,17 @@ static NavigateAlgorithm *Algo = NULL;
  */
 void navigate_algorithm_register(NavigateAlgorithm *algo)
 {
-	Algo = algo;
+	if (nAlgorithms == alloc) {
+		alloc += 4;
+		Algo = (NavigateAlgorithm *)realloc((void *)Algo,
+				sizeof(NavigateAlgorithm) * alloc);
+	}
+	Algo[nAlgorithms] = *algo;
+	nAlgorithms++;
+}
+
+int navigate_route_recalc (NavigateStatus *stp)
+{
 }
 
 /**
@@ -59,27 +72,14 @@ void navigate_algorithm_register(NavigateAlgorithm *algo)
  * @param from_pos
  * @param to_line
  * @param to_pos
- * @param segments
- * @param size
- * @param flags either NEW_ROUTE or RECALC_ROUTE
  * @return track time
  */
-#if 0
-int navigate_route_get_segments (PluginLine *from_line,
-                                 RoadMapPosition from_pos,
-                                 PluginLine *to_line,
-                                 RoadMapPosition to_pos,
-                                 NavigateSegment *segments,
-                                 int *size,
-                                 int *flags)
-#else
 NavigateStatus navigate_route_get_initial (PluginLine *from_line,
 					   RoadMapPosition from_pos,
 					   PluginLine *to_line,
 					   RoadMapPosition to_pos)
-#endif
 {
-	int			i;
+	int			i, ok;
 	NavigateIteration	*p;
 	NavigateStatus	status, rev;
 
@@ -124,19 +124,25 @@ NavigateStatus navigate_route_get_initial (PluginLine *from_line,
 	rev.last = status.first;
 
 	status.iteration = 1;
+	ok = 0;
 	while (status.iteration <= Algo->max_iterations) {
 		Algo->step_fn(Algo, &status);
 		if (Algo->end_fn(&status)) {
+			ok = 1;
 			break;
 		}
 		if (Algo->both_ways) {
 			Algo->step_fn(Algo, &rev);
 			if (Algo->end_fn(&status)) {
+				ok = 1;
 				break;
 			}
 		}
 		status.iteration++;
 	}
+	if (! ok)
+		roadmap_log (ROADMAP_WARNING, "Max #iterations reached (%d).",
+				Algo->max_iterations);
 
 	return status;
 }

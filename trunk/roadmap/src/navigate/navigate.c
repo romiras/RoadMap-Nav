@@ -24,6 +24,7 @@
 /**
  * @file 
  * @brief Navigate plugin, main plugin file
+ * @ingroup NavigatePlugin
  */
 
 /**
@@ -113,11 +114,23 @@ static RoadMapPosition NavigateSrcPos;
 static int NavigateNextAnnounce;
 
 /**
+ * @brief new style structure for navigation info
+ */
+NavigateStatus		status;
+
+/**
  * @brief
  * @return
  */
 static int navigate_recalc_route ()
 {
+	int r;
+
+	roadmap_log (ROADMAP_DEBUG, "navigate_recalc_route");
+
+	r = navigate_route_recalc (&status);
+
+	return r;
 #if 0
    int track_time;
    PluginLine from_line;
@@ -427,8 +440,79 @@ void navigate_format_messages(void)
 		return;
 
 	counter = 0;
-	roadmap_log (ROADMAP_WARNING, "navigate_format_messages -> navigate_update(NULL, NULL);");
+//	roadmap_log (ROADMAP_WARNING, "navigate_format_messages -> navigate_update(NULL, NULL);");
 	navigate_update(NULL, NULL);
+}
+
+/**
+ * @brief gets a GPS position update
+ * @param position
+ */
+#define	HYST	15
+void navigate_update_position (const RoadMapPosition *position,
+		const PluginLine *line, const PluginStreet *street,
+		const int street_has_changed)
+{
+	static RoadMapPosition	oldpos;
+	static RoadMapPosition	old, cur;
+	int			x, y;
+	static int		firsttime = 1;
+	int			doit;
+	static int		skip = 0;	/**< count #times < HYST */
+
+	if (position == 0)
+		return;
+
+	if (firsttime) {
+		roadmap_log (ROADMAP_WARNING, "navigate_update_position(%d %d) initial",
+				position->longitude, position->latitude);
+	}
+
+	if (position->longitude == oldpos.longitude && position->latitude == oldpos.latitude) {
+		firsttime = 0;
+		return;
+	}
+
+	cur = *position;
+
+#if 0
+	if (roadmap_math_distance(&cur, &old) < HYST) {
+		firsttime = 0;
+		skip++;
+		return;
+	}
+
+	roadmap_log (ROADMAP_WARNING,
+		"navigate_update_position(%d %d), line %d, street %d, changed %d, skip %d",
+		position->longitude, position->latitude,
+		line ? line->line_id : 0,
+		street ? street->street_id : 0,
+		street_has_changed, skip);
+	skip = 0;
+
+#else
+	firsttime = 0;
+
+	roadmap_log (ROADMAP_WARNING,
+		"navigate_update_position(%d %d), line %d, street %d, changed %d",
+		position->longitude, position->latitude,
+		line ? line->line_id : 0,
+		street ? street->street_id : 0,
+		street_has_changed);
+#endif
+
+	/* If we find that we need to re-evaluate the route, set this to 1 */
+	doit = 0;
+	if (firsttime)
+		doit = 1;
+
+	if (line && ! navigate_line_in_route (&status, line->line_id)) {
+		navigate_recalc_route();
+	}
+
+	oldpos = *position;
+	old = cur;
+	firsttime = 0;
 }
 
 /**
@@ -618,7 +702,10 @@ void navigate_initialize (void)
 	navigate_cost_initialize ();
 	navigate_bar_initialize ();
 	navigate_visual_initialize ();
+
+	/* Initialize the algorithms */
 	navigate_simple_initialize ();
+	navigate_shst_initialize ();
 
 	navigate_set (1);
 
@@ -663,7 +750,6 @@ int navigate_calc_route ()
 	PluginLine		from_line;
 	RoadMapPosition		from_pos, *fp, *dp;
 	int			flags;
-	NavigateStatus		status;
 	NavigateIteration	*p;
 
 	const char *focus = roadmap_trip_get_focus_name ();
@@ -867,8 +953,8 @@ void navigate_screen_repaint (int max_pen)
 }
 
 /**
- * @brief
- * @param
+ * @brief Update the progress indicator
+ * @param progress
  */
 void navigate_update_progress (int progress)
 {
@@ -879,3 +965,20 @@ void navigate_update_progress (int progress)
    roadmap_main_flush ();
 }
 
+/**
+ * @brief
+ * @param stp
+ * @param line
+ * @return
+ */
+int navigate_line_in_route (NavigateStatus *stp, int line)
+{
+	NavigateIteration	*p;
+
+	for (p=stp->first; p; p = p->next) {
+		if (line == p->segment->line.line_id)
+			return 1;
+	}
+
+	return 0;
+}

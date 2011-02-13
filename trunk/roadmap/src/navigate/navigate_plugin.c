@@ -24,6 +24,7 @@
 /**
  * @file 
  * @brief implement plugin interfaces
+ * @ingroup NavigatePlugin
  */
 
 #include <stdlib.h>
@@ -126,13 +127,18 @@ static RoadMapAction NavigateActions[] = {
 
    {"navigate", "Navigate", NULL, NULL,
      "Calculate route", NULL, navigate_start_navigate},
-#if 0
-   {"deletewaypoints", "Delete Waypoints...", "Delete...", NULL,
-     "Delete selected waypoints", NULL, roadmap_start_delete_waypoint},
-#endif
+
    {"setasdeparture", "Set as Departure", NULL, NULL,
      "Set the selected street block as the trip's departure", NULL,
 	roadmap_start_set_departure},
+
+   {"departure-waypoint", "Set waypoint as Departure", NULL, NULL,
+     "Set the selected street block as the trip's departure", NULL,
+	roadmap_trip_departure_waypoint},
+
+   {"destination-waypoint", "Set waypoint as Destination", NULL, NULL,
+     "Set the selected street block as the trip's departure", NULL,
+	roadmap_trip_destination_waypoint},
 
    {"traffic", "Routing preferences", NULL, NULL,
       "Change routing preferences", NULL,
@@ -149,14 +155,19 @@ static RoadMapAction NavigateActions[] = {
    {"navigate-disable", "Disable navigation", NULL, NULL,
 	   "Disable navigation", NULL, roadmap_navigate_disable},
 
+   {"navigate-shutdown", "Stop navigation", NULL, NULL,
+	   "Stop navigation", NULL, navigate_shutdown},
+
    {NULL, NULL, NULL, NULL, NULL, NULL, NULL}
 };
 
 static const char *NavigateMenu[] = {
 	ROADMAP_MENU "Navigate",
 //		RoadMapFactorySeparator,
-		"setasdestination",
 		"setasdeparture",
+		"departure-waypoint",
+		"setasdestination",
+		"destination-waypoint",
 //		"addaswaypoint",	cannot be here, is a RoadMap action
 //		"deletewaypoints",
 		"navigate-be-debug",
@@ -166,6 +177,7 @@ static const char *NavigateMenu[] = {
 		"traffic",
 		"navigate-enable",
 		"navigate-disable",
+		"navigate-shutdown",
 
 	NULL
 };
@@ -204,7 +216,8 @@ static RoadMapPluginHooks navigate_plugin_hooks = {
   /* after_refresh */		&navigate_bar_after_refresh,
   /* format messages */		&navigate_format_messages,
   /* route_clear */		navigate_visual_route_clear,
-  /* route_add */		navigate_visual_route_add
+  /* route_add */		navigate_visual_route_add,
+  /* update_position */		navigate_update_position
 };
 
 /**
