@@ -1,6 +1,6 @@
 Class.Name: All
 Class.Lines: Freeways Ramps Highways Streets Trails Rivers Shore Railroads Boundaries
-Class.Polygons: Lakes Sea Parks Hospitals Airports Stations Malls Nature Amenity
+Class.Polygons: Lakes Sea Parks Hospitals Airports Stations Malls Nature Amenity Suburbs
 Class.NavigationModes: Car Bike Foot Boat
 Navigation.Car: Freeways Ramps Highways Streets
 Navigation.Bike: Streets Trails Shore Parks
@@ -89,3 +89,7 @@ Amenity.Color: orange
 Amenity.Declutter: 1300
 Amenity.Thickness: 1
 Amenity.Speed: 1
+Suburbs.Color: grey
+Suburbs.Declutter: 1300
+Suburbs.Thickness: 1
+Suburbs.Speed: 50

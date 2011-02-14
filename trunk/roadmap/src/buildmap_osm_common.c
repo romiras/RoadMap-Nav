@@ -84,6 +84,7 @@ int BuildMapLayerStation = 0;
 int BuildMapLayerMall = 0;
 int BuildMapLayerNature = 0;
 int BuildMapLayerAmenity = 0;
+int BuildMapLayerSuburbs = 0;
 
 /* Water layers. */
 
@@ -116,6 +117,7 @@ int BuildMapLayerBoundary = 0;
 #define BOUNDARY    &BuildMapLayerBoundary
 #define	NATURE      &BuildMapLayerNature
 #define AMENITY     &BuildMapLayerAmenity
+#define	SUBURBS     &BuildMapLayerSuburbs
 
 BuildMapDictionary DictionaryPrefix;
 BuildMapDictionary DictionaryStreet;
@@ -149,6 +151,7 @@ void buildmap_osm_common_find_layers (void) {
 
    BuildMapLayerNature    = buildmap_layer_get ("nature");
    BuildMapLayerAmenity   = buildmap_layer_get ("amenity");
+   BuildMapLayerSuburbs   = buildmap_layer_get ("suburbs");
 
    BuildMapLayerBoundary = buildmap_layer_get ("boundaries");
 }
@@ -428,7 +431,7 @@ layer_info_t place_to_layer[] = {
         { "town",               NULL,           AREA },         /* 7 */
         { "village",            NULL,           AREA },         /* 8 */
         { "hamlet",             NULL,           AREA },         /* 9 */
-        { "suburb",             NULL,           AREA },         /* 10 */
+        { "suburb",             SUBURBS,        AREA },         /* 10 */
         { 0,                    NULL,           0 },
 };
 
