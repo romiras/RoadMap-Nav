@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright 2010 Danny Backx
+ *   Copyright (c) 2010, 2011 Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -36,6 +36,7 @@
  */
 
 #include "roadmap_io.h"
+#include "roadmap.h"
 
 
 int roadmap_io_read  (RoadMapIO *io, void *data, int size) {
@@ -55,8 +56,22 @@ int roadmap_io_read  (RoadMapIO *io, void *data, int size) {
          return roadmap_spawn_read_pipe (io->os.pipe, data, size);
 
       case ROADMAP_IO_NULL:
-      case ROADMAP_IO_ANDROID:
          return 0; /* Cannot receive anything from there. */
+
+      case ROADMAP_IO_MEMORY:
+         if (io->os.data) {
+	    int l = strlen(io->os.data);
+	    if (l < size) {
+	       strcpy(data, io->os.data);
+	       io->os.data = NULL;
+	       return l;
+	    }
+
+	    strncpy(data, io->os.data, size);
+	    io->os.data = NULL;
+	    return size;
+         }
+	 return 0;
    }
    return -1;
 }
@@ -79,8 +94,11 @@ int roadmap_io_write (RoadMapIO *io, const void *data, int length) {
          return roadmap_spawn_write_pipe (io->os.pipe, data, length);
 
       case ROADMAP_IO_NULL:
-      case ROADMAP_IO_ANDROID:
          return length; /* It's all done, since there is nothing to do. */
+
+      case ROADMAP_IO_MEMORY:
+	 io->os.data = data;
+         return length;
    }
    return -1;
 }
@@ -107,7 +125,7 @@ void  roadmap_io_close (RoadMapIO *io) {
          break;
 
       case ROADMAP_IO_NULL:
-      case ROADMAP_IO_ANDROID:
+      case ROADMAP_IO_MEMORY:
          break;
    }
    io->subsystem = ROADMAP_IO_INVALID;
@@ -140,7 +158,7 @@ int roadmap_io_same (RoadMapIO *io1, RoadMapIO *io2) {
          break;
 
       case ROADMAP_IO_NULL:
-      case ROADMAP_IO_ANDROID:
+      case ROADMAP_IO_MEMORY:
          break; /* No reason to be any different from each other. */
    }
 

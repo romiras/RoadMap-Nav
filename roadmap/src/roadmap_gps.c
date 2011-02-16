@@ -294,7 +294,7 @@ static void roadmap_gps_call_all_monitors (void) {
 }
 
 /**
- * @brief
+ * @brief call the logger functions
  * @param data
  */
 static void roadmap_gps_call_loggers (const char *data) {
@@ -819,7 +819,7 @@ void roadmap_gps_shutdown (void) {
    if (RoadMapGpsLink.subsystem == ROADMAP_IO_INVALID) return;
 
 #ifdef ANDROID
-   if (RoadMapGpsLink.subsystem == ROADMAP_IO_ANDROID) {
+   if (RoadMapGpsLink.subsystem == ROADMAP_IO_MEMORY) {
       roadmap_androidgps_close ();
    }
 #endif
@@ -1075,7 +1075,7 @@ void roadmap_gps_open (void) {
       RoadMapGpsRetryPending = 0;
    }
 #else /* ANDROID */
-   RoadMapGpsLink.subsystem = ROADMAP_IO_ANDROID;
+   RoadMapGpsLink.subsystem = ROADMAP_IO_MEMORY;
    RoadMapGpsProtocol = ROADMAP_GPS_ANDROID;
 #endif
 
@@ -1139,7 +1139,10 @@ void roadmap_gps_open (void) {
    }
 }
 
-
+/**
+ * @brief register a logger
+ * @param logger function to be called to log
+ */
 void roadmap_gps_register_logger (roadmap_gps_logger logger) {
 
    int i;
@@ -1220,7 +1223,7 @@ void roadmap_gps_input (RoadMapIO *io) {
 
 #ifdef ANDROID
       case ROADMAP_GPS_ANDROID:
-         decode.decoder = roadmap_androidgps_decode;
+         decode.decoder = NULL; /* roadmap_androidgps_decode is not required */
 	 decode.decoder_context = NULL;
 	 break;
 #endif
