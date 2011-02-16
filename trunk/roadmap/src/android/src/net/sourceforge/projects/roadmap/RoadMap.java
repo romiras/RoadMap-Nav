@@ -60,8 +60,10 @@ import android.widget.RelativeLayout;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.location.LocationManager;
 import android.location.GpsStatus;
 import android.location.GpsStatus.Listener;
+import android.location.GpsStatus.NmeaListener;
 import android.location.GpsSatellite;
 
 import android.content.res.AssetManager;
@@ -93,6 +95,7 @@ public class RoadMap extends Activity
 	LinearLayout	ll, buttons = null;
 	Panel	p;
 	Menu	myMenu = null;
+	int	InputHandler;
 
 	AssetManager		asm;
 	PowerManager		power;
@@ -117,6 +120,7 @@ public class RoadMap extends Activity
 	public native void DialogSpecialCallback(int dlg, int btn);
 	public native void ReturnStringDataHack(String s);
 	public native void RoadMapDialogChosen(int position, long id);
+	public native void NMEALogger(int id, String nmea);
 
 	@Override
 	public void onCreate(Bundle state)
@@ -252,6 +256,24 @@ public class RoadMap extends Activity
 		mgr.removeUpdates(onLocationChange);
 		mgr.removeGpsStatusListener(onGpsChange);
 	}
+
+	public void MainSetInput(int id) {
+		InputHandler = id;
+
+		// Log.e("RoadMap", "MainSetInput("+id+")");
+		try {
+			mgr.addNmeaListener(onNmea);
+		} catch (Exception e) {
+			Log.e("RoadMap", "MainSetInput exception" + e);
+		}
+	}
+
+	NmeaListener onNmea = new NmeaListener() {
+		public void onNmeaReceived(long ts, String nmea) {
+			// Log.e("RoadMap", "onNmeaReceived("+ts+","+nmea+")");
+			NMEALogger(InputHandler, nmea);
+		}
+	};
 
 	LocationListener onLocationChange = new LocationListener() {
 		int mystatus;
@@ -449,16 +471,12 @@ public class RoadMap extends Activity
 			else
 				parent = menuCache[i].menu;
 
-			Log.e("RoadMap", "onCreateOptionsMenu -> " + i
-				+ " [" + menuCache[i].label
-				+ "] in bar : " + menuCache[i].inbar);
+			// Log.e("RoadMap", "onCreateOptionsMenu -> " + i + " [" + menuCache[i].label + "] in bar : " + menuCache[i].inbar);
 			if (menuCache[i].inbar != 0) {
 			    try {
 				menuCache[i].menu = parent.addSubMenu(menuCache[i].label);
 			    } catch (Exception e) {
-				Log.e("RoadMap", "AddSubMenu {" + i
-						+ "} (" + parent + ","
-						+ menuCache[i].label + ") : exception " + e);
+				// Log.e("RoadMap", "AddSubMenu {" + i + "} (" + parent + "," + menuCache[i].label + ") : exception " + e);
 				return false;
 			    }
 			}

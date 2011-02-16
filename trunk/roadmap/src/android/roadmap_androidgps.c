@@ -1,7 +1,7 @@
 /*
  * LICENSE:
  *
- *   Copyright 2010 Danny Backx
+ *   Copyright (c) 2010, 2011 Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -52,29 +52,59 @@ void roadmap_androidgps_periodic (void)
 {
 }
 
+/**
+ * @brief indicate that this function is to be called when the GPS triggers us
+ * @param navigation
+ */
 void roadmap_androidgps_subscribe_to_navigation (RoadMapGpsdNavigation navigation)
 {
 	navigationListener = navigation;
 }
 
-
+/**
+ * @brief indicate that this function is to be called when the GPS triggers us
+ * @param satellite
+ */
 void roadmap_androidgps_subscribe_to_satellites (RoadMapGpsdSatellite satellite)
 {
 	satelliteListener = satellite;
 }
 
-
+/**
+ * @brief indicate that this function is to be called when the GPS triggers us
+ * @param dilution
+ */
 void roadmap_androidgps_subscribe_to_dilution (RoadMapGpsdDilution dilution)
 {
 	dilutionListener = dilution;
 }
 
-
+/**
+ * @brief On Android, we don't need this function : no need to decode ASCII streams
+ *	from the GPS device in RoadMap. Android already does that for us.
+ * @param user_context
+ * @param decoder_context
+ * @param sentence
+ */
+#if 0
 int roadmap_androidgps_decode (void *user_context, void *decoder_context, char *sentence)
 {
 	__android_log_print (ANDROID_LOG_ERROR, "RoadMap", "roadmap_androidgps_decode()");
 }
+#endif
 
+/**
+ * @brief function called every time the Android GPS passes a new gps fix
+ * @param env the JNI environment
+ * @param thiz the Java object referred to via JNI
+ * @param status a status byte, RoadMap related
+ * @param gpstime the time
+ * @param lat the latitude
+ * @param lon the longitude
+ * @param alt the altitude
+ * @param speed the speed
+ * @param steering the steering
+ */
 void
 Java_net_sourceforge_projects_roadmap_RoadMap_HereAmI(JNIEnv* env, jobject thiz,
 		int status, int gpstime, int lat, int lon, int alt, int speed, int steering)
@@ -96,9 +126,9 @@ extern JNIEnv		*RoadMapJniEnv;
 extern jobject		RoadMapThiz;
 
 /**
- * @brief
- * @param
- * @return
+ * @brief get the Java layer to request Android location info
+ * @param name not used on Android
+ * @return 0 on success, -1 on failure
  */
 RoadMapSocket roadmap_androidgps_connect (const char *name)
 {
@@ -113,6 +143,9 @@ RoadMapSocket roadmap_androidgps_connect (const char *name)
 	return 0;
 }
 
+/**
+ * @brief stop getting location info
+ */
 void roadmap_androidgps_close (void)
 {
 	jmethodID	mid;

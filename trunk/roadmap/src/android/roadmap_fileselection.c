@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright 2010 Danny Backx
+ *   Copyright (c) 2010, 2011 Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -30,13 +30,12 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <unistd.h>
-// #include <gtk/gtk.h>
-
-#include "roadmap_fileselection.h"
-
 #include "roadmap.h"
 #include "roadmap_types.h"
+#include "roadmap_start.h"
+#include "roadmap_jni.h"
+
+#include "roadmap_fileselection.h"
 #include "roadmap_file.h"
 
 
@@ -69,9 +68,45 @@ struct roadmap_fileselection_item {
 
 static RoadMapFileSelection *RoadMapFileWindows = NULL;
 
+/*
+ * JNI
+ */
+#define	MYCLS2	"net/sourceforge/projects/roadmap/RoadMap"
+static jclass	myRmClassCache = (jclass) 0;
+
+static jclass TheRoadMapClass()
+{
+	if (myRmClassCache == 0) {
+		myRmClassCache = (*RoadMapJniEnv)->FindClass(RoadMapJniEnv, MYCLS2);
+		myRmClassCache = (*RoadMapJniEnv)->NewGlobalRef(RoadMapJniEnv, myRmClassCache);
+	}
+	if (myRmClassCache == 0) {
+		__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "Class not found");
+		// throw
+		(*RoadMapJniEnv)->ThrowNew(RoadMapJniEnv,
+			(*RoadMapJniEnv)->FindClass(RoadMapJniEnv, "java/io/IOException"),
+			"A JNI Exception occurred");
+	}
+
+	return myRmClassCache;
+}
+
+static jmethodID TheMethod(const jclass cls, const char *name, const char *signature)
+{
+	jmethodID	mid;
+
+	mid = (*RoadMapJniEnv)->GetMethodID(RoadMapJniEnv, cls, name, signature);
+	if (mid == 0) {
+		(*RoadMapJniEnv)->ThrowNew(RoadMapJniEnv,
+			(*RoadMapJniEnv)->FindClass(RoadMapJniEnv, "java/io/IOException"),
+			"A JNI Exception occurred");
+	}
+	return mid;
+}
+
 
 /**
- * @brief
+ * @brief huh ? always returns NULL
  * @param title
  * @return
  */
@@ -100,12 +135,22 @@ static void roadmap_fileselection_ok (GtkFileSelection *selector, gpointer user_
 }
 #endif
 
-
+/**
+ * @brief open a file selection dialog
+ * @param title
+ * @param filter
+ * @param path
+ * @param mode
+ * @param callback
+ */
 void roadmap_fileselection_new (const char *title,
                                 const char *filter,
                                 const char *path,
                                 const char *mode,
                                 RoadMapFileCallback callback) {
+  roadmap_log(ROADMAP_WARNING, "roadmap_fileselection_new(%s,%s,%s,%s)", title, filter, path, mode);
+
+  callback("/sdcard/roadmap/yow.gpx", mode);
 #if 0 
     RoadMapFileSelection *item = roadmap_fileselection_search (title);
  
@@ -170,3 +215,12 @@ void roadmap_fileselection_new (const char *title,
     gtk_widget_show_all (GTK_WIDGET(item->dialog));
 #endif
 }
+
+#if 0
+	jclass		cls = TheRoadMapClass();
+	jmethodID	mid = TheMethod(cls, "CreateHeading", "(Ljava/lang/String;I)I");
+	jstring		js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, frame);
+
+	(*RoadMapJniEnv)->CallIntMethod(RoadMapJniEnv, RoadMapThiz, mid, js,
+			parent->w);
+#endif

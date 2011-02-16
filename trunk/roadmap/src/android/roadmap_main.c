@@ -27,6 +27,10 @@
  * @ingroup android
  */
 
+/**
+ * @defgroup android RoadMap implementation for Android
+ */
+
 #include <stdlib.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,7 +56,7 @@ struct roadmap_main_io {
    RoadMapInput callback;
 };
 
-#define ROADMAP_MAX_IO 16
+#define ROADMAP_MAX_IO 4
 static struct roadmap_main_io RoadMapMainIo[ROADMAP_MAX_IO];
 
 
@@ -144,7 +148,7 @@ RoadMapMenu roadmap_main_new_menu (const char *title)
 	jmethodID	mid = TheMethod(cls, "CreateMenu", "(Ljava/lang/String;)I");
 	jstring		js;
 
-	roadmap_log (ROADMAP_WARNING, "roadmap_main_new_menu(%s)", title);
+	// roadmap_log (ROADMAP_WARNING, "roadmap_main_new_menu(%s)", title);
 
 	js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, title);
 	int i = (*RoadMapJniEnv)->CallIntMethod(RoadMapJniEnv, RoadMapThiz, mid, js);
@@ -167,12 +171,12 @@ void roadmap_main_free_menu (RoadMapMenu menu)
  */
 void roadmap_main_add_menu (RoadMapMenu menu, const char *label)
 {
-	roadmap_log (ROADMAP_WARNING, "roadmap_main_add_menu(%d,%s) /* FIX ME */", (int)menu, label);
+	// roadmap_log (ROADMAP_WARNING, "roadmap_main_add_menu(%d,%s) /* FIX ME */", (int)menu, label);
 	int		m = (int)menu;
 	jclass		cls = TheRoadMapClass();
 	jmethodID	mid = TheMethod(cls, "AttachMenuToBar", "(I)V");
 
-	__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_main_add_menu(%d,%s)", m, label);
+	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_main_add_menu(%d,%s)", m, label);
 
 	(*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, RoadMapThiz, mid, m);
 }
@@ -216,7 +220,7 @@ void roadmap_main_add_menu_item (RoadMapMenu menu,
 		maxcallbacks += 100;
 		callbacks = realloc(callbacks, sizeof(struct callback) * maxcallbacks);
 
-		roadmap_log (ROADMAP_WARNING, "roadmap_main_add_menu_item %d", maxcallbacks);
+		roadmap_log (ROADMAP_DEBUG, "roadmap_main_add_menu_item %d", maxcallbacks);
 	}
 
 	if (i < maxcallbacks) {	/* This should now always be true */
@@ -387,9 +391,18 @@ void roadmap_main_set_input (RoadMapIO *io, RoadMapInput callback)
          RoadMapMainIo[i].io = *io;
          RoadMapMainIo[i].callback = callback;
          RoadMapMainIo[i].id = 0;
-         break;
+
+         jclass cls = TheRoadMapClass();
+         jmethodID mid = TheMethod(cls, "MainSetInput", "(I)V");
+
+	 (*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, RoadMapThiz, mid, i);
+
+         return;
       }
    }
+
+   /* Error if we make it here */
+   roadmap_log (ROADMAP_FATAL, "roadmap_main_set_input failed");
 }
 
 /**
@@ -408,6 +421,27 @@ void roadmap_main_remove_input (RoadMapIO *io)
          break;
       }
    }
+}
+
+/**
+ * @brief Receive an NMEA string from Java, pass it through our channel to roadmap_io,
+ *    then call the handler for this.
+ *    Note this has been written with only one purpose : logging NMEA to a file.
+ * @param env the JNI environment
+ * @param thiz the JNI object
+ * @param id points to the right context
+ * @param nmea string (Java format) passed by Android
+ */
+void
+Java_net_sourceforge_projects_roadmap_RoadMap_NMEALogger(JNIEnv* env, jobject thiz, int id, jstring nmea)
+{
+   struct roadmap_main_io *context = &RoadMapMainIo[id];
+   const char	*s = (*env)->GetStringUTFChars(env, nmea, NULL);
+   int l = strlen(s);
+
+   roadmap_io_write(&context->io, s, l);
+
+   (*context->callback)(&context->io);
 }
 
 /**
