@@ -2,6 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
+ *   Copyright (c) 2011 Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -116,7 +117,7 @@ int roadmap_input_split (char *text, char separator, char *field[], int max) {
 }
 
 /**
- * @brief
+ * @brief called from e.g. roadmap_gps_input, which has augmented the context with configuration dependent functions to call
  * @param context
  * @return
  */
@@ -127,7 +128,6 @@ int roadmap_input (RoadMapInputContext *context) {
 
    char *line_start;
    char *data_end;
-
 
    /* Receive more data if available. */
 
@@ -204,7 +204,8 @@ int roadmap_input (RoadMapInputContext *context) {
       if (context->logger != NULL) {
          context->logger (line_start);
       }
-      result |= context->decoder (context->user_context,
+      if (context->decoder)
+         result |= context->decoder (context->user_context,
                                   context->decoder_context, line_start);
 
 

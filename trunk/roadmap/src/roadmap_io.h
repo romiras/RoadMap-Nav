@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright 2010 Danny Backx
+ *   Copyright (c) 2010, 2011 Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -23,7 +23,7 @@
 
 /**
  * @file
- * @brief roadmap_file.h - a module to open/read/close a roadmap database file.
+ * @brief roadmap_io.h - a unique interface to all types of IO
  *
  * DESCRIPTION:
  *
@@ -52,17 +52,18 @@
 #define ROADMAP_IO_SERIAL  3
 #define ROADMAP_IO_PIPE    4
 #define ROADMAP_IO_NULL    5 /* Bottomless pitt (i.e., no IO). */
-#define ROADMAP_IO_ANDROID 6
+#define ROADMAP_IO_MEMORY  6 /* Simply pass data in memory, currently Android only. */
 
 typedef struct {
 
    int subsystem;
 
    union {
-      RoadMapFile file;
+      RoadMapFile   file;
       RoadMapSocket socket;
       RoadMapSerial serial;
       RoadMapPipe   pipe;
+      char         *data;
    } os;
 } RoadMapIO;
 
