@@ -1617,7 +1617,6 @@ void roadmap_start (int argc, char **argv) {
 #ifdef HAVE_NAVIGATE_PLUGIN
    roadmap_tripdb_initialize   ();
 #endif
-   roadmap_track_initialize    ();
    roadmap_landmark_initialize ();
    roadmap_features_initialize ();
    roadmap_pointer_initialize  ();
@@ -1628,6 +1627,7 @@ void roadmap_start (int argc, char **argv) {
    roadmap_display_initialize  ();
    roadmap_voice_initialize    ();
    roadmap_gps_initialize      ();
+   roadmap_track_initialize    ();
    roadgps_screen_initialize ();
    roadmap_canvas_register_configure_handler (roadmap_start_screen_configure);
    roadgps_logger_initialize ();
@@ -1769,6 +1769,7 @@ void roadmap_start_exit (void)
     roadmap_config_shutdown ();
     roadmap_sprite_shutdown ();
     roadmap_layer_shutdown ();
+    roadgps_logger_shutdown ();
     roadmap_path_shutdown ();
     roadmap_log (ROADMAP_WARNING, "RoadMap exiting, time %s", roadmap_start_now());
 }

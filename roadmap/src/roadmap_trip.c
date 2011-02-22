@@ -1423,8 +1423,7 @@ static void roadmap_trip_clear (void) {
 	RoadMapTripRefresh = 1;
 }
 
-
-
+#if USE_ICON_NAME
 /**
  * @brief
  * @param name
@@ -1432,10 +1431,15 @@ static void roadmap_trip_clear (void) {
  * @param sprite
  * @return
  */
-#if USE_ICON_NAME
 waypoint * roadmap_trip_new_waypoint
 	(const char *name, RoadMapPosition * position, const char *sprite)
 #else
+/**
+ * @brief
+ * @param name
+ * @param position
+ * @return
+ */
 waypoint * roadmap_trip_new_waypoint (const char *name, RoadMapPosition * position)
 #endif
 {
@@ -2588,6 +2592,7 @@ static const char *roadmap_trip_current() {
 
 /**
  * @brief start a new trip
+ * Save the current one if there are unsaved changes
  */
 void roadmap_trip_new (void)
 {
@@ -2681,22 +2686,22 @@ static void roadmap_trip_file_merge_dialog_ok (const char *filename, const char 
  * @brief create a file selection dialog
  * @param mode
  */
-static void roadmap_trip_file_dialog (const char *mode)
+static void roadmap_trip_file_dialog (const char *title, const char *mode)
 {
-	roadmap_fileselection_new ("RoadMap Trip",
+   roadmap_fileselection_new (title,
 #ifdef _WIN32
-		"*.gpx",
+      "*.gpx",
 #else
-		NULL,    /* no filter. */
+      NULL,    /* no filter. */
 #endif
-		roadmap_path_trips (),
-		mode,
-		roadmap_trip_file_dialog_ok);
+      roadmap_path_trips (),
+      mode,
+      roadmap_trip_file_dialog_ok);
 }
 
-static void roadmap_trip_file_merge_dialog (const char *mode) {
+static void roadmap_trip_file_merge_dialog (const char *title, const char *mode) {
 
-    roadmap_fileselection_new ("RoadMap Trip Merge", NULL,    /* no filter. */
+    roadmap_fileselection_new (title, NULL,    /* no filter. */
                                roadmap_path_trips (),
                                mode, roadmap_trip_file_merge_dialog_ok);
 }
@@ -2857,14 +2862,19 @@ int roadmap_trip_load (int silent, int merge)
  */
 void roadmap_trip_load_ask (void)
 {
-	roadmap_trip_file_dialog ("r");
+	roadmap_trip_file_dialog ("Select file to read trip", "r");
 }
 
 void roadmap_trip_merge_ask (void)
 {
-	roadmap_trip_file_merge_dialog ("r");
+	roadmap_trip_file_merge_dialog ("Select file to merge trip with", "r");
 }
 
+/**
+ * @brief Save the current trip to a file named in the parameter
+ * @param name file name to save into
+ * @return 1 if success, 0 on failure
+ */
 static int roadmap_trip_save_file (const char *name)
 {
     const char *path = NULL;
@@ -2886,6 +2896,10 @@ static int roadmap_trip_save_file (const char *name)
 
 }
 
+/**
+ * @brief Save the current trip if there are unsaved changes.
+ * @return 1 if success, 0 on failure
+ */
 int roadmap_trip_save (void) {
 
     int ret = 1; /* success */
@@ -2932,7 +2946,7 @@ void roadmap_trip_save_manual (void) {
 }
 
 void roadmap_trip_save_as() {
-    roadmap_trip_file_dialog ("w");
+    roadmap_trip_file_dialog ("Select file to save trip", "w");
 }
 
 
@@ -3662,8 +3676,13 @@ void roadmap_trip_initialize (void)
 
 }
 
+/**
+ * @brief reinitialize the roadmap_trip module
+ */
 void roadmap_trip_shutdown (void)
 {
+	roadmap_trip_save();
+
 	// route_del (RoadMapCurrentRoute);
 	RoadMapCurrentRoute = NULL;
 	RoadMapRouteInProgress = 0;

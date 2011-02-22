@@ -1,8 +1,9 @@
-/* roadgps_window.h - The interface for the RoadGps main window module.
+/* roadgps_logging.h - The interface for the RoadGps logging module.
  *
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
+ *   Copyright (c) 2011, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -25,6 +26,7 @@
 #define INCLUDE__ROADGPS_LOGGER__H
 
 void roadgps_logger_initialize (void);
+void roadgps_logger_shutdown (void);
 
 void roadgps_logger_start (void);
 void roadgps_logger_stop (void);
