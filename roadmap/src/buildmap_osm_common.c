@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright (c) 2007 Paul Fox
- *   Copyright (c) 2008, 2010, Danny Backx
+ *   Copyright (c) 2008, 2010, 2011, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -449,7 +449,14 @@ layer_info_t leisure_to_layer[] = {
         { "marina",             AMENITY,        AREA },         /* 10 */
         { "stadium",            AMENITY,        AREA },         /* 11 */
         { "golf_course",        PARK,           AREA },         /* 12 */
-        { "sports_centre",      NULL,           AREA },         /* 13 */
+        { "sports_centre",      AMENITY,        AREA },         /* 13 */
+        { "sports centre",      AMENITY,        AREA },         /* 14 */
+        { "dog_park",           PARK,           AREA },         /* 15 */
+        { "playground",         PARK,           AREA },         /* 16 */
+        { "ice_rink",           AMENITY,        AREA },         /* 17 */
+        { "miniature_golf",     AMENITY,        AREA },         /* 18 */
+        { "dance",              AMENITY,        AREA },         /* 19 */
+        { "swimming_pool",      AMENITY,        AREA },         /* 20 */
         { 0,                    NULL,           0 },
 };
 
