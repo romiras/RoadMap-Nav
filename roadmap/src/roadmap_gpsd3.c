@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright 2010, 2011, Danny Backx.
+ *   Copyright (c) 2010, 2011, Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -107,7 +107,7 @@ int roadmap_gpsd3_decode (void *user_context,
    static bool	used[MAXCHANNELS];
 #define	MAX_POSSIBLE_SATS	(MAXCHANNELS - 2)
 
-   if (gps_read(gpsdp) < 0) {
+   if (gps_unpack(sentence, gpsdp) < 0) {
       roadmap_log(ROADMAP_ERROR, "gpsd error %d", errno);
    }
 
