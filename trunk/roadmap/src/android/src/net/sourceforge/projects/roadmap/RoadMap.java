@@ -56,6 +56,7 @@ import android.widget.AdapterView.OnItemClickListener;
 
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.Spinner;
 
 import android.location.Location;
 import android.location.LocationListener;
@@ -88,6 +89,12 @@ import android.media.MediaPlayer;
 
 import android.app.ProgressDialog;
 
+import org.openintents.intents.FileManagerIntents;
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
+import android.net.Uri;
+import java.io.File;
+
 public class RoadMap extends Activity
 {
 	private LocationManager mgr = null;
@@ -96,6 +103,8 @@ public class RoadMap extends Activity
 	Panel	p;
 	Menu	myMenu = null;
 	int	InputHandler;
+
+	Thread slt = null;	/**< Socket listener thread */
 
 	AssetManager		asm;
 	PowerManager		power;
@@ -119,8 +128,11 @@ public class RoadMap extends Activity
 	public native void HardExit(int rc);
 	public native void DialogSpecialCallback(int dlg, int btn);
 	public native void ReturnStringDataHack(String s);
-	public native void RoadMapDialogChosen(int position, long id);
+	public native void RoadMapDialogChosen(int dlg, int position, long id);
 	public native void NMEALogger(int id, String nmea);
+	public native void FileSelectionResult(String filename);
+	public native int MonitorSocketIO();
+	public native void HandleSocketIO(int ix);
 
 	@Override
 	public void onCreate(Bundle state)
@@ -191,6 +203,13 @@ public class RoadMap extends Activity
 	}
 
 	@Override
+	public void onResume()
+	{
+		super.onResume();
+		// wl.acquire();
+	}
+
+	@Override
 	public void onRestart()
 	{
 		super.onRestart();
@@ -257,15 +276,60 @@ public class RoadMap extends Activity
 		mgr.removeGpsStatusListener(onGpsChange);
 	}
 
-	public void MainSetInput(int id) {
+	public void MainSetInputAndroid(int id) {
 		InputHandler = id;
 
 		// Log.e("RoadMap", "MainSetInput("+id+")");
 		try {
 			mgr.addNmeaListener(onNmea);
 		} catch (Exception e) {
-			Log.e("RoadMap", "MainSetInput exception" + e);
+			Log.e("RoadMap", "MainSetInputAndroid exception" + e);
 		}
+	}
+
+	Handler socketHandler = new Handler() {
+		@Override
+		public void handleMessage(Message msg) {
+			HandleSocketIO(msg.what);
+		}
+	};
+
+	public class SocketListenerThread implements Runnable {
+		public void run() {
+			while (true) {
+				/*
+				 * The value returned by MonitorSocketIO is not a file descriptor
+				 * but an index into a table in android/roadmap_main.c .
+				 */
+				int ix = MonitorSocketIO();
+				if (slt.isInterrupted())
+					return;
+				if (ix >= 0) {
+					Message m = socketHandler.obtainMessage();
+					m.what = ix;
+					socketHandler.sendMessage(m);
+					// HandleSocketIO(ix);
+				}
+
+		 try {
+			 Thread.sleep(1000);
+		 } catch (Exception e) {
+		 };
+			}
+		}
+	}
+
+	/*
+	 * This needs to set up a thread that listens for signals on a socket,
+	 * and then calls the IO listener (in C) for it.
+	 */
+	public void MainSetInput(int id) {
+		if (slt != null) {
+			slt.interrupt();
+		}
+
+		slt = new Thread(new SocketListenerThread());
+		slt.start();
 	}
 
 	NmeaListener onNmea = new NmeaListener() {
@@ -285,7 +349,7 @@ public class RoadMap extends Activity
 		public void onProviderEnabled(String provider) {
 			// required for interface, not used
 		}
-						            
+										
 		public void onStatusChanged(String provider, int status, Bundle extras) {
 			mystatus = status;
 		}
@@ -303,7 +367,8 @@ public class RoadMap extends Activity
 			int	lat = (int) (location.getLatitude() * 1000000),
 				lon = (int) (location.getLongitude() * 1000000),
 				/* getAltitude() returns m */
-				alt = (int) (location.getAltitude() * 1000000),
+				// alt = (int) (location.getAltitude() * 1000000),
+				alt = (int) location.getAltitude(),
 				/* getSpeed() returns m/s, this calculation
 				 * turns it into knots, see roadmap_gpsd2.c .
 				 * Still need to divide by 1000, see below.
@@ -386,6 +451,8 @@ public class RoadMap extends Activity
 
 	public void Finish()
 	{
+		if (slt != null)
+		   slt.interrupt();
 		thiz.finish();
 	}
 
@@ -974,39 +1041,42 @@ public class RoadMap extends Activity
 	/*
 	 * Create ListView
 	 */
-	public void DialogCreateList(int id)
+	public void DialogCreateList(int dlg)
 	{
+		final int dlgid = dlg;
 		try {
 			LinearLayout	row = new LinearLayout(this);
 			row.setOrientation(LinearLayout.HORIZONTAL);
 
-			dialogs[id].ll.addView(row);
-			dialogs[id].row = row;
-//			Log.e("RoadMap", "DialogCreateList(" + id + ")");
+			dialogs[dlg].ll.addView(row);
+			dialogs[dlg].row = row;
+//			Log.e("RoadMap", "DialogCreateList(" + dlg + ")");
 			ListView	lv = new ListView(thiz);
-//			Log.e("RoadMap", "DialogCreateList(" + id + "), row " + dialogs[id].row);
-			dialogs[id].row.addView(lv);
+//			Log.e("RoadMap", "DialogCreateList(" + dlg + "), row " + dialogs[dlg].row);
+			dialogs[dlg].row.addView(lv);
 
 			// lv.setOnItemClickListener(new AdapterView.OnItemClickListener() { });
-			lv.setOnItemClickListener(listener);
+			lv.setOnItemClickListener(new OnItemClickListener() {
+				public void onItemClick(AdapterView <?> parent, View view,
+					int position, long id) {
+					Log.e("RoadMap", "OnItemClickListener(" + position +
+						"," + id + ")");
+	                        	RoadMapDialogChosen(dlgid, position, id);
+				}
+			});
 		} catch (Exception e) {
-			Log.e("RoadMap", "DialogCreateList(" + id + ") : exception " + e);
+			Log.e("RoadMap", "DialogCreateList(" + dlg + ") : exception " + e);
 		};
 	}
 
+	/*
 	OnItemClickListener listener = new OnItemClickListener() {
 		public void onItemClick(AdapterView <?> parent, View view, int position, long id) {
 			Log.e("RoadMap", "OnItemClickListener(" + position + "," + id + ")");
 			RoadMapDialogChosen(position, id);
 		}
 	};
-
-	DialogInterface.OnClickListener listener2 = new DialogInterface.OnClickListener() {
-		public void onClick(DialogInterface dialog, int which) {
-			Log.e("RoadMap", "OnClickListener(" + which + ")");
-			// RoadMapDialogChosen(position, id);
-		}
-	};
+	*/
 
 	/*
 	 * Set a list contents
@@ -1039,6 +1109,52 @@ public class RoadMap extends Activity
 			Log.e("RoadMap", "DialogSetListContents -> exception " + e);
 		}
 /* */
+	}
+
+	/*
+	 * @brief Create a dropdown menu
+	 * @param id points to the entry in dialogs[] to use
+	 * @param name names this dropdown, CURRENTLY NOT USED, FIX ME
+	 * @param items array of texts to show as items in the dropdown
+	 * @return the index of the text field in the container widget
+	 *
+	 * started as a copy of DialogAddTextEntry
+	 */
+	public int DialogCreateDropDown(int id, String name, String[] items)
+	{
+		try {
+			// String [] items = { "this", "is", "a", "silly", "list" };
+			// Log.e("RoadMap", "DialogCreateDropDown(" + id + "," + name + "," + items + ")");
+
+			Spinner spin = new Spinner(thiz);
+			LinearLayout	row = dialogs[id].row;
+			row.addView(spin);
+			final int dlg = dialogs[id].ll.indexOfChild(row);
+			ArrayAdapter<String> aa = new ArrayAdapter<String>(thiz,
+			   android.R.layout.simple_spinner_item,
+			   items);
+			aa.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+			spin.setAdapter(aa);
+			spin.setOnItemSelectedListener(new Spinner.OnItemSelectedListener() {
+				public void onItemSelected(android.widget.AdapterView av,
+					View v, int position, long id) {
+					Spinner s = (Spinner) v.getParent();
+					int pos = s.getSelectedItemPosition();
+					// int pos = 0;
+					// Log.e("RoadMap", "Spinner.onItemSelected(" + position + "," + id + "), dlg " + dlg + ", pos " + pos);
+					RoadMapDialogChosen(dlg, position, id);
+				}
+				public void onNothingSelected(android.widget.AdapterView av) {
+				}
+			});
+
+			// Log.e("RoadMap", "DialogCreateDropDown(" + id + "," + name + "," + items + ") -> " + dlg);
+			return dlg;
+
+		} catch (Exception e) {
+			Log.e("RoadMap", "DialogCreateDropDown(" + id + "," + name + ") exception " + e);
+			return -1;
+		}
 	}
 
 	/*
@@ -1076,5 +1192,61 @@ public class RoadMap extends Activity
 
 	public void SetProgress(int percent)
 	{
+	}
+
+	/*
+	 * In my opinion, this is lacking from OpenIntents interface definition.
+	 * .. copied from org/openintents/filemanager/demo/Demo.java .
+	 */
+	protected static final int REQUEST_CODE_PICK_FILE_OR_DIRECTORY = 1;
+	protected static final int REQUEST_CODE_GET_CONTENT = 2;
+
+	/*
+	 * Use OpenIntents FileManager if available
+	 * Return -1 if no suitable filemanager
+	 */
+	public int FileSelection(String title, String filter, String path, int mode)
+	{
+		// Log.e("RoadMap", "FileSelection(" + filter + "," + path + "," + mode + ")");
+
+		try {
+			Intent	intent = new Intent(FileManagerIntents.ACTION_PICK_FILE);
+
+			File	file = new File(path);
+			intent.putExtra(FileManagerIntents.EXTRA_TITLE, title);
+			intent.setData(Uri.fromFile(file));
+
+			startActivityForResult(intent, REQUEST_CODE_PICK_FILE_OR_DIRECTORY);
+		} catch (Exception e) {
+			Toast.makeText(thiz, "File Manager interaction failed", 5000).show();
+			return -1;
+		}
+		return 0;
+	}
+
+	/**
+	 * Called after the file manager finishes
+	 */
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		super.onActivityResult(requestCode, resultCode, data);
+
+		switch (requestCode) {
+		case 1 /* ACTION_PICK_FILE */:
+			if (resultCode == RESULT_OK && data != null) {
+				/* obtain file name */
+				Uri fileUri = data.getData();
+				if (fileUri != null) {
+					String filePath = fileUri.getPath();
+
+					Log.e ("RoadMap", "onActivityResult(" + filePath + ")");
+
+					if (filePath != null) {
+						FileSelectionResult(filePath);
+						return;
+					}
+				}
+			}
+		}
 	}
 }
