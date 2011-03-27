@@ -6,8 +6,19 @@
 	android:theme="@style/RoadMapStyle"
 	android:versionName="1.0">
 	<uses-sdk android:minSdkVersion="3" />
+	/*
+	 * Obviously we'd like permission to use the GPS
+	 */
 	<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+	/*
+	 * RoadMap will try to keep the screen on.
+	 */
 	<uses-permission android:name="android.permission.WAKE_LOCK"/>
+	/*
+	 * Only require internet access if we're using e.g. gpsd3://.... for
+	 * feeding us location info.
+	 */
+	<uses-permission android:name="android.permission.INTERNET"/>
 	<application
 		android:label="@string/app_name"
 		android:debuggable="true"

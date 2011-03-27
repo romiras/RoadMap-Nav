@@ -109,20 +109,17 @@ gen/net/sourceforge/projects/roadmap/R.java: AndroidManifest.xml Makefile
 	-mkdir -p gen
 	${AAPT} package -m -J gen -M AndroidManifest.xml -S res -I ${SDKPLAT}/android.jar
 
+org/openintents/intents/FileManagerIntents.class: src/org/openintents/intents/FileManagerIntents.java
+	javac ${JAVAC_FLAGS} -d . src/org/openintents/intents/FileManagerIntents.java
+
 ${DIRHIER}/RoadMap.class:	src/${DIRHIER}/RoadMap.java gen/net/sourceforge/projects/roadmap/R.java
 	javac ${JAVAC_FLAGS} -d . src/${DIRHIER}/RoadMap.java
-
-${DIRHIER}/RoadMapCanvas.class:	src/${DIRHIER}/RoadMapCanvas.java
-	javac ${JAVAC_FLAGS} -d . src/${DIRHIER}/RoadMapCanvas.java
 
 ${DIRHIER}/Panel.class:	src/${DIRHIER}/Panel.java
 	javac ${JAVAC_FLAGS} -d . src/${DIRHIER}/Panel.java
 
 ${DIRHIER}/Pen.class:	src/${DIRHIER}/Pen.java
 	javac ${JAVAC_FLAGS} -d . src/${DIRHIER}/Pen.java
-
-${DIRHIER}/TutorialThread.class:	src/${DIRHIER}/TutorialThread.java
-	javac ${JAVAC_FLAGS} -d . src/${DIRHIER}/TutorialThread.java
 
 RMLIBS=	../libguiroadmap.a ../libroadmap.a ../gpx/libgpx.a ../unix/libosroadmap.a \
 	-L/opt/android/lib -lexpat-1
@@ -148,13 +145,14 @@ libs/armeabi/gdb.setup:
 
 RMANDROID=	${RMASRC:.c=.o}
 
-libs/armeabi/librmnative.so:	${RMANDROID} ${RMDLIBS}
+libs/armeabi/librmnative.so:	${RMANDROID} ${RMDLIBS} /opt/android/lib/libgps.a
 	-mkdir -p libs/armeabi
 	arm-eabi-gcc --Wl,-soname,librmnative.so -o libs/armeabi/librmnative.so \
 		${NDK_CFLAGS} ${NDK_LDFLAGS} \
 		${RMANDROID} \
 		${RMLIBS} \
 		-lgcc \
+		-L/opt/android/lib -lgps \
 		-L${NDKHOME}/platforms/android-${NDK_LEVEL}/arch-${NDK_ARCH}/usr/lib -llog -lc -lm
 
 clean:
