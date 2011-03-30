@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2002 Pascal F. Martin
- *   Copyright 2010 Danny Backx
+ *   Copyright (c) 2010, 2011, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -883,7 +883,6 @@ void roadmap_gps_open (void) {
    RoadMapGpsLatestData = 0;
    roadmap_gps_update_reception ();
 
-#ifndef ANDROID
    url = roadmap_gps_source ();
 
    if (url == NULL) {
@@ -1056,6 +1055,9 @@ void roadmap_gps_open (void) {
          RoadMapGpsLink.subsystem = ROADMAP_IO_FILE;
       }
 
+   } else if (strncasecmp (url, "android:", 8) == 0) {
+      RoadMapGpsLink.subsystem = ROADMAP_IO_MEMORY;
+      RoadMapGpsProtocol = ROADMAP_GPS_ANDROID;
    } else {
       roadmap_log (ROADMAP_ERROR, "invalid protocol in url %s", url);
       return;
@@ -1074,10 +1076,6 @@ void roadmap_gps_open (void) {
       (*RoadMapGpsPeriodicRemove) (roadmap_gps_open);
       RoadMapGpsRetryPending = 0;
    }
-#else /* ANDROID */
-   RoadMapGpsLink.subsystem = ROADMAP_IO_MEMORY;
-   RoadMapGpsProtocol = ROADMAP_GPS_ANDROID;
-#endif
 
    /* Give time for the whole system to initialize itself.  */
    roadmap_gps_got_data();
@@ -1246,9 +1244,9 @@ void roadmap_gps_input (RoadMapIO *io) {
       roadmap_io_close (&context);
 
       /* Try to establish a new IO channel, but don't reread a file: */
-#ifndef ANDROID
-      (*RoadMapGpsPeriodicRemove) (roadmap_gps_keep_alive);
-#endif
+      if (RoadMapGpsProtocol != ROADMAP_GPS_ANDROID)
+         (*RoadMapGpsPeriodicRemove) (roadmap_gps_keep_alive);
+
       if (RoadMapGpsLink.subsystem != ROADMAP_IO_FILE) {
          roadmap_gps_open();
       }
