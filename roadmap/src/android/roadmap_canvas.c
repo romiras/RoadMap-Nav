@@ -232,7 +232,6 @@ void roadmap_canvas_set_foreground (const char *color)
 	jstring		js;
 	jclass		cls = TheClass();
 	jmethodID	mid = TheMethod(cls, "SetForeground", "(Ljava/lang/String;)I");
-	int		r;
 
 	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "set_foreground(%d,%s) - %s", (int)CurrentPen, PenName[(int)CurrentPen].name, color);
 
@@ -724,3 +723,13 @@ static char *roadmap_canvas_lookup_colourname(const char *name)
 		}
 	return NULL;
 }
+
+#if 0
+const char *roadmap_canvas_pen_name (RoadMapPen pen)
+{
+	int i = (int)pen;
+	if (i < 0 || i >= nPens)
+		return "(null pen)";
+	return PenName[i].name;
+}
+#endif
