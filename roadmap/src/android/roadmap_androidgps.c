@@ -79,6 +79,7 @@ void roadmap_androidgps_subscribe_to_dilution (RoadMapGpsdDilution dilution)
 	dilutionListener = dilution;
 }
 
+#if 0
 /**
  * @brief On Android, we don't need this function : no need to decode ASCII streams
  *	from the GPS device in RoadMap. Android already does that for us.
@@ -86,7 +87,6 @@ void roadmap_androidgps_subscribe_to_dilution (RoadMapGpsdDilution dilution)
  * @param decoder_context
  * @param sentence
  */
-#if 0
 int roadmap_androidgps_decode (void *user_context, void *decoder_context, char *sentence)
 {
 	__android_log_print (ANDROID_LOG_ERROR, "RoadMap", "roadmap_androidgps_decode()");
