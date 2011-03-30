@@ -171,6 +171,7 @@ static RoadMapDialogItem roadmap_dialog_get (RoadMapDialogItem parent,
    child = (RoadMapDialogItem) malloc (sizeof (*child));
 
    roadmap_check_allocated(child);
+   roadmap_log (ROADMAP_WARNING, "roadmap_dialog_get(%s) -> new %p, parent %p (%s)", name, child, parent, parent ? parent->name : "");
 
    child->typeid = "RoadMapDialogItem";
 
@@ -216,12 +217,13 @@ static RoadMapDialogItem roadmap_dialog_get (RoadMapDialogItem parent,
 
 /**
  * @brief lookup by number, don't create a new one if not found
+ *   Note this searches recursively, unlike its sister function(s).
  * @param parent look in the hierarchy under this
  * @param id look for this dialog
  * @return the dialog pointer
  */
 static RoadMapDialogItem roadmap_dialog_get_nr (RoadMapDialogItem parent, const int id) {
-//	__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_get_nr(%d)", id);
+   // __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_get_nr(%d)", id);
    RoadMapDialogItem child;
 
    if (parent == NULL) {
@@ -230,12 +232,34 @@ static RoadMapDialogItem roadmap_dialog_get_nr (RoadMapDialogItem parent, const 
       child = parent->children;
    }
 
+   /* breadth-first lookup */
    while (child != NULL) {
       if (child->w == id) {
-//	__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_get_nr -> %p", child);
+         // __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_get_nr -> %p", child);
          return child;
       }
-//	__android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_get_nr found %d", child->w);
+      // __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_get_nr found %d", child->w);
+      child = child->next;
+   }
+
+   /* lookup in depth now */
+   if (parent == NULL) {
+      child = RoadMapDialogWindows;
+   } else {
+      child = parent->children;
+   }
+   while (child != NULL) {
+      if (child->children != NULL) {
+         // __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_get_nr -> %p", child);
+         RoadMapDialogItem p = child->children;
+         while (p) {
+            RoadMapDialogItem r = roadmap_dialog_get_nr(p, id);
+            if (r)
+               return r;
+            p = p->next;
+         }
+      }
+      // __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_get_nr found %d", child->w);
       child = child->next;
    }
 
@@ -372,22 +396,15 @@ void roadmap_dialog_new_entry (const char *frame, const char *name) {
    jstring	js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, name);
 
    RoadMapDialogItem parent, child;
-#if 0
-   child = roadmap_dialog_new_item (frame, name);
-   int w = (*RoadMapJniEnv)->CallIntMethod(RoadMapJniEnv, RoadMapThiz, mid, child->w, js);
-   /* Return value is the index of the text field in the container widget */
-   child->w = w;
-#else
+
    child = roadmap_dialog_new_item (frame, name);
    parent = roadmap_dialog_get (RoadMapDialogCurrent, frame);
    child  = roadmap_dialog_get (parent, name);
    int w = (*RoadMapJniEnv)->CallIntMethod(RoadMapJniEnv, RoadMapThiz, mid, parent->w, js);
    /* Return value is the index of the text field in the container widget */
    child->w = w;
-#endif
 
    child->widget_type = ROADMAP_WIDGET_ENTRY;
-//   roadmap_log(ROADMAP_WARNING, "roadmap_dialog_new_entry(%s,%s) child->w %d w %d", frame, name, child->w, w);
 }
 
 /**
@@ -431,16 +448,27 @@ void roadmap_dialog_new_hidden (const char *frame, const char *name)
 #endif
 }
 
+/*
+ * This used to be a local variable in roadmap_dialog_show_list but then roadmap_dialog_chosen
+ * can't use it, and the Android NDK/SDK pair aren't good at passing this type of info along.
+ */
+RoadMapDialogSelection *choice;
+
 /**
  * @brief Add one choice item (a selection box or menu).
  * The optional callback is called each time a new selection is being made,
  * not when the OK button is called--that is the job of the OK button callback.
+ *
+ * Note there's a rather strange difference in types between values (as passed here as a parameter)
+ * and the thing we need inside the function. Casting this via the "vals" local variable is
+ * copied from the gtk2 implementation because it works.
+ *
  * @param frame
  * @param name
  * @param count
- * @param current
+ * @param current specifies the initial value to be shown in the UI
  * @param labels
- * @param values
+ * @param values note strange type, probably requires FIX ME in all platform dependent sources
  * @param callback
  */
 void roadmap_dialog_new_choice (const char *frame,
@@ -450,7 +478,47 @@ void roadmap_dialog_new_choice (const char *frame,
                                 char **labels,
                                 void *values,
                                 RoadMapDialogCallback callback) {
-// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "roadmap_dialog_new_choice(%s,%s) -> count %d", frame, name, count);
+
+   jclass	cls = TheRoadMapClass();
+   jmethodID	mid = TheMethod(cls, "DialogCreateDropDown", "(ILjava/lang/String;[Ljava/lang/String;)I");
+   jstring	js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, name);
+   jobjectArray	joa;
+   int		i;
+   RoadMapDialogItem parent, child;
+   char **vals = (char **)values;
+
+   // roadmap_log (ROADMAP_WARNING, "roadmap_dialog_new_choice(%s,%s,%d,%d)", frame, name, count, current);
+
+   child = roadmap_dialog_new_item (frame, name);
+   parent = roadmap_dialog_get (RoadMapDialogCurrent, frame);
+   child  = roadmap_dialog_get (parent, name);
+
+   choice = (RoadMapDialogSelection *) calloc (count, sizeof(*choice));
+   roadmap_check_allocated(choice);
+
+   /*
+    * Create list
+    */
+   joa = (*RoadMapJniEnv)->NewObjectArray(RoadMapJniEnv, count, cls, NULL);
+
+   for (i = 0; i < count; ++i) {
+      choice[i].typeid = "RoadMapDialogSelection";
+      choice[i].item = child;
+      choice[i].callback = callback;
+      choice[i].value = vals[i];
+
+      js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, labels[i]);
+      (*RoadMapJniEnv)->SetObjectArrayElement(RoadMapJniEnv, joa, i, js);
+   }
+   child->choice = choice;
+   child->value  = choice[0].value;
+   /** End list creation */
+
+   /* Return value is the index of the text field in the container widget */
+   child->w = (*RoadMapJniEnv)->CallIntMethod(RoadMapJniEnv, RoadMapThiz, mid, parent->w, js, joa);
+   child->widget_type = ROADMAP_WIDGET_CHOICE;
+
+   // roadmap_log (ROADMAP_WARNING, "roadmap_dialog_new_choice(%s,%s,%d,%d) -> w %d, child %p, choice %p", frame, name, count, current, child->w, child, choice);
 }
 
 /**
@@ -478,17 +546,31 @@ void roadmap_dialog_new_list (const char  *frame, const char  *name) {
 
 }
 
-/*
- * This used to be a local variable in roadmap_dialog_show_list but then roadmap_dialog_chosen
- * can't use it, and the Android NDK/SDK pair aren't good at passing this type of info along.
+/**
+ * @brief Find the "choice" for more than one case (list, drop down menu).
+ * @param id the dialog wiget
+ * @return choice
  */
-RoadMapDialogSelection *choice;
+static RoadMapDialogSelection *GetChoice(int id)
+{
+	RoadMapDialogItem dlgp = roadmap_dialog_get_nr(NULL, id);
+	return dlgp->choice;
+}
 
-void roadmap_dialog_chosen (int position, long id) {
+void roadmap_dialog_chosen (int dlg, int position, long id) {
 
+   // RoadMapDialogSelection *selection = &choice[position];
+
+   RoadMapDialogSelection *choice = GetChoice(dlg);
    RoadMapDialogSelection *selection = &choice[position];
 
+   roadmap_log (ROADMAP_WARNING, "roadmap_dialog_chosen --> value old %s new %s, callback %p", selection->item->value, selection->value, selection->callback);
+
    if (selection != NULL) {
+
+      RoadMapDialogItem	item = selection->item;
+      if (item->w == 0)
+         return;
 
       selection->item->value = selection->value;
 
@@ -506,9 +588,10 @@ void roadmap_dialog_chosen (int position, long id) {
    }
 }
 
-void Java_net_sourceforge_projects_roadmap_RoadMap_RoadMapDialogChosen(JNIEnv* env, jobject thiz, int position, long id)
+void Java_net_sourceforge_projects_roadmap_RoadMap_RoadMapDialogChosen(JNIEnv* env, jobject thiz, int dlg, int position, long id)
 {
-	roadmap_dialog_chosen(position, id);
+	roadmap_log(ROADMAP_WARNING, "RoadMapDialogChosen(%d,%d,%d)", dlg, position, id);
+	roadmap_dialog_chosen(dlg, position, id);
 }
 
 /**
@@ -691,7 +774,7 @@ void *roadmap_dialog_get_data (const char *frame, const char *name)
 
    if (this_item->widget_type == ROADMAP_WIDGET_ENTRY) {
       if (RoadMapDialogCurrent->w == 0 && this_item->w == 0) {
-         roadmap_log(ROADMAP_WARNING, "roadmap_dialog_get_data(%s,%s) null", frame, name);
+         // roadmap_log(ROADMAP_WARNING, "roadmap_dialog_get_data(%s,%s) null", frame, name);
          return NULL;
       }
 
@@ -705,7 +788,7 @@ void *roadmap_dialog_get_data (const char *frame, const char *name)
       this_item->value = ReturnStringDataHack;
    }
 
-   roadmap_log(ROADMAP_WARNING, "roadmap_dialog_get_data(%s,%s) -> {%p,%s}", frame, name, this_item->value, this_item->value);
+   // roadmap_log(ROADMAP_WARNING, "roadmap_dialog_get_data(%s,%s) -> {%p,%s}", frame, name, this_item->value, this_item->value);
 
    return (void *)this_item->value;
 }
@@ -722,6 +805,9 @@ void *roadmap_dialog_get_data (const char *frame, const char *name)
  *
  * In other cases, we just pass pointers along from memory, and we're not sure about the data
  * type (they're sometimes pointers to structures).
+ *
+ * Note that some initialisation happens in roadmap_dialog_new_choice, through the "current"
+ * parameter.
  */
 void roadmap_dialog_set_data (const char *frame, const char *name,
                                const void *data) {
@@ -730,7 +816,7 @@ void roadmap_dialog_set_data (const char *frame, const char *name,
    this_frame  = roadmap_dialog_get (RoadMapDialogCurrent, frame);
    this_item   = roadmap_dialog_get (this_frame, name);
 
-   // roadmap_log(ROADMAP_WARNING, "roadmap_dialog_set_data(%s,%s) cur %d fr %d it %d", frame, name, RoadMapDialogCurrent->w, this_frame->w, this_item->w);
+   roadmap_log(ROADMAP_WARNING, "roadmap_dialog_set_data(%s,%s) cur %d fr %d it %d", frame, name, RoadMapDialogCurrent->w, this_frame->w, this_item->w);
 
    switch (this_item->widget_type) {
 

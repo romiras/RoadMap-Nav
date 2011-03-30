@@ -50,6 +50,8 @@
 #include <android/log.h>
 #include "roadmap_jni.h"
 
+#include <sys/select.h>
+
 struct roadmap_main_io {
    int id;
    RoadMapIO io;
@@ -376,8 +378,10 @@ void roadmap_main_show (void)
 /**
  * @brief Organize a system dependent way to handle input from this source,
  * and call the callback when something happens on it.
- * On Android, just make a registry in the table.
- * The only call we're currently getting is from the GPS, handled in Java code.
+ *
+ * For the builtin Android Location services, just make a call to Java to start listening.
+ * For other (socket based) location feeds (RoadMap stuff), set up stuff to listen on the
+ * sockets created, and call the right callbacks for it.
  *
  * @param io description of the input
  * @param callback call this function when awakened
@@ -387,15 +391,24 @@ void roadmap_main_set_input (RoadMapIO *io, RoadMapInput callback)
    int i;
 
    for (i = 0; i < ROADMAP_MAX_IO; ++i) {
+      // roadmap_log (ROADMAP_WARNING, "roadmap_main_set_input(%d,%d)", i, RoadMapMainIo[i].io.subsystem);
       if (RoadMapMainIo[i].io.subsystem == ROADMAP_IO_INVALID) {
          RoadMapMainIo[i].io = *io;
          RoadMapMainIo[i].callback = callback;
          RoadMapMainIo[i].id = 0;
 
-         jclass cls = TheRoadMapClass();
-         jmethodID mid = TheMethod(cls, "MainSetInput", "(I)V");
+	 if (RoadMapMainIo[i].io.subsystem == ROADMAP_IO_MEMORY) {
+	    /* and we're on Android */
+            jclass cls = TheRoadMapClass();
+            jmethodID mid = TheMethod(cls, "MainSetInputAndroid", "(I)V");
 
-	 (*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, RoadMapThiz, mid, i);
+	    (*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, RoadMapThiz, mid, i);
+	 } else {
+            jclass cls = TheRoadMapClass();
+            jmethodID mid = TheMethod(cls, "MainSetInput", "(I)V");
+
+	    (*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, RoadMapThiz, mid, i);
+	 }
 
          return;
       }
@@ -403,6 +416,53 @@ void roadmap_main_set_input (RoadMapIO *io, RoadMapInput callback)
 
    /* Error if we make it here */
    roadmap_log (ROADMAP_FATAL, "roadmap_main_set_input failed");
+}
+
+/**
+ * @brief Handler called from a separate thread to monitor socket I/O
+ *   This function figures out each time again which sockets to listen to.
+ *   The infinite loop around this is in Java so it can get interrupted nicely from there.
+ *   The callback is called from there so it happens from the right thread (via socketHandler).
+ * @param env the JNI environment
+ * @param thiz the JNI object
+ */
+int
+Java_net_sourceforge_projects_roadmap_RoadMap_MonitorSocketIO(JNIEnv* env, jobject thiz)
+{
+   int i, r;
+   fd_set fds;
+
+   // roadmap_log(ROADMAP_WARNING, "MonitorSocketIO enter");
+   /* Figure out which FDs to listen to */
+   FD_ZERO(&fds);
+
+   for (i = 0; i < ROADMAP_MAX_IO; ++i) {
+      if (RoadMapMainIo[i].io.subsystem != ROADMAP_IO_INVALID
+       && RoadMapMainIo[i].io.subsystem != ROADMAP_IO_MEMORY) {
+	 FD_SET(RoadMapMainIo[i].io.os.file, &fds);
+      }
+   }
+
+   r = select(FD_SETSIZE, &fds, NULL, NULL, NULL);
+   if (r > 0)
+      for (i=0; i < ROADMAP_MAX_IO; i++)
+         if (FD_ISSET(RoadMapMainIo[i].io.os.file, &fds)) {
+            // roadmap_log(ROADMAP_WARNING, "MonitorSocketIO return %d", i);
+            return i;
+	 }
+   // roadmap_log(ROADMAP_WARNING, "MonitorSocketIO return -1");
+   return -1;
+}
+
+/**
+ * @brief Call the callback passed to us from RoadMap's C functions to handle data on the socket.
+ * @param env the JNI environment
+ * @param thiz the JNI object
+ */
+void
+Java_net_sourceforge_projects_roadmap_RoadMap_HandleSocketIO(JNIEnv* env, jobject thiz, int ix)
+{
+   (RoadMapMainIo[ix].callback) (&RoadMapMainIo[ix].io);
 }
 
 /**
