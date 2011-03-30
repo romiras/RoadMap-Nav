@@ -495,8 +495,7 @@ buildmap_osm_text_way_pass1(char *data)
 	return 0;
 }
 
-/**< @brief count polygon lines early */
-static int EarlyPolygonCount = 0;
+static int EarlyPolygonCount = 0; /**< @brief count polygon lines early */
 static int EarlyPolygonNodeCounter = 0;
 
 static void
