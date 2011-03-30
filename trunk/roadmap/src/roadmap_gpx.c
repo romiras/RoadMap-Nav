@@ -55,6 +55,16 @@ void warning (const char *fmt, ...) {
 
 #ifdef ROADMAP_USES_EXPAT
 
+/**
+ * @brief
+ * @param path
+ * @param name
+ * @param w
+ * @param wee
+ * @param r
+ * @param t
+ * @return
+ */
 int
 roadmap_gpx_read_file(const char *path,
         const char *name, queue_head *w, int wee, queue_head *r, queue_head *t)
@@ -81,7 +91,14 @@ roadmap_gpx_read_file(const char *path,
     return ret;
 }
 
-/* read a list of waypoints (or optionally, weepoints) from a file */
+/**
+ * @brief read a list of waypoints (or optionally, weepoints) from a file
+ * @param path
+ * @param name
+ * @param waypoints
+ * @param wee
+ * @return
+ */
 int
 roadmap_gpx_read_waypoints
         (const char *path, const char *name, queue_head *waypoints, int wee)
@@ -94,6 +111,13 @@ roadmap_gpx_read_waypoints
 
 }
 
+/**
+ * @brief
+ * @param path
+ * @param name
+ * @param track
+ * @return
+ */
 int
 roadmap_gpx_read_one_track(
     const char *path, const char *name, route_head **track)
@@ -125,6 +149,13 @@ roadmap_gpx_read_one_track(
 
 }
 
+/**
+ * @brief
+ * @param path
+ * @param name
+ * @param route
+ * @return
+ */
 int
 roadmap_gpx_read_one_route(
     const char *path, const char *name, route_head **route)
@@ -153,6 +184,16 @@ roadmap_gpx_read_one_route(
     return ret;
 }
 
+/**
+ * @brief
+ * @param backup
+ * @param path
+ * @param name
+ * @param w
+ * @param r
+ * @param t
+ * @return
+ */
 int
 roadmap_gpx_write_file(int backup, const char *path, const char *name,
         queue_head *w, queue_head *r, queue_head *t)
@@ -176,7 +217,14 @@ roadmap_gpx_write_file(int backup, const char *path, const char *name,
     return ret;
 }
 
-/* write a file of waypoints.  weepoints cannot be written */
+/**
+ * @brief write a file of waypoints.  weepoints cannot be written
+ * @param backup
+ * @param path
+ * @param name
+ * @param waypoints
+ * @return
+ */
 int roadmap_gpx_write_waypoints(int backup, const char *path, const char *name,
         queue_head *waypoints)
 {
@@ -196,6 +244,14 @@ int roadmap_gpx_write_waypoints(int backup, const char *path, const char *name,
     return ret;
 }
 
+/**
+ * @brief
+ * @param backup
+ * @param path
+ * @param name
+ * @param route
+ * @return
+ */
 int roadmap_gpx_write_route(int backup, const char *path, const char *name,
         route_head *route)
 {
@@ -221,6 +277,14 @@ int roadmap_gpx_write_route(int backup, const char *path, const char *name,
     return ret;
 }
 
+/**
+ * @brief
+ * @param backup
+ * @param path
+ * @param name
+ * @param track
+ * @return
+ */
 int roadmap_gpx_write_track(int backup, const char *path, const char *name,
         route_head *track)
 {
@@ -246,7 +310,9 @@ int roadmap_gpx_write_track(int backup, const char *path, const char *name,
 
 #else // ROADMAP_USES_EXPAT
 
-
+/**
+ * @brief
+ */
 static void roadmap_gpx_tell_no_expat (void) {
 
     static int roadmap_gpx_told_no_expat = 0;
