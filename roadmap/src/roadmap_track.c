@@ -1,5 +1,4 @@
-/* roadmap_track.c - Keep track of where we've been.
- *
+/*
  * LICENSE:
  *
  *   Copyright 2005  Paul G. Fox
@@ -22,7 +21,10 @@
  */
 
 
-/*
+/**
+ * @file
+ * @brief roadmap_track.c - Keep track of where we've been.
+ *
  * The trackpoints are stored in a list, like all other
  * waypoints.  We save the list to the "currenttrack" file on
  * exit, and read an initial list from it on startup.
@@ -86,6 +88,10 @@ static RoadMapConfigDescriptor RoadMapConfigTrackName =
 
 FILE *RoadMapTrackRecentCSV;
 
+/**
+ * @brief
+ * @param w
+ */
 void roadmap_track_add_recent (waypoint *w) {
 
     if (!RoadMapTrackRecentCSV) {
@@ -103,6 +109,11 @@ void roadmap_track_add_recent (waypoint *w) {
     fflush(RoadMapTrackRecentCSV);
 }
 
+/**
+ * @brief
+ * @param path
+ * @param name
+ */
 void roadmap_track_fetch_recent(const char *path, char *name) {
 
     char trkpoint[128];
@@ -214,7 +225,13 @@ static RoadMapTrackPolicy roadmap_track_policy(void)
 
 }
 
-
+/**
+ * @brief receive GPS updates in the roadmap_track module
+ * @param reception indication of reception quality
+ * @param gps_time timestamp of this update
+ * @param dilution
+ * @param gps_position the position
+ */
 static void roadmap_track_gps_update (int reception, int gps_time,
                    const RoadMapGpsPrecision *dilution,
                    const RoadMapGpsPosition *gps_position) {
@@ -307,7 +324,10 @@ static void roadmap_track_gps_update (int reception, int gps_time,
 
 }
 
-
+/**
+ * @brief draw this waypoint as part of the current track
+ * @param waypointp pointer to the waypoint
+ */
 static void roadmap_track_waypoint_draw (const waypoint *waypointp)
 {
     RoadMapGuiPoint guipoint;
@@ -328,7 +348,9 @@ static void roadmap_track_waypoint_draw (const waypoint *waypointp)
 
 }
 
-
+/**
+ * @brief display the current track
+ */
 void roadmap_track_display (void) {
 
     if (RoadMapTrackDisplay) {
@@ -337,6 +359,9 @@ void roadmap_track_display (void) {
 
 }
 
+/**
+ * @brief
+ */
 void roadmap_track_toggle_display(void) {
 
     RoadMapTrackDisplay = ! RoadMapTrackDisplay;
@@ -345,6 +370,9 @@ void roadmap_track_toggle_display(void) {
 
 }
 
+/**
+ * @brief
+ */
 int roadmap_track_is_refresh_needed (void) {
 
     if (RoadMapTrackRefresh) {
@@ -395,6 +423,9 @@ static int roadmap_track_save_worker
     return ret;
 }
 
+/**
+ * @brief
+ */
 void roadmap_track_save(void) {
 
     if (RoadMapTrack == NULL ||
@@ -406,6 +437,11 @@ void roadmap_track_save(void) {
     RoadMapTrackModified = 0;
 }
 
+/**
+ * @brief autosave the track, and clean up the CSV file
+ * @param hiwater
+ * @param lowater
+ */
 static void roadmap_track_autosave(int hiwater, int lowater) {
 
     const char *name;
@@ -465,6 +501,9 @@ static void roadmap_track_autosave(int hiwater, int lowater) {
 
 }
 
+/**
+ * @brief
+ */
 void roadmap_track_reset (void) {
 
     RoadMapTrackModified = 1; /* otherwise autosave does nothing */
@@ -473,13 +512,14 @@ void roadmap_track_reset (void) {
     roadmap_screen_refresh();
 }
 
-
-
+/**
+ * @brief
+ */
 void roadmap_track_autowrite(void) {
 
     int nominal;
     
-    /* essentially, if we aquire 25% more points than we've been
+    /* essentially, if we acquire 25% more points than we've been
      * asked to save, we tell the autowriter to archive all but
      * that 75% of what we've been asked for, and continue from
      * there.
@@ -489,6 +529,9 @@ void roadmap_track_autowrite(void) {
 
 }
 
+/**
+ * @brief
+ */
 void roadmap_track_autoload(void) {
 
     const char *name;
@@ -518,6 +561,9 @@ void roadmap_track_autoload(void) {
 
 }
 
+/**
+ * @brief initialize roadmap_track
+ */
 void
 roadmap_track_initialize(void) {
 
@@ -551,6 +597,9 @@ roadmap_track_initialize(void) {
     roadmap_gps_register_listener(roadmap_track_gps_update);
 }
 
+/**
+ * @brief activate roadmap_track
+ */
 void
 roadmap_track_activate(void) {
 
