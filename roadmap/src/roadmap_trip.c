@@ -2684,6 +2684,7 @@ static void roadmap_trip_file_merge_dialog_ok (const char *filename, const char 
 
 /**
  * @brief create a file selection dialog
+ * @param title
  * @param mode
  */
 static void roadmap_trip_file_dialog (const char *title, const char *mode)
