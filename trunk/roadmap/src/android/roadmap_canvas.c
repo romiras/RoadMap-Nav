@@ -232,6 +232,7 @@ void roadmap_canvas_set_foreground (const char *color)
 	jstring		js;
 	jclass		cls = TheClass();
 	jmethodID	mid = TheMethod(cls, "SetForeground", "(Ljava/lang/String;)I");
+	int		r;
 
 	// __android_log_print(ANDROID_LOG_ERROR, "RoadMap", "set_foreground(%d,%s) - %s", (int)CurrentPen, PenName[(int)CurrentPen].name, color);
 
