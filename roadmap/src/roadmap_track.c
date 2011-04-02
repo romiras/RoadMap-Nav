@@ -25,6 +25,8 @@
  * @file
  * @brief roadmap_track.c - Keep track of where we've been.
  *
+ * Note speed is in centimeters per second.
+ *
  * The trackpoints are stored in a list, like all other
  * waypoints.  We save the list to the "currenttrack" file on
  * exit, and read an initial list from it on startup.
@@ -89,8 +91,8 @@ static RoadMapConfigDescriptor RoadMapConfigTrackName =
 FILE *RoadMapTrackRecentCSV;
 
 /**
- * @brief
- * @param w
+ * @brief add a waypoint to the temp file
+ * @param w pointer to a waypoint
  */
 void roadmap_track_add_recent (waypoint *w) {
 
@@ -110,9 +112,9 @@ void roadmap_track_add_recent (waypoint *w) {
 }
 
 /**
- * @brief
- * @param path
- * @param name
+ * @brief Read the temp file, move its contents into the normal track file
+ * @param path Directory holding both files
+ * @param name Name of the normal track file
  */
 void roadmap_track_fetch_recent(const char *path, char *name) {
 
@@ -149,7 +151,11 @@ void roadmap_track_fetch_recent(const char *path, char *name) {
     }
 }
 
-
+/**
+ * @brief Use the info from the parameters to add a track point if appropriate according to config
+ * @param gps_time the current time
+ * @param gps_position the current position
+ */
 static void roadmap_track_add_trackpoint ( int gps_time,
                     const RoadMapGpsPosition *gps_position) {
 
@@ -195,6 +201,10 @@ static void roadmap_track_add_trackpoint ( int gps_time,
 
 }
 
+/**
+ * @brief look up the current track policy from the configuration database
+ * @return the track policy
+ */
 static RoadMapTrackPolicy roadmap_track_policy(void)
 {
     const char *policy = roadmap_config_get (&RoadMapConfigPolicyString);
@@ -382,6 +392,10 @@ int roadmap_track_is_refresh_needed (void) {
     return 0;
 }
 
+/**
+ * @brief get the filename to save track into
+ * @return the filename
+ */
 static const char *roadmap_track_filename(int *defaulted) {
     const char *name;
     name = roadmap_config_get (&RoadMapConfigTrackName);
