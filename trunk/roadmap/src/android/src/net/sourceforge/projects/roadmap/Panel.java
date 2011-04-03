@@ -1,7 +1,7 @@
 /*
  * LICENSE:
  *
- *   Copyright 2010 Danny Backx
+ *   Copyright (c) 2010, 2011, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -199,7 +199,10 @@ class Panel
 
 			paint = pen.GetPaint();
 
-			paint.setTextSize(size);
+			if (size != 0)
+				paint.setTextSize(size);
+			else
+				paint.setTextSize(12);
 			paint.setTypeface(face);
 
 			// Copy from gtk2/roadmap_canvas.c:roadmap_canvas_draw_string()
@@ -218,7 +221,7 @@ class Panel
 			if ((corner & ROADMAP_CANVAS_BOTTOM) != 0)
 				y -= descent;
 			else if ((corner & ROADMAP_CANVAS_CENTER_Y) != 0)
-				y -= descent + height / 2;
+				y = y - descent + height / 2;
 			else /* TOP */
 				y += ascent;
 

@@ -1,7 +1,7 @@
 /*
  * LICENSE:
  *
- *   Copyright (c) 2010, 2011 Danny Backx
+ *   Copyright (c) 2010, 2011, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -279,7 +279,6 @@ public class RoadMap extends Activity
 	public void MainSetInputAndroid(int id) {
 		InputHandler = id;
 
-		// Log.e("RoadMap", "MainSetInput("+id+")");
 		try {
 			mgr.addNmeaListener(onNmea);
 		} catch (Exception e) {
@@ -312,7 +311,11 @@ public class RoadMap extends Activity
 				}
 
 		 try {
-			 Thread.sleep(1000);
+			 /*
+			  * There's very little reason to do this much faster...
+			  * a sub-second wait (e.g. 200) appears to make things worse.
+			  */
+			 Thread.sleep(5000);
 		 } catch (Exception e) {
 		 };
 			}
@@ -334,7 +337,6 @@ public class RoadMap extends Activity
 
 	NmeaListener onNmea = new NmeaListener() {
 		public void onNmeaReceived(long ts, String nmea) {
-			// Log.e("RoadMap", "onNmeaReceived("+ts+","+nmea+")");
 			NMEALogger(InputHandler, nmea);
 		}
 	};
