@@ -155,7 +155,9 @@ static int roadmap_gps_reception_state (void) {
 }
 
 /**
- * @brief
+ * @brief call listeners if we get a new state.
+ * State is derived from a few inputs, one of which is a heuristic about good reception.
+ * Currently this is the only place in RoadMap where a dilution value is used.
  */
 static void roadmap_gps_update_reception (void) {
 
@@ -165,6 +167,10 @@ static void roadmap_gps_update_reception (void) {
             RoadMapGpsLatestData == 0) {
       new_state = GPS_RECEPTION_NA;
 
+   } else if (RoadMapGpsQuality.dimension == 2) {
+      new_state = GPS_RECEPTION_POOR;
+   } else if (RoadMapGpsQuality.dimension >= 3) {
+      new_state = GPS_RECEPTION_GOOD;
    } else if (RoadMapLastKnownStatus != 'A') {
       new_state = GPS_RECEPTION_NONE;
 
@@ -724,7 +730,13 @@ static void roadmap_gps_satellites  (int sequence,
    RoadMapGpsSatelliteCount = sequence;
 }
 
-
+/**
+ * @brief called with GPS dilution data
+ * @param dimension Indicates the quality of the GPS data. Encoding appears to be derived from gps.h (from gpsd) : 0 = MODE_NOT_SEEN, 1 = MODE_NO_FIX, 2 = MODE_2D, 3 = MODE_3D.
+ * @param position Longitude position uncertainty, meters
+ * @param horizontal Latitude position uncertainty, meters
+ * @param vertical Vertical position uncertainty, meters
+ */
 static void roadmap_gps_dilution (int dimension,
                                   double position,
                                   double horizontal,

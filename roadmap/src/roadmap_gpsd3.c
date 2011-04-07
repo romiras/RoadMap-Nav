@@ -159,6 +159,13 @@ int roadmap_gpsd3_decode (void *user_context,
       }
    }
    (*RoadmapGpsd2SatelliteListener) (0, 0, 0, 0, 0, 0);
+
+   /* Provide dilution */
+   if (gpsdp->fix.mode >= MODE_NO_FIX) {
+      /* No conversion required */
+      RoadmapGpsd2DilutionListener(gpsdp->fix.mode, gpsdp->fix.epx, gpsdp->fix.epy, gpsdp->fix.epv);
+   }
+
    return 1;
 #else
    return 0;
