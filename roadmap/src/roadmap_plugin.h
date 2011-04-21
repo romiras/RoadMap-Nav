@@ -206,6 +206,7 @@ typedef void (*plugin_route_clear)(void);
 typedef void (*plugin_route_add)(int, int, int);
 typedef void (*plugin_update_position)(const RoadMapPosition *,
 		const PluginLine *, const PluginStreet *, const int);
+typedef void (*plugin_start_work) (void);
 
 /**
  * @brief definition of a plugin
@@ -236,6 +237,7 @@ typedef struct {
    plugin_route_clear			route_clear;		/**< clear the route */
    plugin_route_add			route_add;		/**< add a hop to the route */
    plugin_update_position		update_position;	/**< GPS position info update */
+   plugin_start_work			start_work;		/**< kick off the plugin after initialize */
 } RoadMapPluginHooks;
 
 #define ROADMAP_PLUGIN_ID 0
@@ -295,6 +297,7 @@ void roadmap_plugin_actions_menu(roadmap_plugin_action_menu_handler);
 char *roadmap_plugin_list_all_plugins(void);
 void roadmap_plugin_after_refresh();
 void roadmap_plugin_format_messages();
+void roadmap_plugin_start_work();
 
 #ifdef HAVE_NAVIGATE_PLUGIN
 void roadmap_plugin_get_line_points (const PluginLine *line,

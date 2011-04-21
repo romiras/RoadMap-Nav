@@ -84,9 +84,9 @@ typedef struct NavigateCost {
  * The code should maintain a doubly linked list of these
  */
 typedef struct NavigateIteration {
-	struct NavigateIteration	*prev, *next;
-	struct NavigateSegment		*segment;
-	struct NavigateCost		cost;
+   struct NavigateIteration *prev, *next;
+   struct NavigateSegment   *segment;
+   struct NavigateCost      cost;
 } NavigateIteration;
 
 /**
@@ -96,10 +96,10 @@ typedef struct NavigateIteration {
  * may be extended by a navigation algorithm
  */
 typedef struct {
-	NavigateIteration	*first, *last;
-	NavigateIteration	*current;
-	int			iteration;
-	int			maxdist;
+   NavigateIteration *first, *last; /**< */
+   NavigateIteration *current;      /**< */
+   int                iteration;    /**< */
+   int                maxdist;      /**< */
 } NavigateStatus;
 
 /*
@@ -129,6 +129,7 @@ void navigate_algorithm_register(NavigateAlgorithm *algo);
 int navigate_is_enabled (void);
 void navigate_shutdown (void);
 void navigate_initialize (void);
+void navigate_start_work (void);
 int  navigate_reload_data (void);
 void navigate_set (int status);
 int  navigate_calc_route (void);
@@ -147,5 +148,6 @@ void navigate_update_position (const RoadMapPosition *,
 		const PluginLine *, const PluginStreet *, const int);
 // plugin_update_position navigate_update_position;
 int navigate_line_in_route (NavigateStatus *stp, int line);
+void navigate_line_skip (NavigateStatus *stp, int line, int ix);
 
 #endif /* INCLUDE__NAVIGATE_H */

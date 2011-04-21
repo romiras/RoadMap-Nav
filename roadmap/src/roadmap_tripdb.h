@@ -71,8 +71,8 @@ typedef struct {
 void roadmap_tripdb_empty_list (void);
 void roadmap_tripdb_add_waypoint_iter (RoadMapPosition pos);
 void roadmap_trip_complete (void);
-void roadmap_trip_add_way(RoadMapPosition from, RoadMapPosition to, enum RoadMapTurningInstruction instr);
-void roadmap_trip_add_point_way(int from_point, int to_point, PluginLine line, enum RoadMapTurningInstruction instr);
+void roadmap_tripdb_add_way(RoadMapPosition from, RoadMapPosition to, enum RoadMapTurningInstruction instr);
+void roadmap_tripdb_add_point_way(int from_point, int to_point, PluginLine line, enum RoadMapTurningInstruction instr);
 void roadmap_tripdb_waypoint_iter (const waypoint *waypointp);
 void roadmap_tripdb_initialize (void);
 void roadmap_tripdb_remove_point (const char *name);

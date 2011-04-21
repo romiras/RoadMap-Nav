@@ -1,6 +1,6 @@
 /*
  * LICENSE:
- *   Copyright (c) 2008, 2009 by Danny Backx.
+ *   Copyright (c) 2008, 2009, 2011 by Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -152,6 +152,9 @@ static int navigate_simple_algo_cost(NavigateIteration *iter)
 
 /**
  * @brief move one step forward from the current position
+ * Assumptions :
+ *   stp->current is allocated, this is where we've gone until now
+ *   stp->last->segment->to_pos is where we're going
  * @param algo the algorithm pointer
  * @param stp pointer to the navigation status to work on
  * @return success (-1 is failure, 0 is backtrack, 1 is success)
@@ -167,13 +170,15 @@ static int navigate_simple_algo_step(NavigateAlgorithm *algo, NavigateStatus *st
 	NavigateIteration	*p;
 	RoadMapPosition		newpos, newpos2, bestnewpos;
 
-	NavigateSegment		*s = stp->current->segment;
 	NavigateSegment		bestseg;
+
+	/* Ignore NULL pointer risks here, see assumptions */
 	RoadMapPosition		to_pos = stp->last->segment->to_pos;
+	NavigateSegment		*s = stp->current->segment;
 
 	/* Figure out where to start */
 	nlines = 0;
-	if (s->from_point) {
+	if (s && s->from_point) {
 		point = s->from_point;
 		nlines = navigate_simple_lines_closeby(s->from_point, lines, maxlines);
 	}
@@ -193,7 +198,7 @@ static int navigate_simple_algo_step(NavigateAlgorithm *algo, NavigateStatus *st
 
 	if (nlines == 0) {
 		/* This is too simplistic, maybe backtrack from here too ? */
-		return -1;
+		return -1;	/* Failure */
 	}
 
 	/* Allocate the next entry */
@@ -328,7 +333,7 @@ static int navigate_simple_algo_step(NavigateAlgorithm *algo, NavigateStatus *st
 	if (best < 0) {
 		if (stp->iteration < 2) {
 			roadmap_log (ROADMAP_WARNING, "On an island ?");
-			return -1;
+			return -1;	/* Failure */
 		}
 
 		roadmap_log (ROADMAP_DEBUG, "Backtrack ..");
@@ -338,7 +343,7 @@ static int navigate_simple_algo_step(NavigateAlgorithm *algo, NavigateStatus *st
 		stp->current = stp->current->prev;
 		if (stp->current == 0)
 			stp->current = stp->first;
-		return 0;
+		return 0;	/* Backtrack */
 	}
 
 	/* Put the data for the "best" selection back */
@@ -361,8 +366,8 @@ static int navigate_simple_algo_step(NavigateAlgorithm *algo, NavigateStatus *st
 			bestnewpt,
 			stp->current->segment->distance,
 			stp->current->segment->time);
-	/* return */
-	return 1;
+
+	return 1;	/* Success */
 }
 
 /**
@@ -389,7 +394,8 @@ static int navigate_simple_algo_end(NavigateStatus *stp)
 
 	roadmap_log (ROADMAP_DEBUG, "Distance is now %d", dist);
 	if (dist < NavigateEndAtThisDistance)
-		return 1;
+		return 1;	/* Stop */
+
 	return 0;	/* Keep going */
 #if 0
 	if (!stop && to_line && to_line->line_id == lines[best].line_id)

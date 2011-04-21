@@ -36,10 +36,10 @@
  * of the list to an archive file, and save the rest to the
  * currenttrack file.
  *
- * To protect against trackpoint loss from a crash that migh
+ * To protect against trackpoint loss from a crash that might
  * occur in between the periodic saves, we write individual
  * trackpoints to a small CSV file.  On startup, if this file
- * exists, we appendit to what we got from teh currenttrack file.
+ * exists, we append it to what we got from the currenttrack file.
  */
 
 

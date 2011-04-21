@@ -647,6 +647,18 @@ void roadmap_plugin_after_refresh (void)
    }
 }
 
+/**
+ * @brief
+ */
+void roadmap_plugin_start_work (void)
+{
+   int i;
+   for (i=1; i<=PluginCount; i++) {
+      RoadMapPluginHooks *hp = get_hooks (i);
+      if (hp && hp->start_work)
+	      hp->start_work ();
+   }
+}
 
 int roadmap_plugin_get_closest
        (const RoadMapPosition *position,
