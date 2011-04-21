@@ -94,6 +94,11 @@ int roadmap_navigate_get_mode(void)
 	return RoadMapNavigateMode;
 }
 
+/**
+ * @brief announce to the user that we're on another street (well, .., line actually)
+ * @param format the string to show (with formatting)
+ * @param line the new line we're on
+ */
 static void roadmap_navigate_trace (const char *format, PluginLine *line)
 {
     char text[1024];
@@ -157,7 +162,7 @@ int roadmap_navigate_get_neighbours (const RoadMapArea *focus,
 }
 
 /**
- * @brief
+ * @brief disable navigation
  */
 void roadmap_navigate_disable (void)
 {
@@ -169,9 +174,9 @@ void roadmap_navigate_disable (void)
 }
 
 /**
- * @brief
+ * @brief enable navigation
  */
-void roadmap_navigate_enable  (void)
+void roadmap_navigate_enable (void)
 {
     RoadMapNavigateEnabled  = 1;
 
@@ -588,6 +593,12 @@ void roadmap_navigate_locate (const RoadMapGpsPosition *gps_position)
         if (! roadmap_plugin_same_line (&RoadMapConfirmedLine.line,
                    &RoadMapNeighbourhood[found].line)) {
 
+		/* We're on another line than before 
+		 *
+		 * Note: as two lines may be part of the same street,
+		 * we're not with certainty on another street.
+		 */
+
             if (PLUGIN_VALID(RoadMapConfirmedLine.line)) {
                 roadmap_navigate_trace ("Quit street %N", &RoadMapConfirmedLine.line);
             }
@@ -604,8 +615,19 @@ void roadmap_navigate_locate (const RoadMapGpsPosition *gps_position)
         RoadMapConfirmedStreet.fuzzyfied = best;
         INVALIDATE_PLUGIN(RoadMapConfirmedStreet.intersection);
 
+	/* ?? */
+#if 0
         roadmap_display_activate ("Current Street", &RoadMapConfirmedLine.line,
             NULL, &RoadMapConfirmedStreet.street);
+#else /* Danny hack FIX ME */
+	{
+	 RoadMapPosition p;
+	 p.longitude = gps_position->longitude;
+	 p.latitude = gps_position->latitude;
+        roadmap_display_activate ("Current Street", &RoadMapConfirmedLine.line,
+            &p, &RoadMapConfirmedStreet.street);
+	    }
+#endif
 
         if (gps_position->speed > roadmap_gps_speed_accuracy()) {
            PluginLine p_line;
@@ -635,6 +657,7 @@ void roadmap_navigate_initialize (void)
 {
     int RoadMapNavigationClasses;
 
+    roadmap_log (ROADMAP_WARNING, "roadmap_navigate_initialize");
     RoadMapNavigationClasses = roadmap_layer_declare_navigation_mode ("Classes");
     roadmap_config_declare_enumeration ("session", &RoadMapNavigateFlag, "yes", "no", NULL);
 }

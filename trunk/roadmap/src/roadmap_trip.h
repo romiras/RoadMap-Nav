@@ -118,6 +118,7 @@ void roadmap_trip_edit_last_place(void);
 void roadmap_trip_move_last_place(void);
 void roadmap_trip_move_routepoint_ahead (void);
 void roadmap_trip_move_routepoint_back (void);
+void roadmap_trip_complete (void);
 
 int roadmap_trip_move_last_place_callback
         (int action, const RoadMapGuiPoint *point);

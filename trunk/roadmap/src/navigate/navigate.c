@@ -119,6 +119,7 @@ static RoadMapPosition NavigateDestPos;
  */
 NavigateStatus		status;
 
+#if 0
 /**
  * @brief recalculate the route (implemented in navigate_route.c)
  * @return status
@@ -178,6 +179,7 @@ static int navigate_recalc_route ()
 #endif
    return 0;
 }
+#endif
 
 /****** Route calculation progress dialog ******/
 /**
@@ -215,6 +217,7 @@ static void show_progress_dialog (void) {
  */
 static void navigate_update (RoadMapPosition *position, PluginLine *current)
 {
+   roadmap_log (ROADMAP_WARNING, "navigate_update(%d %d, %d)", position ? position->longitude : 0, position ? position->latitude : 0, current ? current->line_id : 0);
 #if 0
    int announce = 0;
    const NavigateSegment *segment = NavigateSegments + NavigateCurrentSegment;
@@ -427,6 +430,9 @@ static void navigate_update (RoadMapPosition *position, PluginLine *current)
 #endif
 }
 
+// #define	MAXCOUNTER	10
+#define	MAXCOUNTER	3
+
 /**
  * @brief gets called after every GPS input, choose when to do something
  */
@@ -437,16 +443,15 @@ void navigate_format_messages(void)
 	counter++;
 
 	/* Don't call this so often */
-	if (counter < 10)
+	if (counter < MAXCOUNTER)
 		return;
 
 	counter = 0;
-//	roadmap_log (ROADMAP_WARNING, "navigate_format_messages -> navigate_update(NULL, NULL);");
 	navigate_update(NULL, NULL);
 }
 
 /**
- * @brief gets a GPS position update
+ * @brief gets a GPS position update, trigger route recalculation if necessary
  * @param position
  * @param line
  * @param street
@@ -457,71 +462,84 @@ void navigate_update_position (const RoadMapPosition *position,
 		const PluginLine *line, const PluginStreet *street,
 		const int street_has_changed)
 {
-	static RoadMapPosition	oldpos;
-	static RoadMapPosition	old, cur;
-	int			x, y;
-	static int		firsttime = 1;
-	int			need_recalc = 0, r;
-	static int		skip = 0;	/**< count #times < HYST */
+   static RoadMapPosition   oldpos;
+   static RoadMapPosition   old, cur;
+   int         x, y;
+   static int      firsttime = 1;
+   int         need_recalc = 0, r;
+   static int      skip = 0;   /**< count #times < HYST */
+   int ix;
 
-	if (position == 0)
-		return;
+   if (position == 0) {
+      roadmap_log (ROADMAP_WARNING, "navigate_update_position 0");
+      return;
+   }
 
-	if (firsttime) {
-		roadmap_log (ROADMAP_WARNING, "navigate_update_position(%d %d) initial",
-				position->longitude, position->latitude);
-		need_recalc = 1;
-	}
-	firsttime = 0;
+   if (firsttime) {
+      roadmap_log (ROADMAP_WARNING, "navigate_update_position(%d %d) initial",
+            position->longitude, position->latitude);
+      need_recalc = 1;
+   }
+   firsttime = 0;
 
-	if (position->longitude == oldpos.longitude && position->latitude == oldpos.latitude) {
-		roadmap_log (ROADMAP_WARNING, "navigate_update_position return samepos");
-		return;
-	}
+   if (position->longitude == oldpos.longitude && position->latitude == oldpos.latitude) {
+      roadmap_log (ROADMAP_WARNING, "navigate_update_position return samepos");
+      return;
+   }
 
-	cur = *position;
+   cur = *position;
 
 #if 0
-	if (roadmap_math_distance(&cur, &old) < HYST) {
-		firsttime = 0;
-		skip++;
-		return;
-	}
+   if (roadmap_math_distance(&cur, &old) < HYST) {
+      firsttime = 0;
+      skip++;
+      return;
+   }
 
-	roadmap_log (ROADMAP_WARNING,
-		"navigate_update_position(%d %d), line %d, street %d, changed %d, skip %d",
-		position->longitude, position->latitude,
-		line ? line->line_id : 0,
-		street ? street->street_id : 0,
-		street_has_changed, skip);
-	skip = 0;
+   roadmap_log (ROADMAP_WARNING,
+      "navigate_update_position(%d %d), line %d, street %d, changed %d, skip %d",
+      position->longitude, position->latitude,
+      line ? line->line_id : 0,
+      street ? street->street_id : 0,
+      street_has_changed, skip);
+   skip = 0;
 
 #else
-	firsttime = 0;
+   firsttime = 0;
 
-	roadmap_log (ROADMAP_WARNING,
-		"navigate_update_position(%d %d), line %d, street %d, changed %d",
-		position->longitude, position->latitude,
-		line ? line->line_id : 0,
-		street ? street->street_id : 0,
-		street_has_changed);
+   roadmap_log (ROADMAP_WARNING,
+      "navigate_update_position(%d %d), line %d, street %d, changed %d",
+      position->longitude, position->latitude,
+      line ? line->line_id : 0,
+      street ? street->street_id : 0,
+      street_has_changed);
 #endif
 
-	/* If we find that we need to re-evaluate the route, set this to 1 */
-	if (street_has_changed)
-		need_recalc = 1;
-	/* If the current line is outside the current route ... */
-	if (line && ! navigate_line_in_route (&status, line->line_id))
-		need_recalc = 1;
+   /* If the current line is outside the current route ... */
+   ix = 0;
+   if (line && ! (ix = navigate_line_in_route (&status, line->line_id)))
+      need_recalc = 1;
 
-	/* Recalculate the route under conditions determined above */
-	roadmap_log (ROADMAP_WARNING, "navigate_update_position recalc %d", need_recalc);
-	if (need_recalc) {
-		r = navigate_recalc_route();
-	}
+   /* Now ix is the index of the line in this route */
+   if (ix) {
+      navigate_line_skip (&status, line->line_id, ix);
+   } else {
+      /* If we find that we need to re-evaluate the route, set this to 1 */
+      if (street_has_changed)
+         need_recalc = 1;
 
-	oldpos = *position;
-	old = cur;
+      /* FIX ME */
+      status.first->segment->from_pos = *position;
+
+      /* Recalculate the route under conditions determined above */
+      roadmap_log (ROADMAP_WARNING, "navigate_update_position recalc %d", need_recalc);
+      if (need_recalc) {
+         r = navigate_route_recalc(&status);
+      }
+   }
+
+   oldpos = *position;
+   old = cur;
 }
 
 #if 0
@@ -650,14 +668,6 @@ static void navigate_get_next_line (PluginLine *current, int direction, PluginLi
 
 /**
  * @brief
- * @return
- */
-int navigate_is_enabled (void) {
-   return NavigateEnabled;
-}
-
-/**
- * @brief
  */
 static void navigate_init_pens (void)
 {
@@ -691,7 +701,18 @@ static void navigate_init_pens (void)
  */
 void navigate_shutdown (void)
 {
-	roadmap_config_set_integer (&NavigateConfigNavigating, 0);
+   roadmap_config_set_integer (&NavigateConfigNavigating, 0);
+}
+
+/**
+ * @brief initialize the status structure
+ */
+void navigate_status_initialize (void)
+{
+   status.first = status.last = (NavigateIteration *)0;
+   status.current = (NavigateIteration *)0;
+   status.iteration = 0;
+   status.maxdist = 0;
 }
 
 /**
@@ -699,14 +720,19 @@ void navigate_shutdown (void)
  */
 void navigate_initialize (void)
 {
-	roadmap_log (ROADMAP_DEBUG, "navigate_initialize");
-	roadmap_config_declare ("preferences", &NavigateConfigRouteColor,  "#00ff00a0");
-	roadmap_config_declare ("preferences", &NavigateConfigPossibleRouteColor,  "#ff0000a0");
+	roadmap_log (ROADMAP_WARNING, "navigate_initialize");
+	roadmap_config_declare
+		("preferences", &NavigateConfigRouteColor,  "#00ff00a0");
+	roadmap_config_declare
+		("preferences", &NavigateConfigPossibleRouteColor,  "#ff0000a0");
 	roadmap_config_declare_enumeration
 		("preferences", &NavigateConfigAutoZoom, "no", "yes", NULL);
-	roadmap_config_declare ("session",  &NavigateConfigLastPos, "0, 0");
-	roadmap_config_declare ("session",  &NavigateConfigNavigating, "0");
+	roadmap_config_declare
+		("session",  &NavigateConfigLastPos, "0, 0");
+	roadmap_config_declare
+		("session",  &NavigateConfigNavigating, "0");
 
+	navigate_status_initialize ();
 	navigate_init_pens ();
 	navigate_cost_initialize ();
 	navigate_bar_initialize ();
@@ -718,37 +744,23 @@ void navigate_initialize (void)
 	navigate_shst_initialize ();
 #endif
 
-	navigate_set (1);
+	roadmap_navigate_enable ();	/* FIX ME probably not right */
 
 //	roadmap_address_register_nav (navigate_address_cb);
 	roadmap_skin_register (navigate_init_pens);
-
-#if 0
-	/* FIX ME need to figure out why this causes roadmap to stop */
-	if (roadmap_config_get_integer (&NavigateConfigNavigating)) {
-		RoadMapPosition pos;
-		roadmap_config_get_position (&NavigateConfigLastPos, &pos);
-		roadmap_trip_set_focus ("GPS");
-		roadmap_trip_set_point ("Destination", &pos);
-
-		navigate_calc_route ();
-	}
-#endif
 }
 
-/**
- * @brief enable or disable navigation
- * @param status whether to set NavigateEnabled
- */
-void navigate_set (int status)
+void navigate_start_work (void)
 {
-	if (status && NavigateEnabled) {
-		return;
-	} else if (!status && !NavigateEnabled) {
-		return;
-	}
+   roadmap_log (ROADMAP_WARNING, "navigate_start_work");
+   if (roadmap_config_get_integer (&NavigateConfigNavigating)) {
+      RoadMapPosition pos;
+      roadmap_config_get_position (&NavigateConfigLastPos, &pos);
+      roadmap_trip_set_focus ("GPS");
+      roadmap_trip_set_point ("Destination", &pos);
 
-	NavigateEnabled = status;
+      navigate_calc_route ();
+   }
 }
 
 /**
@@ -808,9 +820,6 @@ int navigate_calc_route ()
 		int i;
 		int length = 0;
 
-		length = status.current->cost.distance;
-		track_time = status.current->cost.time;
-
 		roadmap_dialog_hide ("Route calc");
 		NavigateFlags = flags;
 
@@ -818,6 +827,9 @@ int navigate_calc_route ()
 			snprintf(msg, sizeof(msg), "%s\n",
 			roadmap_lang_get ("The calculated route may have incorrect turn instructions."));
 		}
+
+		length = status.current->cost.distance;
+		track_time = status.current->cost.time;
 
 		snprintf(msg + strlen(msg), sizeof(msg) - strlen(msg),
 				"%s: %.1f %s,\n%s: %.1f %s",
@@ -855,7 +867,7 @@ int navigate_calc_route ()
 				TRIP_PLACE_ROUTE_MARK_START);
 
 		for (i=0, p=status.first; p; p = p->next, i++) {
-			roadmap_trip_add_point_way(
+			roadmap_tripdb_add_point_way(
 				p->segment->from_point,
 				p->segment->to_point,
 				p->segment->line,
@@ -982,16 +994,34 @@ void navigate_update_progress (int progress)
  * @brief figure out whether the line passed is on the route
  * @param stp current navigation status (= list of lines)
  * @param line a line identifier
- * @return 1 if the line is on this route, 0 if not
+ * @return the position of the line on this route, 0 if not on the route
  */
 int navigate_line_in_route (NavigateStatus *stp, int line)
 {
-	NavigateIteration	*p;
+   NavigateIteration	*p;
+   int			i;
 
-	for (p=stp->first; p; p = p->next) {
-		if (line == p->segment->line.line_id)
-			return 1;
-	}
+   for (i=1, p=stp->first; p; p = p->next) {
+      if (line == p->segment->line.line_id)
+         return i;
+      i++;
+   }
 
-	return 0;
+   return 0;
+}
+
+/**
+ * @brief skip ix segments, we know we're that far on the route
+ * @param stp pointer to status (to be changed)
+ * @param line line we're currently on
+ * @param ix index of the line in this route
+ */
+void navigate_line_skip (NavigateStatus *stp, int line, int ix)
+{
+   NavigateIteration	*p;
+
+   roadmap_log (ROADMAP_WARNING, "navigate_line_skip(%d,%d)", line, ix);
+   for (p = stp->first; p; p = p->next)
+      if (line == p->segment->line.line_id)
+         stp->current = p;
 }

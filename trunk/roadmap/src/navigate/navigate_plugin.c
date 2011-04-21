@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2005 Ehud Shabtai
- *   Copyright (c) 2008, Danny Backx.
+ *   Copyright (c) 2008, 2009, 2011, Danny Backx.
  *
  *   This file is part of RoadMap.
  *
@@ -125,7 +125,7 @@ static RoadMapAction NavigateActions[] = {
      "Set the selected street block as the trip's destination", NULL,
      roadmap_start_set_destination},
 
-   {"navigate", "Navigate", NULL, NULL,
+   {"navigate", "Navigate to dest", NULL, NULL,
      "Calculate route", NULL, navigate_start_navigate},
 
    {"setasdeparture", "Set as Departure", NULL, NULL,
@@ -155,6 +155,9 @@ static RoadMapAction NavigateActions[] = {
    {"navigate-disable", "Disable navigation", NULL, NULL,
 	   "Disable navigation", NULL, roadmap_navigate_disable},
 
+//   {"navigate-to", "Navigate to destination", NULL, NULL,
+// 	   "Navigate to destination", NULL, navigate_to_destination},
+
    {"navigate-shutdown", "Stop navigation", NULL, NULL,
 	   "Stop navigation", NULL, navigate_shutdown},
 
@@ -173,6 +176,7 @@ static const char *NavigateMenu[] = {
 		"navigate-be-debug",
 		"navigate-sf-debug",
 		"navigate",
+//		"navigate-to",
 		RoadMapFactorySeparator,
 		"traffic",
 		"navigate-enable",
@@ -217,7 +221,8 @@ static RoadMapPluginHooks navigate_plugin_hooks = {
   /* format messages */		&navigate_format_messages,
   /* route_clear */		navigate_visual_route_clear,
   /* route_add */		navigate_visual_route_add,
-  /* update_position */		navigate_update_position
+  /* update_position */		navigate_update_position,
+  /* start_work */		navigate_start_work
 };
 
 /**

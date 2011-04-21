@@ -1,7 +1,7 @@
 /*
  * LICENSE:
  *
- *   Copyright (c) 2008, 2009 Danny Backx
+ *   Copyright (c) 2008, 2009, 2011 Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -86,7 +86,7 @@ void roadmap_tripdb_empty_list (void)
  * @brief
  * @param pos
  */
-void roadmap_trip_add_waypoint_iter (RoadMapPosition pos)
+void roadmap_tripdb_add_waypoint_iter (RoadMapPosition pos)
 {
 	waypoint *wpt = waypt_new();
 	wpt->pos = pos;
@@ -118,13 +118,13 @@ void roadmap_tripdb_complete (void)
  */
 #define	TRIP_MAX_NEIGHBOURS	200
 #define	MAX_CAT			10
-void roadmap_trip_add_way(RoadMapPosition from, RoadMapPosition to, enum RoadMapTurningInstruction instr)
+void roadmap_tripdb_add_way(RoadMapPosition from, RoadMapPosition to, enum RoadMapTurningInstruction instr)
 {
 	int	num, ncategories, maxneighbours, i;
 	int	categories[MAX_CAT];
 	RoadMapNeighbour	neighbours[TRIP_MAX_NEIGHBOURS];
 
-	roadmap_log (ROADMAP_DEBUG, "trip_add_way %d", RoadMapTripNumSegments);
+	roadmap_log (ROADMAP_DEBUG, "tripdb_add_way %d", RoadMapTripNumSegments);
 
 	RoadMapTripSegments[RoadMapTripNumSegments].instruction = instr;
 	RoadMapTripSegments[RoadMapTripNumSegments].from_pos = from;
@@ -137,7 +137,7 @@ void roadmap_trip_add_way(RoadMapPosition from, RoadMapPosition to, enum RoadMap
 
 	num = roadmap_street_get_closest(&from, categories, ncategories, neighbours, maxneighbours);
 	if (num == TRIP_MAX_NEIGHBOURS) {
-		roadmap_log (ROADMAP_WARNING, "trip_add_way: sizing %d insufficient",
+		roadmap_log (ROADMAP_WARNING, "tripdb_add_way: sizing %d insufficient",
 				TRIP_MAX_NEIGHBOURS);
 	}
 
@@ -163,10 +163,9 @@ void roadmap_trip_add_way(RoadMapPosition from, RoadMapPosition to, enum RoadMap
  */
 #define	TRIP_MAX_NEIGHBOURS	200
 #define	MAX_CAT			10
-void roadmap_trip_add_point_way(int from_point, int to_point, PluginLine line, enum RoadMapTurningInstruction instr)
+void roadmap_tripdb_add_point_way(int from_point, int to_point, PluginLine line, enum RoadMapTurningInstruction instr)
 {
-	roadmap_log (ROADMAP_DEBUG, "trip_add_way2 %d, line %d",
-			RoadMapTripNumSegments, line.line_id);
+	roadmap_log (ROADMAP_WARNING, "roadmap_tripdb_add_point_way %d, line %d", RoadMapTripNumSegments, line.line_id);
 
 	RoadMapTripSegments[RoadMapTripNumSegments].instruction = instr;
 	roadmap_point_position(from_point, &RoadMapTripSegments[RoadMapTripNumSegments].from_pos);
@@ -188,7 +187,7 @@ void roadmap_tripdb_waypoint_iter (const waypoint *waypointp)
 	    return;
     }
 
-    roadmap_trip_add_way(RoadMapTripLastPos,
+    roadmap_tripdb_add_way(RoadMapTripLastPos,
 		    waypointp->pos,
 		    (waypointp == RoadMapTripDest) ? TRIP_APPROACHING_DESTINATION : TRIP_CONTINUE);
 
@@ -211,7 +210,7 @@ void roadmap_tripdb_initialize (void)
  */
 void roadmap_tripdb_remove_point (const char *name)
 {
-#warning reimplement roadmap_trip_remove_point
+#warning reimplement roadmap_tripdb_remove_point
 #if 0   
 	RoadMapTripPoint *result;
 	if (name == NULL) {

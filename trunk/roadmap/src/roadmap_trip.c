@@ -630,6 +630,9 @@ void roadmap_trip_preserve_focus (void) {
         roadmap_screen_hold();
 }
 
+/**
+ * @brief
+ */
 void roadmap_trip_restore_focus (void) {
 
     RoadMapTripFocal *focal, *fallback = NULL;
@@ -650,6 +653,7 @@ void roadmap_trip_restore_focus (void) {
 
         }
 
+        roadmap_log (ROADMAP_WARNING, "roadmap_trip_restore_focus(%s) {%d,%d}", focal->id, focal->map.latitude, focal->map.longitude);
         if (focal->mobile) {
 
             /* This is a mobile point: what was recorded was the GPS
