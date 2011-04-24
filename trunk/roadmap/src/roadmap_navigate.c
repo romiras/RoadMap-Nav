@@ -2,7 +2,7 @@
  * LICENSE:
  *
  *   Copyright 2003 Pascal F. Martin
- *   Copyright (c) 2008, 2009, Danny Backx
+ *   Copyright (c) 2008, 2009, 2011, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -517,6 +517,7 @@ void roadmap_navigate_locate (const RoadMapGpsPosition *gps_position)
 
     static RoadMapTracking candidate;
     static RoadMapTracking nominated;
+    RoadMapPosition rmp;
 
     RoadMapArea focus;
     int navigation_mode = roadmap_navigate_get_mode();
@@ -615,19 +616,11 @@ void roadmap_navigate_locate (const RoadMapGpsPosition *gps_position)
         RoadMapConfirmedStreet.fuzzyfied = best;
         INVALIDATE_PLUGIN(RoadMapConfirmedStreet.intersection);
 
-	/* ?? */
-#if 0
+        rmp.longitude = gps_position->longitude;
+        rmp.latitude = gps_position->latitude;
+
         roadmap_display_activate ("Current Street", &RoadMapConfirmedLine.line,
-            NULL, &RoadMapConfirmedStreet.street);
-#else /* Danny hack FIX ME */
-	{
-	 RoadMapPosition p;
-	 p.longitude = gps_position->longitude;
-	 p.latitude = gps_position->latitude;
-        roadmap_display_activate ("Current Street", &RoadMapConfirmedLine.line,
-            &p, &RoadMapConfirmedStreet.street);
-	    }
-#endif
+            &rmp, &RoadMapConfirmedStreet.street);
 
         if (gps_position->speed > roadmap_gps_speed_accuracy()) {
            PluginLine p_line;
