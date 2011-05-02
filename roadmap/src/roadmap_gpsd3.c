@@ -132,6 +132,9 @@ int roadmap_gpsd3_decode (void *user_context,
       if (isnan(gpsdp->fix.time) == 0) {
          gps_time = gpsdp->fix.time;
       }
+      if (isnan(gpsdp->fix.track) == 0) {
+         steering = gpsdp->fix.track;
+      }
    }
 
    RoadmapGpsd2NavigationListener
