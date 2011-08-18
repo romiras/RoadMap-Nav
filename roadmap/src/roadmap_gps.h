@@ -149,5 +149,22 @@ extern int    RoadMapGpsReception;
 extern roadmap_gps_periodic_control RoadMapGpsPeriodicAdd;
 extern roadmap_gps_periodic_control RoadMapGpsPeriodicRemove;
 
+extern void roadmap_gps_navigation (char status,
+                                    int gmt_time,
+                                    int latitude,
+                                    int longitude,
+                                    int altitude,   // "preferred" units
+                                    int speed,      // knots
+                                    int steering);
+void roadmap_gps_satellites  (int sequence,
+                                     int id,
+                                     int elevation,
+                                     int azimuth,
+                                     int strength,
+                                     int active);
+void roadmap_gps_dilution (int dimension,
+                                  double position,
+                                  double horizontal,
+                                  double vertical);
 #endif // INCLUDED__ROADMAP_GPS__H
 
