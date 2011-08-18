@@ -515,8 +515,8 @@ buildmap_osm_binary_error(unsigned char *data)
     /*
      * Interpret the HTTP error code, if present
      */
-    if (slen > 14 && strncasecmp(data+5, "http", 4) == 0) {
-       error = atoi(data + 14);
+    if (slen > 14 && strncasecmp((char *)data+5, "http", 4) == 0) {
+       error = atoi((char *)data + 14);
        return -error;
     }
     return -1;
