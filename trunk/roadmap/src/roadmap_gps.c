@@ -629,7 +629,7 @@ void roadmap_gps_nmea (void) {
  * @param speed
  * @param steering
  */
-static void roadmap_gps_navigation (char status,
+void roadmap_gps_navigation (char status,
                                     int gmt_time,
                                     int latitude,
                                     int longitude,
@@ -686,7 +686,7 @@ static void roadmap_gps_navigation (char status,
  * @param strength
  * @param active
  */
-static void roadmap_gps_satellites  (int sequence,
+void roadmap_gps_satellites  (int sequence,
                                      int id,
                                      int elevation,
                                      int azimuth,
@@ -737,7 +737,7 @@ static void roadmap_gps_satellites  (int sequence,
  * @param horizontal Latitude position uncertainty, meters
  * @param vertical Vertical position uncertainty, meters
  */
-static void roadmap_gps_dilution (int dimension,
+void roadmap_gps_dilution (int dimension,
                                   double position,
                                   double horizontal,
                                   double vertical) {

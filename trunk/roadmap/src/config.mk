@@ -122,8 +122,8 @@ EXPAT = YES
 # If the library isn't used, roadmap's "gpsd3" protocol mode will
 # attempt to use the NMEA mode offered by the new gpsd versions.
 #
-# CFLAGS += -DROADMAP_USES_LIBGPS
-# LIBS += -lgps
+CFLAGS += -DROADMAP_USES_LIBGPS
+LIBS += -lgps
 
 # RoadMap users in the USA will probably use the Tiger maps from
 # the US Census bureau.  These maps do not requre "shapefile"
