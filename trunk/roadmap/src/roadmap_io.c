@@ -36,6 +36,7 @@
  */
 
 #include "roadmap_io.h"
+#include "string.h"
 #include "roadmap.h"
 
 
@@ -97,7 +98,7 @@ int roadmap_io_write (RoadMapIO *io, const void *data, int length) {
          return length; /* It's all done, since there is nothing to do. */
 
       case ROADMAP_IO_MEMORY:
-	 io->os.data = data;
+	 io->os.data = (void *)data;
          return length;
    }
    return -1;
