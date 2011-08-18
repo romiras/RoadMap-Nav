@@ -1251,13 +1251,13 @@ static void roadmap_start_gps_listen
 
    static int RoadMapSynchronous = -1;
 
-   /*
+#ifdef NEEDED
    roadmap_log (ROADMAP_WARNING,
       "roadmap_start_gps_listen(recep %d) frozen %d pos %d %d (%s)",
       reception, RoadMapStartFrozen,
       gps_position->longitude, gps_position->latitude,
       roadmap_start_now());
-   /* */
+#endif
 
    if (RoadMapStartFrozen) {
 
