@@ -1613,6 +1613,7 @@ void roadmap_start (int argc, char **argv) {
 
    roadmap_option_initialize   ();
    roadmap_math_initialize     ();
+   roadmap_gps_initialize      ();
    roadmap_trip_initialize     ();
 #ifdef HAVE_NAVIGATE_PLUGIN
    roadmap_tripdb_initialize   ();
@@ -1626,7 +1627,6 @@ void roadmap_start (int argc, char **argv) {
    roadmap_label_initialize    ();
    roadmap_display_initialize  ();
    roadmap_voice_initialize    ();
-   roadmap_gps_initialize      ();
    roadmap_track_initialize    ();
    roadgps_screen_initialize ();
    roadmap_canvas_register_configure_handler (roadmap_start_screen_configure);
