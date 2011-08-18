@@ -119,6 +119,8 @@ EXPAT = YES
 #
 # Implement the new gpsd protocol, referred to as gpsd3 .
 # This requires the libgps library, part of the gpsd distribution.
+# If the library isn't used, roadmap's "gpsd3" protocol mode will
+# attempt to use the NMEA mode offered by the new gpsd versions.
 #
 # CFLAGS += -DROADMAP_USES_LIBGPS
 # LIBS += -lgps

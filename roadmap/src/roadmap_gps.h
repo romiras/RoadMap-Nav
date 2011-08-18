@@ -126,7 +126,7 @@ typedef void (*roadmap_gps_logger)   (const char *sentence);
 
 void roadmap_gps_register_logger (roadmap_gps_logger logger);
 
-
+void roadmap_gps_nmea (void);
 void roadmap_gps_open   (void);
 void roadmap_gps_input  (RoadMapIO *io);
 int  roadmap_gps_active (void);
