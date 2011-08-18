@@ -76,7 +76,7 @@ static RoadMapPathList RoadMapPaths = NULL;
 static const char *RoadMapUser = NULL;
 static const char *RoadMapTrips = NULL;
 static char *RoadMapPathHome = NULL;
-static const char *RoadMapPathEmptyList = NULL;
+static char *RoadMapPathEmptyList = NULL;
 
 /**
  * @brief This list exist because the user context is a special case
