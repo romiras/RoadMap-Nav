@@ -362,7 +362,7 @@ static void roadmap_gps_keep_alive (void) {
 
 /* NMEA protocol support ----------------------------------------------- */
 
-static RoadMapNmeaAccount RoadMapGpsNmeaAccount;
+RoadMapNmeaAccount RoadMapGpsNmeaAccount;
 static RoadMapNmeaAccount RoadMapGpsExtendedAccount;
 
 /**
@@ -593,7 +593,7 @@ static RoadMapNmeaAccount roadmap_gps_subscribe (const char *title) {
 /**
  * @brief
  */
-static void roadmap_gps_nmea (void) {
+void roadmap_gps_nmea (void) {
 
    if (RoadMapGpsNmeaAccount == NULL) {
       RoadMapGpsNmeaAccount = roadmap_gps_subscribe (RoadMapGpsTitle);
@@ -1120,9 +1120,7 @@ void roadmap_gps_open (void) {
 
       case ROADMAP_GPS_GPSD3:
 
-         roadmap_gpsd3_subscribe_to_navigation (roadmap_gps_navigation);
-         roadmap_gpsd3_subscribe_to_satellites (roadmap_gps_satellites);
-         roadmap_gpsd3_subscribe_to_dilution   (roadmap_gps_dilution);
+         roadmap_gpsd3_subscriptions();
          break;
 
       case ROADMAP_GPS_VII:
@@ -1218,7 +1216,7 @@ void roadmap_gps_input (RoadMapIO *io) {
       case ROADMAP_GPS_GPSD3:
 
          decode.decoder = roadmap_gpsd3_decode;
-         decode.decoder_context = NULL;
+         decode.decoder_context = roadmap_gpsd3_decoder_context();
          break;
 
       case ROADMAP_GPS_VII:

@@ -37,11 +37,8 @@
 #include "roadmap_net.h"
 #include "roadmap_input.h"
 
-void roadmap_gpsd3_subscribe_to_navigation (RoadMapGpsdNavigation navigation);
-
-void roadmap_gpsd3_subscribe_to_satellites (RoadMapGpsdSatellite satellite);
-
-void roadmap_gpsd3_subscribe_to_dilution   (RoadMapGpsdDilution dilution);
+void roadmap_gpsd3_subscriptions(void);
+void *roadmap_gpsd3_decoder_context(void);
 
 
 RoadMapSocket roadmap_gpsd3_connect (const char *name);

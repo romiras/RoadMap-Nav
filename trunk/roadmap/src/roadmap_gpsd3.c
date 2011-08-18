@@ -34,6 +34,8 @@
 
 #include "roadmap.h"
 #include "roadmap_gpsd3.h"
+#include "roadmap_gps.h"
+#include "roadmap_nmea.h"
 
 #if defined(ROADMAP_USES_LIBGPS)
 /* This include won't work on WinCE but libgps won't run on WinCE either. */
@@ -49,10 +51,12 @@ static RoadMapGpsdSatellite  RoadmapGpsd2SatelliteListener = NULL;
 static RoadMapGpsdDilution   RoadmapGpsd2DilutionListener = NULL;
 
 RoadMapSocket gpsd3_socket;
+#ifdef ROADMAP_USES_LIBGPS
 #if GPSD_API_MAJOR_VERSION == 5
 struct gps_data_t	gpsd_e, *gpsdp = &gpsd_e;
 #else
 struct gps_data_t	*gpsdp = NULL;
+#endif
 #endif
 
 RoadMapSocket roadmap_gpsd3_connect (const char *name) {
@@ -69,7 +73,25 @@ RoadMapSocket roadmap_gpsd3_connect (const char *name) {
 #endif
    return (RoadMapSocket)gpsdp->gps_fd;
 #else /* ! (defined(ROADMAP_USES_LIBGPS) && defined(GPSD_API_MAJOR_VERSION)) */
-   return ROADMAP_INVALID_SOCKET;
+   gpsd3_socket = roadmap_net_connect ("tcp", name, 2947);
+
+   if (ROADMAP_NET_IS_VALID(gpsd3_socket)) {
+
+      /* Start watching what happens. */
+
+      static const char request[] = "?WATCH={\"enable\":true,\"nmea\":true}\n";
+
+      if (roadmap_net_send
+	    (gpsd3_socket, request, sizeof(request)-1) != sizeof(request)-1) {
+
+	 roadmap_log (ROADMAP_WARNING, "Lost gpsd server session");
+	 roadmap_net_close (gpsd3_socket);
+
+	 return ROADMAP_INVALID_SOCKET;
+      }
+   }
+
+   return gpsd3_socket;
 #endif /* defined(ROADMAP_USES_LIBGPS) && defined(GPSD_API_MAJOR_VERSION) */
 }
 
@@ -90,6 +112,27 @@ void roadmap_gpsd3_subscribe_to_dilution (RoadMapGpsdDilution dilution) {
    RoadmapGpsd2DilutionListener = dilution;
 }
 
+void roadmap_gpsd3_subscriptions(void)
+{
+#ifdef ROADMAP_USES_LIBGPS
+	 roadmap_gpsd3_subscribe_to_navigation (roadmap_gps_navigation);
+	 roadmap_gpsd3_subscribe_to_satellites (roadmap_gps_satellites);
+	 roadmap_gpsd3_subscribe_to_dilution   (roadmap_gps_dilution);
+#else
+	 roadmap_gps_nmea();
+#endif
+}
+
+void *roadmap_gpsd3_decoder_context(void)
+{
+#ifdef ROADMAP_USES_LIBGPS
+	 return NULL;
+#else
+	 extern RoadMapNmeaAccount RoadMapGpsNmeaAccount;
+	 return (void *)RoadMapGpsNmeaAccount;
+#endif
+}
+  
 
 int roadmap_gpsd3_decode (void *user_context,
                           void *decoder_context, char *sentence) {
@@ -171,6 +214,6 @@ int roadmap_gpsd3_decode (void *user_context,
 
    return 1;
 #else
-   return 0;
+   return roadmap_nmea_decode (user_context, decoder_context, sentence);
 #endif
 }
