@@ -78,6 +78,18 @@ class Pen {
 		return 0;
 	}
 
+	public int SetForegroundInt(int colorvalue)
+	{
+		try {
+			Log.e("RoadMap", "SetForegroundInt(" + colorvalue + ")");
+			pens[current].setColor(colorvalue);
+		} catch (Exception e) {
+			Log.e("RoadMap", "SetForegroundInt(" + colorvalue + ") failed : " + e);
+			return -2;
+		};
+		return 0;
+	}
+
 	public void SetLineStyle(int dashed)
 	{
 		try {
