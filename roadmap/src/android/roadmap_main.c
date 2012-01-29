@@ -150,7 +150,7 @@ RoadMapMenu roadmap_main_new_menu (const char *title)
 	jmethodID	mid = TheMethod(cls, "CreateMenu", "(Ljava/lang/String;)I");
 	jstring		js;
 
-	// roadmap_log (ROADMAP_WARNING, "roadmap_main_new_menu(%s)", title);
+	// DANNY roadmap_log (ROADMAP_WARNING, "roadmap_main_new_menu(%s)", title);
 
 	js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, title);
 	int i = (*RoadMapJniEnv)->CallIntMethod(RoadMapJniEnv, RoadMapThiz, mid, js);
@@ -212,6 +212,8 @@ void roadmap_main_add_menu_item (RoadMapMenu menu,
 	jclass		cls = TheRoadMapClass();
 	jmethodID	mid = TheMethod(cls, "AddMenuItem", "(ILjava/lang/String;)I");
 	jstring		js;
+
+	// DANNY roadmap_log (ROADMAP_WARNING, "roadmap_main_add_menu_item(%s)", label);
 
 	js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, label);
 	int i = (*RoadMapJniEnv)->CallIntMethod(RoadMapJniEnv, RoadMapThiz, mid, m, js);
@@ -288,6 +290,7 @@ void roadmap_main_add_toolbar (const char *orientation)
 	jmethodID       mid = TheMethod(cls, "AddToolbar", "(Ljava/lang/String;)V");
 	jstring         js;
 
+	if (orientation) roadmap_log (ROADMAP_WARNING, "roadmap_main_add_toolbar(%s)", orientation);
 	js = orientation ? (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, orientation) : NULL;
 	(*RoadMapJniEnv)->CallVoidMethod(RoadMapJniEnv, RoadMapThiz, mid, js);
 }
@@ -319,9 +322,12 @@ void roadmap_main_add_tool (const char *label,
 	 * The Java code doesn't handle this because we do it here.
 	 */
 	const char *fnicon = roadmap_path_search_icon(icon);
+	if (fnicon) roadmap_log (ROADMAP_WARNING, "roadmap_main_add_tool(%s)", fnicon);
 	jsicon = fnicon ? (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, fnicon) : NULL;
 
+	if (label) roadmap_log (ROADMAP_WARNING, "roadmap_main_add_tool(%s)", label);
 	jslabel = label ? (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, label) : NULL;
+	if (tip) roadmap_log (ROADMAP_WARNING, "roadmap_main_add_tool(%s)", tip);
 	jstip = tip ? (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, tip) : NULL;
 
 	if (nToolCallbacks == MAXTOOLCALLBACKS) {
@@ -493,7 +499,7 @@ void roadmap_main_remove_input (RoadMapIO *io)
  * @param nmea string (Java format) passed by Android
  */
 void
-Java_net_sourceforge_projects_roadmap_RoadMap_NMEALogger(JNIEnv* env, jobject thiz, int id, jstring nmea)
+Java_net_sourceforge_projects_roadmap_EclairHelper_NMEALogger(JNIEnv* env, jobject thiz, int id, jstring nmea)
 {
    struct roadmap_main_io *context = &RoadMapMainIo[id];
    const char	*s = (*env)->GetStringUTFChars(env, nmea, NULL);
