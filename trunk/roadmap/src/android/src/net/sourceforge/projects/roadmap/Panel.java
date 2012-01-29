@@ -67,7 +67,9 @@ class Panel
 		if (cacheBitmap != null)
 			return;
 
-		Log.e("RoadMap Panel", "Size wid " + getWidth() + ", ht " + getHeight());
+		Log.e("RoadMap Panel", "Size wid " + getWidth() + ", ht " + getHeight()
+			+ ", margins left " + getLeft() + " right " + getRight()
+			+ " top " + getTop() + " bottom " + getBottom());
 		cacheBitmap = Bitmap.createBitmap(getWidth(), getHeight(), Bitmap.Config.ARGB_8888);
 		cacheCanvas = new Canvas(cacheBitmap);
 
@@ -177,6 +179,11 @@ class Panel
 	public void SetThickness(int thickness)
 	{
 		pen.SetThickness(thickness);
+	}
+
+	public int SetForegroundInt(int colorvalue)
+	{
+		return pen.SetForegroundInt(colorvalue);
 	}
 
 	public int SetForeground(String color)

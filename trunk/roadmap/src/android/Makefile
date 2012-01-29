@@ -32,20 +32,32 @@ TARGETS = roadmap.apk
 # TARGETS += demomaps.apk
 
 #
-# I used this with Android 2.3
+# Definitions to get a Makefile to work with Android SDK/NDK.
+# Some of these require configuration or version dependent changes,
+# the ones at the top are more likely to require that than the lower ones.
 #
 
-NDKHOME=	/home/danny/src/android/android-ndk-r5
+#
+# This is the place where you chose to install the Android SDK and NDK.
+#
+SDKHOME=	/home/danny/src/android/android-sdk-linux_86
+NDKHOME=	/home/danny/src/android/android-ndk-r6
+#
+# The number here is the Android SDK API level, e.g. 13 for Android 3.2 .
+#
+SDK_ANDV=	android-13
 NDK_LEVEL=	9
+#
+# In theory, the stuff below should not change (much) between Android releases.
+#
+NDK_NAME=	arm-linux-androideabi-4.4.0
+NDK_TARGET=	arm-linux-androideabi
 NDK_ARCH=	arm
-NDK_NAME=	arm-eabi-4.4.0
 NDK_PREFIX=	linux-x86
 NDK_SYSROOT=	${NDKHOME}/platforms/android-${NDK_LEVEL}/arch-${NDK_ARCH}
 NDK_CC=		${NDKHOME}/toolchains/${NDK_NAME}/prebuilt/${NDK_SYSTEM}/bin/${NDK_PREFIX}gcc --sysroot=${NDK_SYSROOT}
 NDK_LDFLAGS=	'-Wl,--fix-cortex-a8'
 
-SDKHOME=	/home/danny/src/android/android-sdk-linux_86
-SDK_ANDV=	android-9
 SDKPLAT=	${SDKHOME}/platforms/${SDK_ANDV}
 NDK_CFLAGS=	-I$(NDKHOME)/platforms/android-${NDK_LEVEL}/arch-${NDK_ARCH}/usr/include \
 		-DANDROID -fno-short-enums -g
@@ -53,7 +65,7 @@ NDK_LDFLAGS=	-nostdlib -Wl,-shared,-Bsymbolic -Wl,--no-undefined -Wl,-z,noexecst
 JAVA=		/usr/share/java
 JAVAC_FLAGS=	-cp ${JAVA}/jaxp_parser_impl.jar:${JAVA}/xml-commons-apis.jar:${JAVA}/antlr.jar:${JAVA}/ant/ant-antlr.jar:${JAVA}/regexp.jar:${JAVA}/ant/ant-apache-regexp.jar:${JAVA}/jakarta-commons-logging.jar:${JAVA}/ant/ant-commons-logging.jar:${JAVA}/javamail.jar:${JAVA}/jaf.jar:${JAVA}/ant/ant-javamail.jar:${JAVA}/jsch.jar:${JAVA}/ant/ant-jsch.jar:/usr/lib/jvm/java/lib/tools.jar:${SDKPLAT}/android.jar -sourcepath gen:src -bootclasspath ${SDKPLAT}/android.jar
 SRCNAME=	RoadMap
-CLSES=		${DIRHIER}/RoadMap.class ${DIRHIER}/Panel.class ${DIRHIER}/Pen.class
+CLSES=		${DIRHIER}/RoadMap.class ${DIRHIER}/Panel.class ${DIRHIER}/Pen.class ${DIRHIER}/EclairHelper.class
 DX=		${SDKHOME}/platform-tools/dx
 AAPT=		${SDKHOME}/platform-tools/aapt
 APKBUILDER=	${SDKHOME}/tools/apkbuilder
@@ -121,6 +133,9 @@ ${DIRHIER}/Panel.class:	src/${DIRHIER}/Panel.java
 ${DIRHIER}/Pen.class:	src/${DIRHIER}/Pen.java
 	javac ${JAVAC_FLAGS} -d . src/${DIRHIER}/Pen.java
 
+${DIRHIER}/EclairHelper.class:	src/${DIRHIER}/EclairHelper.java
+	javac ${JAVAC_FLAGS} -d . src/${DIRHIER}/EclairHelper.java
+
 RMLIBS=	../libguiroadmap.a ../libroadmap.a ../gpx/libgpx.a ../unix/libosroadmap.a \
 	-L/opt/android/lib -lexpat-1
 RMDLIBS=	../libguiroadmap.a ../libroadmap.a ../gpx/libgpx.a ../unix/libosroadmap.a
@@ -136,8 +151,8 @@ RMASRC=		roadmap_canvas.c \
 		../win32/roadmap_colors.c \
 		roadmap_sound.c
 
-libs/armeabi/gdbserver:	${NDKHOME}/toolchains/arm-eabi-4.4.0/prebuilt/gdbserver
-	cp ${NDKHOME}/toolchains/arm-eabi-4.4.0/prebuilt/gdbserver libs/armeabi/gdbserver
+libs/armeabi/gdbserver:	${NDKHOME}/toolchains/arm-linux-androideabi-4.4.3/prebuilt/gdbserver
+	cp ${NDKHOME}/toolchains/arm-linux-androideabi-4.4.3/prebuilt/gdbserver libs/armeabi/gdbserver
 
 libs/armeabi/gdb.setup:
 	echo "set solib-search-path libs/armeabi" >$@
@@ -147,7 +162,7 @@ RMANDROID=	${RMASRC:.c=.o}
 
 libs/armeabi/librmnative.so:	${RMANDROID} ${RMDLIBS} /opt/android/lib/libgps.a
 	-mkdir -p libs/armeabi
-	arm-eabi-gcc --Wl,-soname,librmnative.so -o libs/armeabi/librmnative.so \
+	${NDK_TARGET}-gcc --Wl,-soname,librmnative.so -o libs/armeabi/librmnative.so \
 		${NDK_CFLAGS} ${NDK_LDFLAGS} \
 		${RMANDROID} \
 		${RMLIBS} \

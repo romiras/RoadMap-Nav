@@ -1,7 +1,7 @@
 /*
  * LICENSE:
  *
- *   Copyright (c) 2010, 2011, Danny Backx
+ *   Copyright (c) 2010, 2011, 2012, Danny Backx
  *
  *   This file is part of RoadMap.
  *
@@ -42,6 +42,8 @@ import android.view.MenuItem;
 
 import android.os.Handler;
 import android.os.Message;
+import android.os.Build;
+import android.os.Build.VERSION_CODES;
 
 import android.widget.Button;
 import android.widget.ImageButton;
@@ -61,10 +63,9 @@ import android.widget.Spinner;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.location.LocationManager;
 import android.location.GpsStatus;
 import android.location.GpsStatus.Listener;
-import android.location.GpsStatus.NmeaListener;
+// import android.location.GpsStatus.NmeaListener;
 import android.location.GpsSatellite;
 
 import android.content.res.AssetManager;
@@ -95,6 +96,9 @@ import android.content.Intent;
 import android.net.Uri;
 import java.io.File;
 
+import android.view.WindowManager;
+import android.util.DisplayMetrics;
+
 public class RoadMap extends Activity
 {
 	private LocationManager mgr = null;
@@ -108,7 +112,7 @@ public class RoadMap extends Activity
 
 	AssetManager		asm;
 	PowerManager		power;
-	PowerManager.WakeLock	wl;
+	PowerManager.WakeLock	wl = null;
 
 	/*
 	 * References to native functions
@@ -129,7 +133,6 @@ public class RoadMap extends Activity
 	public native void DialogSpecialCallback(int dlg, int btn);
 	public native void ReturnStringDataHack(String s);
 	public native void RoadMapDialogChosen(int dlg, int position, long id);
-	public native void NMEALogger(int id, String nmea);
 	public native void FileSelectionResult(String filename);
 	public native int MonitorSocketIO();
 	public native void HandleSocketIO(int ix);
@@ -158,9 +161,13 @@ public class RoadMap extends Activity
 		/*
 		 * Keep on the screen, possibly dimmed.
 		 */
+		/*
 		power = (PowerManager)getSystemService(POWER_SERVICE);
 		wl = power.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "RoadMap");
 		wl.acquire();
+		*/
+
+		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
 		/*
 		 * Some experimental code - not really used yet - to try and
@@ -189,17 +196,41 @@ public class RoadMap extends Activity
 		 */
 		JniStart();
 
-		// Don't do this here - moved to Panel
-		// so we're sure that the View is created first.
+		/* Figure out our Android level */
+		try {
+		   Log.e("RoadMap", "We're running on Android version "
+		   + Build.VERSION.SDK_INT
+		   + " (" + Build.VERSION.CODENAME
+		   + "," + Build.VERSION.INCREMENTAL
+		   + "," + Build.VERSION.RELEASE
+		   + ")");
+		} catch (Exception es) {
+		   Log.e("RoadMap", "Cannot assert software level : " + es);
+		};
+
+		try {
+		   Log.e("RoadMap", "Hardware "
+		   + Build.BOARD
+		   + "," + Build.BRAND
+		   + "," + Build.DEVICE);
+		} catch (Exception eh) {
+		   Log.e("RoadMap", "Cannot assert hardware level : " + eh);
+		};
+
 		//
-		// RoadMapStart();
+		// Show some data about our display
+		//
+		DisplayMetrics metrics = new DisplayMetrics();
+		getWindowManager().getDefaultDisplay().getMetrics(metrics);
+		Log.e("RoadMap", "Display dpi " + metrics.densityDpi
+			+ " (x " + metrics.xdpi + " y " + metrics.ydpi + ") pixels x " + metrics.widthPixels + " y " + metrics.heightPixels);
 	}
 
 	@Override
 	public void onPause()
 	{
 		super.onPause();
-		wl.release();
+		if (wl != null) wl.release();
 	}
 
 	@Override
@@ -213,7 +244,7 @@ public class RoadMap extends Activity
 	public void onRestart()
 	{
 		super.onRestart();
-		wl.acquire();
+		if (wl != null) wl.acquire();
 	}
 
 	private void displayFiles (AssetManager mgr, String path) {
@@ -276,14 +307,23 @@ public class RoadMap extends Activity
 		mgr.removeGpsStatusListener(onGpsChange);
 	}
 
+	/**
+	 * @brief this function is more complicated because it calls a helper class to avoid
+	 * using stuff that didn't exist in earlier versions of Android.
+	 *
+	 * In this case, the functionality is NMEA logging.
+	 */
 	public void MainSetInputAndroid(int id) {
-		InputHandler = id;
+	   InputHandler = id;
 
-		try {
-			mgr.addNmeaListener(onNmea);
-		} catch (Exception e) {
-			Log.e("RoadMap", "MainSetInputAndroid exception" + e);
-		}
+	   /* Only call if Android supports it. */
+	   try {
+	      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ECLAIR) {
+	         EclairHelper.MainSetInputAndroid(mgr, id);
+	      }
+	   } catch (Exception e) {
+	      Log.e("RoadMap", "MainSetInputAndroid exception" + e);
+	   }
 	}
 
 	Handler socketHandler = new Handler() {
@@ -334,12 +374,6 @@ public class RoadMap extends Activity
 		slt = new Thread(new SocketListenerThread());
 		slt.start();
 	}
-
-	NmeaListener onNmea = new NmeaListener() {
-		public void onNmeaReceived(long ts, String nmea) {
-			NMEALogger(InputHandler, nmea);
-		}
-	};
 
 	LocationListener onLocationChange = new LocationListener() {
 		int mystatus;
