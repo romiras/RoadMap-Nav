@@ -1090,171 +1090,6 @@ function downloadToXml($serverhost,$serverpath,$query) {
 
 }
 
-function old_downloadToXml($serverhost,$serverpath,$query) {
-
-	$testfile = $_REQUEST["testfile"];
-
-	$path = $serverpath . "?" . $query;
-	if ($testfile) {
-		$fp = fopen("test.5.osm",'r');
-	} else {
-		$fp = fsockopen( $serverhost, 80, &$errno, &$errstr, 120);
-	}
-	
-	if( !$fp ) {
-		global $EDownloadErrorConnect;
-		reportError($EDownloadErrorConnect,
-		  "Couldn't connect to API server ".$serverhost);
-	}
-
-	doLog($serverhost.$path);
-	if (!$testfile) {
-		fwrite($fp, "GET $path HTTP/1.1\r\n");
-		fwrite($fp, "Host: $serverhost\r\n");
-		if ($_SERVER['PHP_AUTH_PW']) {
-			fwrite($fp, "Authorization: Basic " .
-			    base64_encode($_SERVER['PHP_AUTH_USER'] .
-			    ":" . $_SERVER['PHP_AUTH_PW']) . "\r\n");
-		}
-		fwrite($fp, "User-Agent: OSMtoCSV/1.0\r\n");
-		fwrite($fp, "Accept-encoding: gzip\r\n");
-		fwrite($fp, "Connection: Close\r\n");
-		fwrite($fp, "\r\n");
-	}
-
-	$gzip = False;
-	$chunked = False;
-	$header200 = False;
-	$gotdata = False;
-	if (!$testfile) {
-		stream_set_timeout($fp,60*20);
-		ini_set('default_socket_timeout',  60*20);
-	}
-
-	// get first (status) line
-	if ($statusline = fgets($fp)) {
-		$statusline = trim($statusline);
-		if (strpos($statusline," 200 ")!==FALSE) {
-			$header200 = True;
-		} else if (strpos($statusline," 401 ")!==FALSE) {
-			needAuth();
-		} else if (strpos($statusline," 400 ")!==FALSE) {
-			global $EDownloadErrorTooBig;
-			reportError($EDownloadErrorTooBig);
-		} else if (strpos($statusline," 404 ")!==FALSE) {
-			global $EDownloadErrorConnect;
-			reportError($EDownloadErrorConnect);
-		}
-	}
-
-	if ($gzip && $chunked) {
-		global $EDownloadErrorNoData;
-		reportError($EDownloadErrorNoData,
-			"Can't handle chunked gzipped response");
-	}
-
-	// get header
-	while (!feof($fp)) {
-
-		$headerline = trim(fgets($fp));
-
-		// headers end with a blank line
-		if (!$headerline)
-		    break;
-
-		if (strncasecmp($headerline,'Location:', 9) == 0) {
-			$headerline = trim(substr($headerline, 9));
-			doLog("Redirecting to: " . $headerline );
-			$parsed = parse_url($headerline);
-			fclose($fp);
-			downloadToXml(
-				$parsed['host'],$parsed['path'],
-				$parsed['query']);
-			return;
-		}
-	
-		if (strncasecmp($headerline,"Content-encoding: gzip",
-				strlen("Content-encoding: gzip")) == 0) {
-			$gzip = True;
-		}
-
-		if (strncasecmp($headerline, "Transfer-Encoding: chunked",
-				strlen("Transfer-Encoding: chunked")) == 0) {
-			$chunked = True;
-		}
-
-	}
-
-	if (!$header200) {
-		doLog("No 200 header: '" . $statusline . "'");
-		reportError($EDownloadErrorNoData,
-			"Got: " . $statusline);
-	}
-
-
-	if ($gzip) {
-		$toss = fread($fp, 10); // discard gzip file header
-		if (!stream_filter_append($fp, 'zlib.inflate',
-						STREAM_FILTER_READ)) {
-		    doLog("error appending zlib.inflate");
-		    exit();
-		}
-	}
-
-	$xml_parser = xml_parser_create();
-	xml_set_element_handler($xml_parser, "startElement", "endElement");
-
-	/* get and parse the body */
-	if ($chunked) {
-		while (!feof($fp)) {
-
-			// read a length line:  "hex[;[comment]]CRNL"
-			$chunkline = preg_replace("/;.*/","",fgets($fp));
-			$chunk = hexdec($chunkline);
-
-			if ($chunk == 0)
-			    break;
-
-			$got = 0;
-			while ($got < $chunk &&
-					($piece = fread($fp, $chunk - $got))) {
-				$got += strlen($piece);
-				if (!xml_parse($xml_parser, $piece, False)) {
-					report_xml_error($xml_parser);
-				}
-				$gotdata = True;
-			}
-			fgets($fp); // data is followed by CR/NL
-		}
-		if (!xml_parse($xml_parser, "", True)) {
-			report_xml_error($xml_parser);
-		}
-		// consume footers, if any, and trailing blank line
-		while (!feof($fp)) {
-			$footer = fgets($fp);
-		}
-
-	} else {
-		// not chunked -- much simpler
-		while (!feof($fp)) {
-			$data = fread($fp, 8192);
-			// doLog("data is '" . $data . "'");
-			if (!xml_parse($xml_parser, $data, feof($fp))) {
-				report_xml_error($xml_parser);
-			}
-			$gotdata = True;
-		}
-	}
-	xml_parser_free($xml_parser);
-
-	fclose($fp);
-
-	if (!$gotdata) {
-		global $EDownloadErrorNoData;
-		reportError($EDownloadErrorNoData);
-	}
-
-}
 
 function getStaticPageNameBMap($tileid) {
 	global $KMaxBits, $CacheDir;
@@ -1454,11 +1289,13 @@ function fetchTile($tileid, $bits, $have, $server, $path) {
 
     findKnownWays($tileid,$have);
 
+    /* if cached copy is found, will output it and exit */
     staticPageStartBMap($tileid);
 
     downloadToXml($server, $path, "bbox=".$bbox);
     doLog("Nodes: ".$nodecount.", Ways: ".$waycount);
 
+    /* will output based on fresh download */
     staticPageEndBMap();
 
     global $skipwaycount;
