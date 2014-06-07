@@ -82,6 +82,8 @@ struct opt_defs options[] = {
         "Analyze given tileid (or quadtile filename) (hex only)"},
    {"encode", "e", opt_string, "",
         "Report tileid for given lat,lon"},
+   {"listonly", "l", opt_int, "0",
+        "Dump the list of filenames and bounding boxes for the request"},
    {"quiet", "q", opt_flag, "0",
         "Show less progress information"},
    {"verbose", "v", opt_flag, "0",
@@ -786,6 +788,7 @@ main(int argc, char **argv)
     int count;
     int *tileslist;
     char *decode, *encode;
+    int listonly;
     int tileid;
     char *class, *latlonarg, *source, *cmdfmt, *inputfile;
 
@@ -808,6 +811,7 @@ main(int argc, char **argv)
             opt_val("tileid", &tileid) ||
             opt_val("decode", &decode) ||
             opt_val("encode", &encode) ||
+            opt_val("listonly", &listonly) ||
             opt_val("outputfile", &BuildMapFileName) ||
             opt_val("inputfile", &inputfile);
     if (error)
@@ -881,6 +885,29 @@ main(int argc, char **argv)
 	buildmap_info("processing with bits '%d'", osm_bits);
 
         count = buildmap_osm_which_tiles(latlonarg, &tileslist, osm_bits);
+	if (listonly) {
+	    int i, n;
+	    char filename[128];
+	    RoadMapArea edges[1];
+
+	    for (i = 0; i < count; i++) {
+		n = tileslist[i];
+        	roadmap_osm_filename(filename, 1, n);
+		printf("%s	", filename);
+		roadmap_osm_tileid_to_bbox(n, edges);
+		/* w, s, e, n */
+		printf("%s,",
+		    roadmap_math_to_floatstring(0, edges->west, MILLIONTHS));
+		printf("%s,",
+		    roadmap_math_to_floatstring(0, edges->south, MILLIONTHS));
+		printf("%s,",
+		    roadmap_math_to_floatstring(0, edges->east, MILLIONTHS));
+		printf("%s\n",
+		    roadmap_math_to_floatstring(0, edges->north, MILLIONTHS));
+	    }
+
+	    exit(0);
+	}
     }
 
     error = buildmap_osm_process_tiles
