@@ -94,7 +94,7 @@ static RoadMapConfigDescriptor RoadMapConfigLabelSize =
                         ROADMAP_CONFIG_ITEM("Labels", "Font Size");
 
 /* this is fairly arbitrary */
-#define MAX_LABELS 4096
+#define MAX_LABELS 8192
 
 typedef struct {
    RoadMapListItem link;
