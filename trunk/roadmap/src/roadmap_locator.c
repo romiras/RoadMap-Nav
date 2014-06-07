@@ -71,6 +71,7 @@ static int RoadMapCountyCacheSize = 0;
 
 static int RoadMapActiveCounty;
 
+static int RoadMapUseCounties = 1;
 
 static roadmap_db_model *RoadMapUsModel;
 static roadmap_db_model *RoadMapCountyModel;
@@ -82,6 +83,13 @@ static RoadMapDictionary RoadMapUsStateDictionary = NULL;
 static int roadmap_locator_no_download (int fips) {return 0;}
 
 static RoadMapInstaller  RoadMapDownload = roadmap_locator_no_download;
+
+void
+roadmap_locator_use_counties(int yesno)
+{
+	RoadMapUseCounties = yesno;
+}
+
 
 
 /*
@@ -330,7 +338,10 @@ static int roadmap_locator_allocate (int **fipslistp) {
    roadmap_locator_configure();
    if (RoadMapCountyCache == NULL) return 0;
 
-   count = roadmap_county_count();
+   if (RoadMapUseCounties)
+	count = roadmap_county_count();
+    else
+	count = 0;
 
    /* note that this can also be resized during tile splitting in
     * roadmap_osm.c -- see usage of roadmap_osm_tilelist in that file.
@@ -371,7 +382,8 @@ int roadmap_locator_by_position
    count = roadmap_locator_allocate (fipslistp);
    if (count < 0) return 0;
    
-   count = roadmap_county_by_position (position, *fipslistp, count);
+   if (RoadMapUseCounties)
+      count = roadmap_county_by_position (position, *fipslistp, count);
 
    roadmap_math_get_focus (&focus);
 
