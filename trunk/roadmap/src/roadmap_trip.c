@@ -3176,11 +3176,13 @@ void roadmap_trip_routepoint_iterate (waypt_cb cb) {
 
     ROADMAP_LIST_FOR_EACH (&RoadMapTripRouteHead, relem, rtmp) {
         route_head *rh = (route_head *) relem;
-        RoadMapAreaCurListName = rh->rte_name;
-        QUEUE_FOR_EACH(&rh->waypoint_list, elem, tmp) {
-                w = (waypoint *) elem;
-                (*cb)(w);
-        }
+	if (rh == RoadMapCurrentRoute || RoadMapTripShowInactiveRoutes) {
+	    RoadMapAreaCurListName = rh->rte_name;
+	    QUEUE_FOR_EACH(&rh->waypoint_list, elem, tmp) {
+		    w = (waypoint *) elem;
+		    (*cb)(w);
+	    }
+	}
     }
     ROADMAP_LIST_FOR_EACH (&RoadMapTripTrackHead, relem, rtmp) {
         route_head *rh = (route_head *) relem;
