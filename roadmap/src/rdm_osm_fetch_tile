@@ -18,8 +18,8 @@ server="www.overpass-api.de/api/xapi?*"
 #server="overpass.osm.rambler.ru/cgi/xapi?*"
 
 
-if ! opts="$(getopt -o t:b:h:B:x: \
-	-l trutile:,bits:,have:,bbox:,xmlfile: -n $program -- $@)"
+if ! opts="$(getopt -o b:B:x: \
+	-l bits:,bbox:,xmlfile: -n $program -- $@)"
 then
     usage
 fi
@@ -32,8 +32,6 @@ while true
 do
     : \$1 is $1
     case $1 in
-	-t|--trutile) trutile=$2; shift 2 ;;
-	-h|--have) have=$2; shift 2 ;;
 	-b|--bits) bits=$2; shift 2 ;;
 	-B|--bbox) bbox=$2; shift 2 ;;
 	-x|--xmlfile) xmlfile=$2; shift 2 ;;
