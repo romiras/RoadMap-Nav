@@ -278,6 +278,7 @@ buildmap_osm_text_node_finish(void)
 	if (ni.NodeFakeFips) {
 	    if (ni.NodePlace && (strcmp(ni.NodePlace, "town") == 0
 			|| strcmp(ni.NodePlace, "village") == 0
+			|| strcmp(ni.NodePlace, "hamlet") == 0
 			|| strcmp(ni.NodePlace, "city") == 0)) {
                 /* We have a town, process it */
 
@@ -594,20 +595,31 @@ buildmap_osm_text_node_tag(char *data, int catalog)
                 if (ni.NodePostalCode)
                         free(ni.NodePostalCode);
                 ni.NodePostalCode = strdup(tagv);
-		if (catalog) saveInterestingNode(ni.NodeId);
+		if (catalog) {
+		    saveInterestingNode(ni.NodeId);
+		    buildmap_verbose("saving node info k %s v %s", tagk, tagv);
+		}
         } else if (strcmp(tagk, "place") == 0) {
                 /* <tag k="place" v="town"/> */
                 if (ni.NodePlace)
                         free(ni.NodePlace);
                 ni.NodePlace = strdup(tagv);
-		if (catalog) saveInterestingNode(ni.NodeId);
+		if (catalog) {
+		    saveInterestingNode(ni.NodeId);
+		    buildmap_verbose("saving node info k %s v %s", tagk, tagv);
+		}
         } else if (strcmp(tagk, "name") == 0) {
                 /* <tag k="name" v="Herent"/> */
                 if (ni.NodeTownName)
                         free(ni.NodeTownName);
                 ni.NodeTownName = FromXmlAndDup(tagv);
-		if (catalog) saveInterestingNode(ni.NodeId);
-        }
+		if (catalog) {
+		    saveInterestingNode(ni.NodeId);
+		    buildmap_verbose("saving node info k %s v %s", tagk, tagv);
+		}
+        } else {
+		buildmap_debug("dropping node info k %s v%s", tagk, tagv);
+	}
 }
 
 /**
