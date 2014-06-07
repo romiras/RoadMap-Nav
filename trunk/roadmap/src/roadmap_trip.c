@@ -653,7 +653,7 @@ void roadmap_trip_restore_focus (void) {
 
         }
 
-        roadmap_log (ROADMAP_WARNING, "roadmap_trip_restore_focus(%s) {%d,%d}", focal->id, focal->map.latitude, focal->map.longitude);
+        roadmap_log (ROADMAP_DEBUG, "roadmap_trip_restore_focus(%s) {%d,%d}", focal->id, focal->map.latitude, focal->map.longitude);
         if (focal->mobile) {
 
             /* This is a mobile point: what was recorded was the GPS
@@ -1066,7 +1066,7 @@ static int roadmap_trip_waypoint_manage_dialog_populate (void *which) {
  */
 static void roadmap_trip_set_nav_departure (const char *name, void *data)
 {
-    roadmap_log (ROADMAP_WARNING, "roadmap_trip_departure_waypoint");
+    roadmap_log (ROADMAP_DEBUG, "roadmap_trip_departure_waypoint");
     roadmap_trip_set_point ("Departure",
 	    &RoadMapTripSelectedPlace->wpt->pos);
     roadmap_dialog_hide (name);
@@ -2002,7 +2002,7 @@ static void roadmap_trip_set_directions (int dist_to_next, int suppress_dist, wa
 
     /* Info from another call if !suppress_dist */
     if (suppress_dist)
-	roadmap_log(ROADMAP_WARNING, "roadmap_trip_set_directions(%d, %d)",
+	roadmap_log(ROADMAP_DEBUG, "roadmap_trip_set_directions(%d, %d)",
 			dist_to_next, suppress_dist);
 
     if (next == NULL) {
