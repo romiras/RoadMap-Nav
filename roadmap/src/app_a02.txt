@@ -3238,6 +3238,10 @@ FIPS          County     State
 81     003     Alaska State Boundaries     SB
 81     004     Hawaii State Boundaries     SB
 81     061     Canadian Provincial Boundaries     SB
+81     070     World Boundaries         SB
+81     071     World Boundaries         SB
+81     072     World Boundaries         SB
+81     073     World Boundaries         SB
 82     001     Placenames     PN
 83     010     DCW Europe and North Asia     DW
 83     011     DCW Europe and North Asia     DW
