@@ -2190,3 +2190,128 @@ int roadmap_math_calc_line_length (const RoadMapPosition *position,
    return length_result;
 }
 #endif
+
+
+
+
+#if 0
+
+/* this code came from http://mappinghacks.com/code/PolyLineReduction/ .
+ * i converted it from float to int, and it is basically untested.
+ */
+typedef struct STACK_RECORD {
+    int nAnchorIndex, nFloaterIndex;
+    struct STACK_RECORD *precPrev;
+} STACK_RECORD;
+
+STACK_RECORD *m_pStack = 0;
+
+static void
+StackPush(int nAnchorIndex, int nFloaterIndex)
+{
+    STACK_RECORD *precPrev = m_pStack;
+    m_pStack = (STACK_RECORD *) malloc(sizeof(STACK_RECORD));
+    m_pStack->nAnchorIndex = nAnchorIndex;
+    m_pStack->nFloaterIndex = nFloaterIndex;
+    m_pStack->precPrev = precPrev;
+}
+
+static int
+StackPop(int *pnAnchorIndex, int *pnFloaterIndex)
+{
+    STACK_RECORD *precStack = m_pStack;
+    if (precStack == 0)
+	return 0;
+    *pnAnchorIndex = precStack->nAnchorIndex;
+    *pnFloaterIndex = precStack->nFloaterIndex;
+    m_pStack = precStack->precPrev;
+    free(precStack);
+    return 1;
+}
+
+
+void
+roadmap_math_reduce_points(int *pPointsX, int *pPointsY, int nPointsCount,
+	     int *pnUseFlag, int dTolerance)
+{
+    int nVertexIndex, nAnchorIndex, nFloaterIndex;
+    int dSegmentVecLength;
+    int dAnchorVecX, dAnchorVecY;
+    int dAnchorUnitVecX, dAnchorUnitVecY;
+    int dVertexVecLength;
+    int dVertexVecX, dVertexVecY;
+    int dProjScalar;
+    int dVertexDistanceToSegment;
+    int dMaxDistThisSegment;
+    int nVertexIndexMaxDistance;
+
+    nAnchorIndex = 0;
+    nFloaterIndex = nPointsCount - 1;
+    StackPush(nAnchorIndex, nFloaterIndex);
+    while (StackPop(&nAnchorIndex, &nFloaterIndex)) {
+
+	// initialize line segment
+	dAnchorVecX = pPointsX[nFloaterIndex] - pPointsX[nAnchorIndex];
+	dAnchorVecY = pPointsY[nFloaterIndex] - pPointsY[nAnchorIndex];
+	dSegmentVecLength = sqrt(dAnchorVecX * dAnchorVecX
+				 + dAnchorVecY * dAnchorVecY);
+	if (dSegmentVecLength == 0) {
+	    pnUseFlag[nAnchorIndex] = 1;
+	    pnUseFlag[nFloaterIndex] = 1;
+	    continue;
+	}
+	dAnchorUnitVecX = dAnchorVecX / dSegmentVecLength;
+	dAnchorUnitVecY = dAnchorVecY / dSegmentVecLength;
+
+	// inner loop:
+	dMaxDistThisSegment = 0.0;
+	nVertexIndexMaxDistance = nAnchorIndex + 1;
+	for (nVertexIndex = nAnchorIndex + 1; nVertexIndex < nFloaterIndex;
+	     nVertexIndex++) {
+
+	    // compare to anchor
+	    dVertexVecX = pPointsX[nVertexIndex] - pPointsX[nAnchorIndex];
+	    dVertexVecY = pPointsY[nVertexIndex] - pPointsY[nAnchorIndex];
+	    dVertexVecLength = sqrt(dVertexVecX * dVertexVecX
+				    + dVertexVecY * dVertexVecY);
+	    // dot product:
+	    dProjScalar =
+		dVertexVecX * dAnchorUnitVecX + dVertexVecY * dAnchorUnitVecY;
+	    if (dProjScalar < 0.0) {
+		dVertexDistanceToSegment = dVertexVecLength;
+	    } else {
+		// compare to floater
+		dVertexVecX = pPointsX[nVertexIndex] - pPointsX[nFloaterIndex];
+		dVertexVecY = pPointsY[nVertexIndex] - pPointsY[nFloaterIndex];
+		dVertexVecLength = sqrt(dVertexVecX * dVertexVecX
+					+ dVertexVecY * dVertexVecY);
+		// dot product:
+		dProjScalar =
+		    dVertexVecX * (-dAnchorUnitVecX) +
+		    dVertexVecY * (-dAnchorUnitVecY);
+		if (dProjScalar < 0.0) {
+		    dVertexDistanceToSegment = dVertexVecLength;
+		} else {
+		    // perpendicular distance to line
+		    dVertexDistanceToSegment =
+			sqrt(
+			    abs(dVertexVecLength * dVertexVecLength -
+				    dProjScalar * dProjScalar)
+			    );
+		}
+	    }
+	    if (dMaxDistThisSegment < dVertexDistanceToSegment) {
+		dMaxDistThisSegment = dVertexDistanceToSegment;
+		nVertexIndexMaxDistance = nVertexIndex;
+	    }
+	}
+	if (dMaxDistThisSegment <= dTolerance) {	//use line segment
+	    pnUseFlag[nAnchorIndex] = 1;
+	    pnUseFlag[nFloaterIndex] = 1;
+	} else {
+	    StackPush(nAnchorIndex, nVertexIndexMaxDistance);
+	    StackPush(nVertexIndexMaxDistance, nFloaterIndex);
+	}
+    }
+}
+#endif

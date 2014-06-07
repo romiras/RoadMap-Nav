@@ -2984,8 +2984,10 @@ void roadmap_trip_save_screenshot (void) {
  * C, then point B will be dropped.  Doing a cross-track-error
  * simplification would give better results, but that's
  * much more expensive.  (gpsbabel's smplroute.c contains code
- * for this, and there are implementationso fo Douglas-Peucker on
- * the web:  e.g. http://geometryalgorithms.com/Archive/algorithm_0205/)
+ * for this, and there are implementations of Douglas-Peucker on
+ * the web:  e.g. http://geomalgorithms.com/a16-_decimate-1.html)
+ * Actually, there's now an implementation in in roadmap, in
+ * roadmap_map_reduce_points().
  */
 int roadmap_trip_simplify_route
         (const route_head *orig_route, route_head *new_route) {
