@@ -56,7 +56,21 @@ case $xmlfile in
 *.gz) want_compressed=1 ;;
 esac
 
+# for development, convenient to be able to get the .osm from
+# somewhere on the local system, when maps targetted for somewhere
+# else.
+localstore=/usr/local/share/roadmap/newquads
+want=qt$bits/${xmlfile##*/qt$bits}
+
+if [ -e "$localstore/$want" ]
+then
+    cp -a $localstore/$want $xmlfile
+    exit
+fi
+
 url="http://$server$bbox$query$me"
+
+echo "Fetching from $url"
 
 if [ "$want_compressed" ]
 then
