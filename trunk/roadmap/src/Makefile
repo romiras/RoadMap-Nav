@@ -369,7 +369,7 @@ C_SRC = $(RMLIBSRC) $(RMGUISRC) $(RGGUISRC) \
 ALL_SRC = $(MKFILES) $(C_SRC) $(HEADERS) \
 	$(PKGDATAFILES) $(MISCFILES) $(MANPAGES) $(SCRIPTS) $(FONT) $(MANUAL)
 
-ALL_SUBDIRS = unix gpx gtk gtk2 qt qt4 icons ipkg agg_support win32
+ALL_SUBDIRS = unix gpx gtk gtk2 qt qt4 icons ipkg agg_support win32 basefiles
 
 # --- Additions for Trip plugin -------------------------------
 
@@ -492,9 +492,9 @@ endif
 # --- Conventional targets ----------------------------------------
 
 .PHONY: all gtk gtk2 qt3 qt4 qpe4 rebuild build \
-         topclean clean strip install uninstall unix gpx
+         topclean clean strip install uninstall unix gpx icons basefiles
 
-all: runtime build $(TOOLS) icons $(MANUAL)
+all: runtime build $(TOOLS) icons basefiles $(MANUAL)
 
 
 # --- Convenience targets, to force a specific desktop build ------
@@ -545,6 +545,9 @@ strip:
 icons:
 	$(MAKE) -C icons all
 
+basefiles: build
+	$(MAKE) -C basefiles all
+
 topclean:
 	rm -f *.o *.a *.da .depends.mk $(BUILD) $(TOOLS) $(DRIVERS)
 	# Clean up CVS backup files as well.
@@ -572,11 +575,15 @@ installdata:
 	chmod a+rx $(pkgdatadir)
 	mkdir -p $(pkgdatadir)/default
 	chmod a+rx $(pkgdatadir)/default
+	mkdir -p $(pkgdatadir)/basemaps
+	chmod a+rx $(pkgdatadir)/basemaps
 	cd $(pkgdatadir) && rm -f $(PKGDATAFILES)
 	cp $(PKGDATAFILES) $(pkgdatadir)/.
 	cd $(pkgdatadir) ; chmod a+r $(PKGDATAFILES)
 	cp default/All $(pkgdatadir)/default/.
 	chmod a+r $(pkgdatadir)/default/All
+	cp basefiles/us*.rdm $(pkgdatadir)/basemaps/.
+	chmod a+r $(pkgdatadir)/basemaps/us*.rdm
 ifneq ($(strip $(AGG)),NO)
 	cp $(FONT) $(pkgdatadir)/font.ttf
 endif
@@ -618,7 +625,7 @@ $(MANUAL): ../README $(addprefix ../doc/, $(DOC_SRC))
 	    $@
 
 uninstall:
-	cd $(pkgdatadir) && rm -f $(PKGDATAFILES)
+	cd $(pkgdatadir) && rm -rf $(PKGDATAFILES) default basemaps
 	cd $(pkgbindir) && rm -f $(BUILD) $(SCRIPTS) $(DRIVERS)
 	-test -d $(menudir) && rm -f $(menudir)/roadmap
 	$(MAKE) -C icons uninstall
