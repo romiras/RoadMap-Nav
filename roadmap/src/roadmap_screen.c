@@ -1443,7 +1443,7 @@ void roadmap_screen_repaint (void) {
     int j;
     int k;
     int count, sqcount;
-    int drawn;
+    int *drawnlist;
     int max_pen = roadmap_layer_max_pen();
     static int nomap;
     
@@ -1497,7 +1497,12 @@ void roadmap_screen_repaint (void) {
 
     roadmap_label_start();
 
-    /* - For each candidate county: */
+    /* if a county has nothing to draw at this zoom level, we
+     * want to remember that, so we don't bother trying again
+     * next time.
+     */
+    drawnlist = (int *)calloc(count, sizeof(int));
+    roadmap_check_allocated(drawnlist);
 
     for (i = count-1; i >= 0; --i) {
 
@@ -1507,14 +1512,16 @@ void roadmap_screen_repaint (void) {
                continue;
             roadmap_screen_draw_square_edges (ROADMAP_SQUARE_GLOBAL);
         }
+    }
 
+    for (i = count-1; i >= 0; --i) {
         /* -- nothing to draw at this zoom? -- */
         if (roadmap_locator_get_decluttered(fipslist[i]))
             continue;
 
         /* -- Access the county's database. */
-
-        if (roadmap_locator_activate (fipslist[i]) != ROADMAP_US_OK) continue;
+        if (roadmap_locator_activate (fipslist[i]) != ROADMAP_US_OK)
+	    continue;
 
 #if 0
         /* mark each OSM tile location with its tileid -- the
@@ -1542,17 +1549,36 @@ void roadmap_screen_repaint (void) {
            }
         }
 #endif
+    }
 
-        drawn = 0;
-        drawn += roadmap_screen_draw_polygons ();
+    for (i = count-1; i >= 0; --i) {
+        /* -- nothing to draw at this zoom? -- */
+        if (roadmap_locator_get_decluttered(fipslist[i]))
+            continue;
+
+        /* -- Access the county's database. */
+        if (roadmap_locator_activate (fipslist[i]) != ROADMAP_US_OK)
+	    continue;
+
+        drawnlist[i] += roadmap_screen_draw_polygons ();
 
         if (roadmap_screen_repaint_leave(count, count - i)) {
             roadmap_label_new_invalidate();
             goto out;
         }
 
-        /* -- Look for the squares that are currently visible. */
+    }
 
+    for (i = count-1; i >= 0; --i) {
+        /* -- nothing to draw at this zoom? -- */
+        if (roadmap_locator_get_decluttered(fipslist[i]))
+            continue;
+
+        /* -- Access the county's database. */
+        if (roadmap_locator_activate (fipslist[i]) != ROADMAP_US_OK)
+	    continue;
+
+        /* -- Look for the squares that are currently visible. */
         sqcount = roadmap_square_view (&in_view);
 
         for (k = 0; k < max_pen; ++k) {
@@ -1576,13 +1602,13 @@ void roadmap_screen_repaint (void) {
                if (!layer_count) continue;
 
                for (j = sqcount - 1; j >= 0; --j) {
-                  drawn += roadmap_screen_repaint_square (in_view[j], pen_type,
+                  drawnlist[i] += roadmap_screen_repaint_square (in_view[j], pen_type,
                     layer_count, layers);
 
                }
             }
 
-            drawn += roadmap_screen_draw_long_lines (k);
+            drawnlist[i] += roadmap_screen_draw_long_lines (k);
 
         }
 
@@ -1596,11 +1622,25 @@ void roadmap_screen_repaint (void) {
            goto out;
         }
         
-        if (drawn && !RoadMapScreenDragging) {
+    }
+
+    for (i = count-1; i >= 0; --i) {
+        /* -- nothing to draw at this zoom? -- */
+        if (roadmap_locator_get_decluttered(fipslist[i]))
+            continue;
+
+        /* -- Access the county's database. */
+
+        if (roadmap_locator_activate (fipslist[i]) != ROADMAP_US_OK) continue;
+
+        if (drawnlist[i] && !RoadMapScreenDragging) {
             roadmap_label_draw_cache (RoadMapScreen3dHorizon == 0);
         }
 
-        if (!drawn)
+    }
+
+    for (i = count-1; i >= 0; --i) {
+        if (!drawnlist[i])
             roadmap_locator_set_decluttered(fipslist[i]);
     }
 
