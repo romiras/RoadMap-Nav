@@ -308,6 +308,7 @@ int buildmap_osm_text_process_file(char *fn)
     buildmap_metadata_add_attribute ("Data",  "Source", "OSM");
 
     buildmap_osm_common_find_layers();
+    buildmap_debug("reading file %s", fn);
     ret = buildmap_osm_text_read(f, country_num, division_num);
     if (fclose(f) != 0) {
         buildmap_error(0, "problem fetching data (fclose: %s)", strerror(errno));
@@ -348,7 +349,7 @@ int buildmap_osm_by_position
     found = 0;
     tileid = roadmap_osm_latlon2tileid
             (position->latitude, position->longitude, bits);
-    fipslist = realloc(fipslist, (found + 1) * sizeof(int));
+    fipslist = realloc(fipslist, (found + 100) * sizeof(int));
     buildmap_check_allocated(fipslist);
     fipslist[found++] = tileid;
 
@@ -368,7 +369,7 @@ int buildmap_osm_by_position
                 tileid = roadmap_osm_tileid_to_neighbor(tileid, eswn[d]);
                 roadmap_osm_tileid_to_bbox(tileid, &tileedges);
                 if (roadmap_math_areas_intersect (&tileedges, focus)) {
-                    fipslist = realloc(fipslist, (found + 1) * sizeof(int));
+                    fipslist = realloc(fipslist, (found + 100) * sizeof(int));
                     buildmap_check_allocated(fipslist);
                     fipslist[found++] = tileid;
                 }
@@ -550,20 +551,32 @@ buildmap_osm_process_tiles (int *tiles, int bits, int count,
             ret = buildmap_osm_process_one_tile (tileid, source, cmdfmt);
 
             if (ret == -2) {
+                /* we got a "tile too big" error.  try for four
+                 * subtiles instead.
+                 */
+		int n;
+
                 if (bits >= TILE_MAXBITS-1) {
                     buildmap_info("can't split tile 0x%x further", tileid);
                     continue;
                 }
-                /* we got a "tile too big" error.  try for four
-                 * subtiles instead -- put them at the end of the list.
-                 */
                 nbits = tileid2bits(tileid);
                 buildmap_info
                     ("splitting tile 0x%x, new bits %d", tileid, nbits+2);
-                count += 4;
+
+                count += 3;
                 tiles = realloc(tiles, sizeof(*tiles) * count);
                 buildmap_check_allocated(tiles);
-                roadmap_osm_tilesplit(tileid, &tiles[count - 4], 2);
+
+		/* insert new tiles in-place, so that we try the new size right away.
+		 * this doesn't matter, except for the user who is trying
+		 * to figure out what tile size is needed.
+		 */
+		for (n = count - 1; n >= i + 3; n--) {
+			tiles[n] = tiles[n-4];
+		}
+                roadmap_osm_tilesplit(tileid, &tiles[i], 2);
+		i--;
                 continue;
             }
     
@@ -828,8 +841,6 @@ main(int argc, char **argv)
 
     buildmap_metadata_add_attribute ("MapFormat", "Version", "1.3 alpha");
 
-    buildmap_verbose("processing with bits '%d'", osm_bits);
-
     if (tileid) {
 
         tileslist = malloc(sizeof(int));
@@ -852,6 +863,8 @@ main(int argc, char **argv)
             usage(argv[0], "too many arguments");
 
         latlonarg = argv[1];
+
+	buildmap_info("processing with bits '%d'", osm_bits);
 
         count = buildmap_osm_which_tiles(latlonarg, &tileslist, osm_bits);
     }
