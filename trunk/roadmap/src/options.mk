@@ -202,6 +202,11 @@ ifeq ($(strip $(QT_NO_ROTATE)),YES)
 	CFLAGS += -DQT_NO_ROTATE
 endif
 
+# libgps support
+ifeq ($(strip $(LIBGPS)),YES)
+    CFLAGS += -DROADMAP_USES_LIBGPS
+    LIBS += -lgps
+endif
 
 # each DESKTOP version has a fully-"native" canvas
 # implementation, as well as a possible agg-based implementation.
