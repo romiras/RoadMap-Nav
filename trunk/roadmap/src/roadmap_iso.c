@@ -399,19 +399,19 @@ int roadmap_iso_division_to_num(char *country, char *division)
 	if (! f) {
 		/* How to report errors here ? */
 		roadmap_log(ROADMAP_WARNING, "Cannot open %s", mfn);
-		return 0;
+		return -1;
 	}
 
 	while (! feof(f)) {
 		if (fscanf(f, "%d %s", &num, div) != 2)
 			continue;
-		if (strcmp(div, division) == 0) {
+		if (strcasecmp(div, division) == 0) {
 			fclose(f);
 			return num;
 		}
 	}
 	fclose(f);
-	return 0;
+	return -1;
 }
 
 /**
