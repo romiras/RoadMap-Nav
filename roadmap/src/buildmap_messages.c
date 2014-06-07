@@ -148,7 +148,9 @@ void buildmap_error (int column, const char *format, ...) {
    va_start(ap, format);
    if (BuildMapMessageLevel >= BUILDMAP_MESSAGE_ERROR)
       vfprintf(stderr, format, ap);
+   va_end(ap);
 
+   va_start(ap, format);
    if (log != NULL) {
       vfprintf(log, format, ap);
    }
@@ -187,6 +189,8 @@ void buildmap_fatal (int column, const char *format, ...) {
    va_start(ap, format);
    if (BuildMapMessageLevel >= BUILDMAP_MESSAGE_FATAL)
       vfprintf(stderr, format, ap);
+   va_end(ap);
+   va_start(ap, format);
    if (log != NULL) {
       vfprintf(log, format, ap);
    }
