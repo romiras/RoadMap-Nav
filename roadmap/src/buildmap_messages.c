@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <unistd.h>
 
 #include "buildmap.h"
 
@@ -214,15 +215,23 @@ void buildmap_fatal (int column, const char *format, ...) {
 void buildmap_progress (unsigned long done, unsigned long estimated) {
 
    unsigned long this;
+   int percent;
 
+   if (!isatty(1)) return;
 
    if (BuildMapMessageLevel >= BUILDMAP_MESSAGE_PROGRESS) {
 
-      this = (100 * done) / estimated;
+      if (estimated) {
+	 this = (100 * done) / estimated;
+	 percent = '%';
+      } else {
+	 this = done;
+	 percent = ' ';
+      }
 
       if (this != LastProgress) {
          LastProgress = this;
-        fprintf (stdout, "-- %s: %3ld%% done\r", SourceFile, this);
+        fprintf (stdout, "-- %s: %3ld%c done\r", SourceFile, this, percent);
       }
    }
 }
