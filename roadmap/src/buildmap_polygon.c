@@ -256,34 +256,37 @@ static void buildmap_polygon_adjust_bbox
         (RoadMapPolygon *polygon, int from, int to) {
 
       int x1, x2, y1, y2;
+      RoadMapArea *pa;
+
+      pa = &polygon->area;
 
       x1 = buildmap_point_get_longitude_sorted (from);
       y1 = buildmap_point_get_latitude_sorted  (from);
       x2 = buildmap_point_get_longitude_sorted (to);
       y2 = buildmap_point_get_latitude_sorted  (to);
 
-      if (x1 < polygon->west) {
-         polygon->west = x1;
-      } else if (x1 > polygon->east) {
-         polygon->east = x1;
+      if (x1 < pa->west) {
+         pa->west = x1;
+      } else if (x1 > pa->east) {
+         pa->east = x1;
       }
 
-      if (x2 < polygon->west) {
-         polygon->west = x2;
-      } else if (x2 > polygon->east) {
-         polygon->east = x2;
+      if (x2 < pa->west) {
+         pa->west = x2;
+      } else if (x2 > pa->east) {
+         pa->east = x2;
       }
 
-      if (y1 < polygon->south) {
-         polygon->south = y1;
-      } else if (y1 > polygon->north) {
-         polygon->north = y1;
+      if (y1 < pa->south) {
+         pa->south = y1;
+      } else if (y1 > pa->north) {
+         pa->north = y1;
       }
 
-      if (y2 < polygon->south) {
-         polygon->south = y2;
-      } else if (y2 > polygon->north) {
-         polygon->north = y2;
+      if (y2 < pa->south) {
+         pa->south = y2;
+      } else if (y2 > pa->north) {
+         pa->north = y2;
       }
 }
 
@@ -300,12 +303,13 @@ static void buildmap_polygon_fill_in_drawing_order
    int match_point;
    BuildMapPolygonLine *this_line;
    BuildMapPolygonLine *other_line;
+   RoadMapArea *pa = &polygon->area;
 
-   first = roadmap_polygon_get_first(polygon);
-   count = roadmap_polygon_get_count(polygon);
+   first = polygon->first;
+   count = polygon->count;
 
-   polygon->west = polygon->south = 180000000;
-   polygon->east = polygon->north = -180000000;
+   pa->west = pa->south = 180000000;
+   pa->east = pa->north = -180000000;
 
    end = first + count - 1;
 
@@ -958,7 +962,7 @@ static int buildmap_polygon_save (void) {
 
          if (polygon_current >= 0) {
 
-            if (roadmap_polygon_get_count(db_poly) <= 1) {
+            if (db_poly->count <= 1) {
                buildmap_error (0, "empty polygon");
 	       return 1;
             }
@@ -971,14 +975,14 @@ static int buildmap_polygon_save (void) {
          db_poly = &db_head[polygon_current];
 
          db_poly->name  = one_polygon->name;
-         buildmap_polygon_set_first(db_poly, i);
+         db_poly->first = i;
          db_poly->cfcc  = one_polygon->cfcc;
 
          if (one_polygon->count > MAX_POLYGON_LINE_COUNT) {
             buildmap_error (0, "too many polygon lines (%d, max %d)", one_polygon->count, MAX_POLYGON_LINE_COUNT);
 	    return 1;
          }
-         buildmap_polygon_set_count(db_poly, one_polygon->count);
+         db_poly->count = one_polygon->count;
 
          square = one_polygon->square[0];
 

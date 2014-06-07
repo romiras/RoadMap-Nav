@@ -28,9 +28,21 @@
 #include "roadmap_dbread.h"
 
 int  roadmap_polygon_count    (void);
-int  roadmap_polygon_category (int polygon);
-void roadmap_polygon_edges    (int polygon, RoadMapArea *edges);
-int  roadmap_polygon_lines   (int polygon, int **listp);
+struct roadmap_polygon_version {
+    int (*category)(int polygon);
+    void (*edges)(int polygon, RoadMapArea *edges);
+    int (*lines)(int polygon, int **listp);
+};
+extern struct roadmap_polygon_version roadmap_polygon_versions[];
+extern int roadmap_polygon_db_version;
+
+#define roadmap_polygon_category(p) \
+    (roadmap_polygon_versions[roadmap_polygon_db_version].category)(p)
+#define roadmap_polygon_edges(p, e) \
+    (roadmap_polygon_versions[roadmap_polygon_db_version].edges)(p, e)
+#define roadmap_polygon_lines(p, lp) \
+    (roadmap_polygon_versions[roadmap_polygon_db_version].lines)(p, lp)
+
 
 extern roadmap_db_handler RoadMapPolygonHandler;
 
