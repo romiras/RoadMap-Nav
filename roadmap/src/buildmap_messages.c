@@ -42,21 +42,16 @@ static char *SourceFile = NULL;
 static int   SourceLine = 0;
 static int   ErrorCount = 0;
 static int   ErrorTotal = 0;
-static int   LastProgress = 0;
+static unsigned long   LastProgress = 0;
 
-#define BUILDMAP_MESSAGE_VERBOSE   5
-#define BUILDMAP_MESSAGE_PROGRESS  4
-#define BUILDMAP_MESSAGE_INFO      3
-#define BUILDMAP_MESSAGE_ERROR     2
-#define BUILDMAP_MESSAGE_FATAL     1
-int BuildMapMessageLevel = 4; /* + for more verbosity, - for less */
+int BuildMapMessageLevel = BUILDMAP_MESSAGE_PROGRESS; /* + for more verbosity, - for less */
 
 void buildmap_message_adjust_level (int level) {
 
-    BuildMapMessageLevel += level;
+    BuildMapMessageLevel = level;
 
 #ifndef _WIN32
-    if (BuildMapMessageLevel >= BUILDMAP_MESSAGE_VERBOSE)
+    if (BuildMapMessageLevel >= BUILDMAP_MESSAGE_PROGRESS)
         setbuf(stdout, NULL);
 #endif
 }
@@ -68,6 +63,11 @@ void buildmap_message_adjust_level (int level) {
 void buildmap_set_source (const char *name) {
 
    const char *p;
+
+#ifndef _WIN32
+    if (BuildMapMessageLevel >= BUILDMAP_MESSAGE_PROGRESS)
+        setbuf(stdout, NULL);
+#endif
 
    if (name == NULL) {
       if (SourceFile)
@@ -207,9 +207,10 @@ void buildmap_fatal (int column, const char *format, ...) {
  * @param done
  * @param estimated
  */
-void buildmap_progress (int done, int estimated) {
+void buildmap_progress (unsigned long done, unsigned long estimated) {
 
-   int this;
+   unsigned long this;
+
 
    if (BuildMapMessageLevel >= BUILDMAP_MESSAGE_PROGRESS) {
 
@@ -217,7 +218,7 @@ void buildmap_progress (int done, int estimated) {
 
       if (this != LastProgress) {
          LastProgress = this;
-        fprintf (stdout, "-- %s: %3d%% done\r", SourceFile, this);
+        fprintf (stdout, "-- %s: %3ld%% done\r", SourceFile, this);
       }
    }
 }
@@ -261,6 +262,20 @@ void buildmap_verbose (const char *format, ...) {
    va_list ap;
 
    if (BuildMapMessageLevel < BUILDMAP_MESSAGE_VERBOSE)
+      return;
+
+   va_start(ap, format);
+   vfprintf(stdout, format, ap);
+   va_end(ap);
+
+   fprintf (stdout, "\n");
+}
+
+void buildmap_debug (const char *format, ...) {
+
+   va_list ap;
+
+   if (BuildMapMessageLevel < BUILDMAP_MESSAGE_DEBUG)
       return;
 
    va_start(ap, format);

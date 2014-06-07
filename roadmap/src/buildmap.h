@@ -39,11 +39,19 @@ void buildmap_set_line   (int line);
 
 void buildmap_fatal    (int column, const char *format, ...);
 void buildmap_error    (int column, const char *format, ...);
-void buildmap_progress (int done, int estimated);
+void buildmap_progress (unsigned long done, unsigned long estimated);
 void buildmap_info     (const char *format, ...);
 void buildmap_summary  (int verbose, const char *format, ...);
 void buildmap_verbose  (const char *format, ...);
+void buildmap_debug (const char *format, ...);
 int  buildmap_is_verbose (void);
+
+#define BUILDMAP_MESSAGE_DEBUG     6
+#define BUILDMAP_MESSAGE_VERBOSE   5
+#define BUILDMAP_MESSAGE_PROGRESS  4
+#define BUILDMAP_MESSAGE_INFO      3
+#define BUILDMAP_MESSAGE_ERROR     2
+#define BUILDMAP_MESSAGE_FATAL     1
 void buildmap_message_adjust_level (int level);
 
 int buildmap_get_error_count (void);

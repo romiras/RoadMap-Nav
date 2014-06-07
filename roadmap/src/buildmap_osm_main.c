@@ -86,6 +86,8 @@ struct opt_defs options[] = {
         "Show less progress information"},
    {"verbose", "v", opt_flag, "0",
         "Show more progress information"},
+   {"debug", "d", opt_flag, "0",
+        "Show debug information"},
    {"inputfile", "i", opt_string, "",
         "Convert this OSM file into a map"},
    {"outputfile", "o", opt_string, "",
@@ -223,6 +225,7 @@ buildmap_osm_process_one_tile
     }
 
     buildmap_osm_common_find_layers();
+    buildmap_debug("reading file %s", fn);
 
     ret = buildmap_osm_binary_read(fdata);
 
@@ -751,7 +754,7 @@ main(int argc, char **argv)
 {
 
     int error;
-    int verbose, quiet;
+    int verbose = 0, quiet = 0, debug = 0;
     int osm_bits;
     int count;
     int *tileslist;
@@ -767,6 +770,7 @@ main(int argc, char **argv)
 
     /* then, fetch the option values */
     error = opt_val("verbose", &verbose) ||
+            opt_val("debug", &debug) ||
             opt_val("quiet", &quiet) ||
             opt_val("format", &BuildMapFormat) ||
             opt_val("class", &class) ||
@@ -813,8 +817,12 @@ main(int argc, char **argv)
         cmdfmt = "%s -t %d -b %d -h %d";
     }
 
-    if (verbose || quiet)
-        buildmap_message_adjust_level (verbose - quiet);
+    if (debug)
+        buildmap_message_adjust_level (BUILDMAP_MESSAGE_DEBUG);
+    else if (verbose)
+        buildmap_message_adjust_level (BUILDMAP_MESSAGE_VERBOSE);
+    else if (quiet)
+        buildmap_message_adjust_level (BUILDMAP_MESSAGE_ERROR);
 
     buildmap_layer_load(class);
 
