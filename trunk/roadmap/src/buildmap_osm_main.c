@@ -100,7 +100,7 @@ struct opt_defs options[] = {
  * @param filename
  * @param writeit
  */
-static int buildmap_osm_save_custom (const char *filename, int writeit) {
+static int buildmap_osm_save_custom (const char *filename, int tileid, int writeit) {
 
    char *parent;
    int ret = 0;
@@ -127,7 +127,8 @@ static int buildmap_osm_save_custom (const char *filename, int writeit) {
 	   ret = buildmap_db_remove (BuildMapResult, filename);
    }
 
-   buildmap_osm_text_save_wayids(BuildMapResult, filename);
+   if (tileid)
+	buildmap_osm_text_save_wayids(BuildMapResult, filename);
 
    return 0;
 }
@@ -143,7 +144,7 @@ static void buildmap_osm_save (int tileid, int writeit) {
 
    roadmap_osm_filename(db_name, 1, tileid, ".rdm");
 
-   buildmap_osm_save_custom(db_name, writeit);
+   buildmap_osm_save_custom(db_name, tileid, writeit);
 }
 
 /**
@@ -373,7 +374,7 @@ int buildmap_osm_text_process_file(char *fn, char *ofn)
     buildmap_osm_text_read(fn, 0, country_num, division_num);
 
     buildmap_db_sort();
-    ret2 = buildmap_osm_save_custom(ofn, (ret == 0) ? 1 : 0);
+    ret2 = buildmap_osm_save_custom(ofn, 0, (ret == 0) ? 1 : 0);
     if (ret2 != 0)
 	    return ret2;
 
