@@ -114,8 +114,6 @@ November 2010
 %!include: Configuration
 @@ runtime-help-link Maps
 %!include: Maps
-@@ runtime-help-link OpenStreetMap
-%!include: OpenStreetMap
 %!include: Map-Building
 @@ runtime-help-link Navigation
 %!include: Navigation
