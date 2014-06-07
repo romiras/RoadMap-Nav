@@ -1100,6 +1100,8 @@ buildmap_osm_text_read(char *fn, int tileid, int country_num, int division_num)
 	    buildmap_osm_text_neighbor_way_maps(tileid);
 
     buildmap_osm_text_point_hash_reset();
+    buildmap_osm_text_reset_way();
+    buildmap_osm_text_reset_node();
 
     (void) time(&t[0]);
     passid = 1;
@@ -1119,6 +1121,11 @@ buildmap_osm_text_read(char *fn, int tileid, int country_num, int division_num)
     buildmap_set_source("pass 1");
     LineNo = 0;
     NumWays = 0;
+    numshapes = 0;
+    nPolygons = 0;
+    LineId = 0;
+    nWayTable = 0;
+    nNodeTable = 0;
 
     while (! feof(fdata) && need_osm_trailer) {
         buildmap_set_line(++LineNo);
