@@ -89,6 +89,9 @@ $EDownloadErrorConnect  = 6;
 $EDownloadErrorPerms    = 7;
 $EDownloadErrorXMLError = 8;
 $EDownloadErrorNoData   = 9;
+$EDownloadErrorNoData   = 9;
+$EDownloadErrorServerProblem = 10;
+$EDownloadErrorLzmaProblem   = 11;
 
 // suppress php default error reporting
 error_reporting(0);
