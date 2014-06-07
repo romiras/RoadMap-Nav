@@ -1,4 +1,4 @@
-Destination.Color: red
+Map.Path: %PKGMAPSDIR%/...
 Map.Cache: 8
 Map.Background: LightYellow
 General.Default Zoom: 20
@@ -21,3 +21,4 @@ Display.Font Size: 20
 Labels.Font Size: 15
 Landmarks.Font Size: 20
 Map.DynamicOrientation: off
+Destination.Color: red

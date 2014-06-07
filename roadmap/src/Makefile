@@ -370,7 +370,8 @@ C_SRC = $(RMLIBSRC) $(RMGUISRC) $(RGGUISRC) \
 ALL_SRC = $(MKFILES) $(C_SRC) $(HEADERS) \
 	$(PKGDATAFILES) $(MISCFILES) $(MANPAGES) $(SCRIPTS) $(FONT) $(MANUAL)
 
-ALL_SUBDIRS = unix gpx gtk gtk2 qt qt4 icons ipkg agg_support win32 basefiles
+ALL_SUBDIRS = unix gpx gtk gtk2 qt qt4 icons ipkg agg_support win32 \
+	basefiles quadtiles
 
 # --- Additions for Trip plugin -------------------------------
 
@@ -493,9 +494,10 @@ endif
 # --- Conventional targets ----------------------------------------
 
 .PHONY: all gtk gtk2 qt3 qt4 qpe4 rebuild build \
-         topclean clean strip install uninstall unix gpx icons basefiles
+         topclean clean strip install uninstall unix gpx icons \
+	 basefiles quadtiles
 
-all: runtime build $(TOOLS) icons basefiles $(MANUAL)
+all: runtime build $(TOOLS) icons basefiles quadtiles $(MANUAL)
 
 
 # --- Convenience targets, to force a specific desktop build ------
@@ -546,8 +548,11 @@ strip:
 icons:
 	$(MAKE) -C icons all
 
-basefiles: build   # need buildmap_osm and builus to be built
+basefiles: $(BUILD)
 	$(MAKE) -C basefiles all
+
+quadtiles: $(BUILD)
+	$(MAKE) -C quadtiles all
 
 topclean:
 	rm -f *.o *.a *.da .depends.mk $(BUILD) $(TOOLS) $(DRIVERS)
@@ -555,7 +560,7 @@ topclean:
 	$(RM) .#*
 
 clean:  topclean
-	for module in icons $(OSDIR) gpx $(RDMODULES) ; \
+	for module in icons $(OSDIR) gpx $(RDMODULES) basefiles quadtiles ; \
 	do \
 		$(MAKE) -C $$module clean || exit 1; \
 	done
@@ -576,15 +581,17 @@ installdata:
 	chmod a+rx $(pkgdatadir)
 	mkdir -p $(pkgdatadir)/default
 	chmod a+rx $(pkgdatadir)/default
-	mkdir -p $(pkgdatadir)/basemaps
-	chmod a+rx $(pkgdatadir)/basemaps
+	mkdir -p $(pkgmapsdir)/basemaps
+	chmod a+rx $(pkgmapsdir)/basemaps
 	cd $(pkgdatadir) && rm -f $(PKGDATAFILES)
-	cp $(PKGDATAFILES) $(pkgdatadir)/.
+	for p in $(PKGDATAFILES); do \
+	  sed 's;%PKGMAPSDIR%;$(pkgmapsdir);g' $$p >$(pkgdatadir)/$$p ; done
 	cd $(pkgdatadir) ; chmod a+r $(PKGDATAFILES)
 	cp default/All $(pkgdatadir)/default/.
 	chmod a+r $(pkgdatadir)/default/All
-	cp basefiles/us*.rdm $(pkgdatadir)/basemaps/.
-	chmod a+r $(pkgdatadir)/basemaps/us*.rdm
+	cp basefiles/us*.rdm $(pkgmapsdir)/basemaps/.
+	cp -a quadtiles/qt?? $(pkgmapsdir)
+	chmod -R a+r $(pkgmapsdir)
 ifneq ($(strip $(AGG)),NO)
 	cp $(FONT) $(pkgdatadir)/font.ttf
 endif
