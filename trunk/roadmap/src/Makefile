@@ -369,7 +369,7 @@ C_SRC = $(RMLIBSRC) $(RMGUISRC) $(RGGUISRC) \
 ALL_SRC = $(MKFILES) $(C_SRC) $(HEADERS) \
 	$(PKGDATAFILES) $(MISCFILES) $(MANPAGES) $(SCRIPTS) $(FONT) $(MANUAL)
 
-ALL_SUBDIRS = unix gpx gtk gtk2 qt qt4 icons ipkg agg_support php win32
+ALL_SUBDIRS = unix gpx gtk gtk2 qt qt4 icons ipkg agg_support win32
 
 # --- Additions for Trip plugin -------------------------------
 
@@ -592,9 +592,6 @@ installbin:
 	mkdir -p $(pkgbindir)
 	cd $(pkgbindir) && rm -f $(BUILD) $(SCRIPTS)
 	cp $(BUILD) $(SCRIPTS) $(DRIVERS) $(pkgbindir)/.
-	cp php/osmgetbmap php/osmgetbmapcore.php $(pkgbindir)/.
-	cd $(pkgbindir) && \
-		chmod a+x $(BUILD) $(SCRIPTS) $(DRIVERS) osmgetbmap
 
 installdesktop:
 	-test -d $(menudir) && cp roadmap.menu $(menudir)/roadmap
