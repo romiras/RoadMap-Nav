@@ -237,6 +237,9 @@ void roadmap_log (int level, const char *source,
 
    roadmap_log_one (category, stderr, saved, source, line, format, ap);
 
+   va_end(ap);
+   va_start(ap, format);
+
    roadmap_redirect_one (category, format, ap);
 
    /* for now, assume that if someone has put in a redirect for

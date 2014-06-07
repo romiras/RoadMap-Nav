@@ -684,11 +684,11 @@ void roadmap_display_text (const char *title, const char *format, ...) {
    RoadMapSign *sign = roadmap_display_search_sign (title);
 
    char text[1024];
-   va_list parameters;
+   va_list ap;
 
-   va_start(parameters, format);
-   vsnprintf (text, sizeof(text), format, parameters);
-   va_end(parameters);
+   va_start(ap, format);
+   vsnprintf (text, sizeof(text), format, ap);
+   va_end(ap);
 
    if (sign->content != NULL) {
       free (sign->content);
