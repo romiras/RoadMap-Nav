@@ -902,6 +902,7 @@ function downloadToXml($serverhost,$serverpath,$query) {
 	if ($testfile) {
 		$fp = fopen("test.5.osm",'r');
 	} else {
+		doLog("Trying: " . $serverhost . $path . "\n");
 		$fp = fsockopen( $serverhost, 80, &$errno, &$errstr, 120);
 	}
 	
@@ -911,7 +912,6 @@ function downloadToXml($serverhost,$serverpath,$query) {
 		  "Couldn't connect to API server ".$serverhost);
 	}
 
-	doLog($serverhost.$path);
 	if (!$testfile) {
 		fwrite($fp, "GET $path HTTP/1.1\r\n");
 		fwrite($fp, "Host: $serverhost\r\n");
