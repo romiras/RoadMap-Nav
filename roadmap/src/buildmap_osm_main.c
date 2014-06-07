@@ -77,7 +77,7 @@ struct opt_defs options[] = {
    {"source", "s", opt_string, "osmgetbmap",
         "commandname or URL for accessing map data"},
    {"tileid", "t", opt_int, "",
-        "Fetch the given numeric tileid"},
+        "Fetch the given numeric tileid (use 0x for hex)"},
    {"decode", "d", opt_string, "",
         "Analyze given tileid (or quadtile filename) (hex only)"},
    {"encode", "e", opt_string, "",
@@ -545,7 +545,7 @@ buildmap_osm_process_tiles (int *tiles, int bits, int count,
 
             buildmap_info("");
             buildmap_info
-                ("processing tileid '%d', for file '%s'", tileid, name);
+                ("processing tileid '0x%x', for file '%s'", tileid, name);
 
             ret = buildmap_osm_process_one_tile (tileid, source, cmdfmt);
 
