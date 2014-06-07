@@ -15,9 +15,22 @@ function usage() {
 
 // configure the server -- should perhaps be cmdline arg
 $server = "www.openstreetmap.org";
+$path = "/api/0.6/map"; 
+
+$server = "api.openstreetmap.fr";
+$path = "/api/0.6/map"; 
+
 //$server = "osmxapi.informationfreeway.org";
 //$server = "openstreetmap.gryph.de";
-$path = "/api/0.6/map"; 
+// $server = "jxapi.openstreetmap.org";
+
+$server = "www.overpass-api.de";
+$path = "/api/xapi?map";
+
+#$server = "overpass.osm.rambler.ru";
+#$path = "/cgi/xapi?map";
+
+// api/xapi?*[key=value][bbox=-180,-90,180,90]
 
 function doLog($text) {
     fwrite(STDERR, $text . "\n");
@@ -62,13 +75,17 @@ global $nocache, $CacheDir;
 $nocache = false;
 $CacheDir = getenv('HOME')."/".".osm_bmap_cache";
 
-$options = getopt("b:t:h:c:");
+$options = getopt("b:t:h:c:", array('bits:', 'trutile:', 'have:', 'cache:'));
 foreach (array_keys($options) as $opt) {
     switch ($opt) {
-      case 'b': $bits = $options['b']; break;
-      case 't': $tileid = $options['t']; break;
-      case 'h': $have = $options['h']; break;
-      case 'c': $CacheDir = $options['c']; break;
+      case 'b':		$bits = $options['b']; break;
+      case 'bits':	$bits = $options['bits']; break;
+      case 't':		$tileid = $options['t']; break;
+      case 'trutile':	$tileid = $options['trutile']; break;
+      case 'h':		$have = $options['h']; break;
+      case 'have':	$have = $options['have']; break;
+      case 'c':		$CacheDir = $options['c']; break;
+      case 'cache':	$CacheDir = $options['cache']; break;
     }
 }
 
