@@ -87,6 +87,7 @@ static struct WayInfo {
 						     the table flags */
     int      WayIsOneWay;        /**< is this way one direction only */
     int      WayAdminLevel;	 /**< boundaries */
+    int      WayTerritorial; /* is this a territorial boundary? */
     int      WayCoast;           /**< coastline */
     int      WayIsInteresting;   /**< this way is interesting for RoadMap */
 } wi;
@@ -663,6 +664,9 @@ buildmap_osm_text_way_tag(char *data)
 		}
 	} else if (strcasecmp(tag, "admin_level") == 0) {
 		wi.WayAdminLevel = atoi(value);
+	} else if (strcasecmp(tag, "border_type") == 0 ||
+		    strcasecmp(tag, "boundary_type") == 0) {
+		wi.WayTerritorial = !strncasecmp(value, "territorial", 11);
 	} else if (strcasecmp(tag, "natural") == 0 &&
 			strcasecmp(value, "coastline") == 0) {
 		wi.WayCoast = 1;
@@ -719,7 +723,8 @@ buildmap_osm_text_way_finish(char *data)
 		wi.WayLayer = l_shoreline;
 	} else if (wi.WayAdminLevel) {
 		/* national == 2, state == 4, ignore lesser boundaries */
-		if  (wi.WayAdminLevel > 4) {
+		/* also ignore territorial (marine) borders */
+		if  (wi.WayAdminLevel > 4 || wi.WayTerritorial) {
 			wi.WayIsInteresting = 0;
 		}
 
