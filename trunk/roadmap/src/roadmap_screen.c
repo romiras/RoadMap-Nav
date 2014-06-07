@@ -930,6 +930,31 @@ static void roadmap_screen_draw_square_edges (int square) {
    roadmap_log_pop ();
 }
 
+static void roadmap_screen_draw_osm_label(int tileid)
+{
+    void roadmap_osm_tileid_to_bbox(int tileid, RoadMapArea *edges);
+    /* mark each OSM tile location with its tileid -- the
+     * edges will be its true bounding box -- the label will
+     * be at its purported center.
+     */
+    RoadMapArea edges;
+    RoadMapPosition position;
+    RoadMapGuiRect bbox, tbbox;
+    RoadMapGuiPoint screen_point;
+    char label[16];
+
+    sprintf(label, "0x%x", tileid);
+    roadmap_osm_tileid_to_bbox(tileid, &edges);
+    position.latitude = (edges.north + edges.south) / 2;
+    position.longitude = (edges.east + edges.west) / 2;
+    if (roadmap_math_point_is_visible(&position)) {
+	roadmap_math_coordinate (&position, &screen_point);
+	roadmap_math_rotate_coordinates (1, &screen_point);
+	roadmap_sprite_draw_with_text
+	("TextBox", &screen_point, 0, &bbox, &tbbox, label);
+     }
+}
+
 /* arrange to not do labels further than 3/4 up the screen */
 static int roadmap_screen_label_cutoff(RoadMapGuiPoint *loweredge) {
 
@@ -1504,51 +1529,15 @@ void roadmap_screen_repaint (void) {
     drawnlist = (int *)calloc(count, sizeof(int));
     roadmap_check_allocated(drawnlist);
 
-    for (i = count-1; i >= 0; --i) {
-
-        /* draw global square outline (with "--square" or "--map-boxes") */
-        if (roadmap_is_visible (ROADMAP_SHOW_GLOBAL_SQUARE)) {
+    if (roadmap_is_visible (ROADMAP_SHOW_GLOBAL_SQUARE)) {
+	/* draw global square outline (with "--square" or "--map-boxes") */
+	for (i = count-1; i >= 0; --i) {
             if (roadmap_locator_activate (fipslist[i]) != ROADMAP_US_OK)
                continue;
             roadmap_screen_draw_square_edges (ROADMAP_SQUARE_GLOBAL);
+	    if (fipslist[i] < 0)
+		roadmap_screen_draw_osm_label(-fipslist[i]);
         }
-    }
-
-    for (i = count-1; i >= 0; --i) {
-        /* -- nothing to draw at this zoom? -- */
-        if (roadmap_locator_get_decluttered(fipslist[i]))
-            continue;
-
-        /* -- Access the county's database. */
-        if (roadmap_locator_activate (fipslist[i]) != ROADMAP_US_OK)
-	    continue;
-
-#if 0
-        /* mark each OSM tile location with its tileid -- the
-         * edges will be its true bounding box -- the label will
-         * be at its purported center.
-         */
-        if (fipslist[i] < 0 &&
-                roadmap_is_visible (ROADMAP_SHOW_GLOBAL_SQUARE)) {
-            void roadmap_osm_tileid_to_bbox(int tileid, RoadMapArea *edges);
-            RoadMapArea edges;
-            RoadMapPosition position;
-            RoadMapGuiRect bbox, tbbox;
-            RoadMapGuiPoint screen_point;
-            char label[16];
-
-            sprintf(label, "0x%x", -fipslist[i]);
-            roadmap_osm_tileid_to_bbox(-fipslist[i], &edges);
-            position.latitude = (edges.north + edges.south) / 2;
-            position.longitude = (edges.east + edges.west) / 2;
-           if (roadmap_math_point_is_visible(&position)) {
-              roadmap_math_coordinate (&position, &screen_point);
-              roadmap_math_rotate_coordinates (1, &screen_point);
-              roadmap_sprite_draw_with_text
-                ("TextBox", &screen_point, 0, &bbox, &tbbox, label);
-           }
-        }
-#endif
     }
 
     for (i = count-1; i >= 0; --i) {
@@ -2403,7 +2392,7 @@ void roadmap_screen_set_initial_position (void) {
         (roadmap_config_get (&RoadMapConfigMapBackground));
 
     RoadMapPenEdges = roadmap_canvas_create_pen ("Map.Edges");
-    roadmap_canvas_set_thickness (4);
+    roadmap_canvas_set_thickness (2);
     roadmap_canvas_set_foreground ("grey");
 
     roadmap_layer_adjust ();
