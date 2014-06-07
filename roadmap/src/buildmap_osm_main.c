@@ -545,7 +545,7 @@ buildmap_osm_process_tiles (int *tiles, int bits, int count,
 
             buildmap_info("");
             buildmap_info
-                ("processing tileid '0x%x', for file '%s'", tileid, name);
+                ("processing tile %d of %d, file '%s'", i, count, name);
 
             ret = buildmap_osm_process_one_tile (tileid, source, cmdfmt);
 
