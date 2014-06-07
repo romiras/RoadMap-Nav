@@ -704,7 +704,7 @@ RELNAME = roadmap-$(DOTVERSION)
 UPPER_SRC = README COPYING 
 DOC_SRC = Bugs ChangeLog Coding Configuration Developer-Guide \
 	Installation Map-Building Map-Designing Map-Format \
-	OpenStreetMap Platforms Quickstart Status ToDo Usage
+	Maps Platforms Quickstart Status ToDo Usage
 
 tarball: $(RELNAME)-src.tar.gz
 

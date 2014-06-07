@@ -57,7 +57,7 @@ USER_GUIDE_SECTIONS = \
 	Installation \
 	Usage \
 	Configuration \
-	OpenStreetMap \
+	Maps \
 	Map-Building
 USER_GUIDE_SECTION_PATHS = $(addprefix ../doc/, $(USER_GUIDE_SECTIONS))
 
