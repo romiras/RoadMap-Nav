@@ -301,17 +301,33 @@ static void roadmap_start_mapinfo (void) {
 
    char map_info[512];
    RoadMapPosition pos;
-   char lon[32], lat[32];
+   char clat[32], clon[32];
+   char w[32], s[32], e[32], n[32];
+   RoadMapArea screen;
 
    roadmap_math_get_context (&pos, NULL, NULL);
+   roadmap_math_to_floatstring(clat, pos.latitude, MILLIONTHS);
+   roadmap_math_to_floatstring(clon, pos.longitude, MILLIONTHS);
+
+   roadmap_log (ROADMAP_WARNING, "%s,%s   %s x %s", clat, clon,
+    	roadmap_message_get('x'), roadmap_message_get('y'));
+
+   roadmap_math_screen_edges (&screen);
+   roadmap_math_to_floatstring(s, screen.south, MILLIONTHS);
+   roadmap_math_to_floatstring(w, screen.west, MILLIONTHS);
+   roadmap_math_to_floatstring(n, screen.north, MILLIONTHS);
+   roadmap_math_to_floatstring(e, screen.east, MILLIONTHS);
+
+   /* s, w, n, e */
+   roadmap_log (ROADMAP_WARNING, "%s,%s:%s,%s", s, w, n, e);
+
 
    snprintf(map_info, sizeof(map_info),
-            "Map view area: %s by %s\n"
-            "Map center: %s, %s",
+            "Map view area: %s wide by %s high\n"
+            "Map center (lat,lon): %s, %s",
              roadmap_message_get('x'),
              roadmap_message_get('y'),
-             roadmap_math_to_floatstring(lon, pos.longitude, MILLIONTHS),
-             roadmap_math_to_floatstring(lat, pos.latitude, MILLIONTHS));
+             clat, clon);
    roadmap_messagebox_wait ("Map Parameters", map_info);
 }
 
