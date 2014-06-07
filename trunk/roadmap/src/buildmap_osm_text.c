@@ -279,6 +279,9 @@ void
 buildmap_osm_text_node_read_lat_lon(char *data)
 {
     int         nchars;
+#if 1
+    double      flat, flon;
+#endif
     char        *p;
     int         NodeLatRead, NodeLonRead;
     char	tag[512], value[512];
@@ -302,6 +305,17 @@ buildmap_osm_text_node_read_lat_lon(char *data)
 	    if (s != 2)
 		    buildmap_fatal(0, "bad tag read at '%s'\n", p);
 
+#if 1
+            if (strcmp(tag, "lat") == 0) {
+                    sscanf(value, "%lf", &flat);
+                    ni.NodeLat = flat * 1000000;
+                    NodeLatRead++;
+            } else if (strcmp(tag, "lon") == 0) {
+                    sscanf(value, "%lf", &flon);
+                    ni.NodeLon = flon * 1000000;
+                    NodeLonRead++;
+            }
+#else
             if (strcmp(tag, "lat") == 0) {
                     ni.NodeLat = roadmap_math_from_floatstring(value, MILLIONTHS);
                     NodeLatRead++;
@@ -309,6 +323,7 @@ buildmap_osm_text_node_read_lat_lon(char *data)
                     ni.NodeLon = roadmap_math_from_floatstring(value, MILLIONTHS);
                     NodeLonRead++;
             }
+#endif
 
             p += nchars;
     }
