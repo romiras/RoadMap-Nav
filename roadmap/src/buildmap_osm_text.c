@@ -1055,6 +1055,9 @@ buildmap_osm_text_read(char *fn, int country_num, int division_num)
     struct stat st;
     unsigned int interesting_way;
     int		in_relation;
+    int		need_xml_header = 1;
+    int		need_osm_header = 1;
+    int		need_osm_trailer = 1;
 
     fdata = buildmap_osm_text_fopen(fn);
     fstat(fileno(fdata), &st);
@@ -1083,7 +1086,7 @@ buildmap_osm_text_read(char *fn, int country_num, int division_num)
     LineNo = 0;
     NumWays = 0;
 
-    while (! feof(fdata)) {
+    while (! feof(fdata) && need_osm_trailer) {
         buildmap_set_line(++LineNo);
 	if (LineNo % 1000 == 0) buildmap_progress(LineNo, 0);
         got = fgets(buf, LINELEN, fdata);
@@ -1097,6 +1100,21 @@ buildmap_osm_text_read(char *fn, int country_num, int division_num)
         for (p=buf; *p && isspace(*p); p++) ;
         if (*p == '\n' || *p == '\r') 
                 continue;
+
+	/* do some error checking in the first pass */
+	if (need_xml_header) {
+	    if (strncmp(p, "<?xml ", 6))
+		buildmap_fatal(0, "bad input from %s, no <?xml line", fn);
+	    need_xml_header = 0;
+	    continue;
+	}
+	if (need_osm_header) {
+	    if (strncmp(p, "<osm ", 5))
+		buildmap_fatal(0, "bad input from %s, no <osm line", fn);
+	    need_osm_header = 0;
+	    continue;
+	}
+
         if (*p != '<') {
 		/*
 		 * Assume we're in a continuation line such as
@@ -1144,11 +1162,16 @@ buildmap_osm_text_read(char *fn, int country_num, int division_num)
 		else
                 	ret += buildmap_osm_text_way_tag(p);
                 continue;
+        } else if (strncasecmp(p, "/osm>", 5) == 0) {
+		need_osm_trailer = 0;
         } 
     }
     buildmap_progress(LineNo, 0);
     putchar('\n');
     lines = LineNo;
+
+    if (need_osm_trailer)
+	buildmap_fatal(0, "bad input from %s, no </osm> line", fn);
 
     qsort(WayTable, nWayTable, sizeof(*WayTable), qsort_compare_unsigneds);
 
