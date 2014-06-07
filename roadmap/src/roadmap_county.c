@@ -384,6 +384,7 @@ int roadmap_county_by_state(RoadMapString state, int *fips, int count) {
    return found;
 }
 
+#ifdef NEEDED
 /**
  * @brief
  * @param state
@@ -415,6 +416,7 @@ const char *roadmap_county_name (RoadMapString state, int fips) {
 
    return "";
 }
+#endif
 
 /**
  * @brief
