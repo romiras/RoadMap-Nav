@@ -254,8 +254,8 @@ void buildmap_turn_restrictions_save (void) {
    int last_square = -1;
    int square_count;
 
-   int longitude = 0;
-   int latitude = 0;
+   // int longitude = 0;
+   // int latitude = 0;
 
    RoadMapTurns *db_turns;
    BuildMapTurns *one_turn;
@@ -312,8 +312,8 @@ void buildmap_turn_restrictions_save (void) {
 
          last_node = one_turn->node;
 
-         longitude = buildmap_point_get_longitude_sorted (last_node);
-         latitude = buildmap_point_get_latitude_sorted (last_node);
+         // longitude = buildmap_point_get_longitude_sorted (last_node);
+         // latitude = buildmap_point_get_latitude_sorted (last_node);
 
          square = buildmap_point_get_square_sorted (last_node);
 
@@ -390,7 +390,7 @@ void buildmap_turn_restrictions_summary (void) {
 
    fprintf (stderr,
             "-- turn restrictions table: %d items, %d add, %d bytes used\n"
-            "                            %d lines (range %d), max %d points per line\n",
+            "                            %d lines (range %d), max %lu points per line\n",
             TurnsCount, 0,
             TurnsCount * sizeof(RoadMapTurns)
                + (TurnsMaxNode + 1) * sizeof(RoadMapTurnsByNode),
