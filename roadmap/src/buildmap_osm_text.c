@@ -176,6 +176,7 @@ buildmap_osm_text_reset_way(void)
         nWayNodes = 0;
         free(WayStreetName); WayStreetName = 0;
         free(WayStreetRef); WayStreetRef = 0;
+        WayLayer = 0;
         WayFlags = 0;
         WayInvalid = 0;
 	WayIsOneWay = ROADMAP_LINE_DIRECTION_BOTH;
