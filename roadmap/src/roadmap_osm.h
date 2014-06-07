@@ -52,7 +52,7 @@
 
 int roadmap_osm_latlon2tileid(int lat, int lon, int bits);
 void roadmap_osm_tileid_to_bbox(int tileid, RoadMapArea *edges);
-char *roadmap_osm_filename(char *buf, int dirpath, int tileid);
+char *roadmap_osm_filename(char *buf, int dirpath, int tileid, char *suffix);
 void roadmap_osm_tilesplit(int tileid, int *ntiles, int howmanybits);
 
 int  roadmap_osm_by_position

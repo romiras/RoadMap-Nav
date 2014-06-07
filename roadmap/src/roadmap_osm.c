@@ -208,7 +208,7 @@ int roadmap_osm_tileid_to_neighbor(int tileid, int dir) {
                 
 }
 
-char *roadmap_osm_filename(char *buf, int dirpath, int tileid) {
+char *roadmap_osm_filename(char *buf, int dirpath, int tileid, char *suffix) {
  
     int a, b;
     char *n;
@@ -230,7 +230,7 @@ char *roadmap_osm_filename(char *buf, int dirpath, int tileid) {
 
         n += sprintf(n, "qt%d/%02x/%02x/", tileid2bits(tileid), a, b);
     }
-    n += sprintf(n, "qt%08x.rdm", tileid);
+    n += sprintf(n, "qt%08x%s", tileid, suffix);
 
     return buf;
 }
@@ -282,7 +282,7 @@ static void roadmap_osm_add_if_exists(int tileid) {
 
     if (roadmap_osm_bits_paths[bits] &&
         roadmap_file_exists (roadmap_osm_bits_paths[bits],
-		roadmap_osm_filename(NULL, 1, tileid))) {
+		roadmap_osm_filename(NULL, 1, tileid, ".rdm"))) {
         roadmap_osm_add_tile_to_list(tileid);
     } else {
         if (bits < roadmap_osm_maps_smallest) {
@@ -314,7 +314,7 @@ int roadmap_osm_by_position
 	int bits;
 
 	roadmap_osm_maps_available = 0;
-	for (bits = RoadMapOSMBits; bits < TILE_MAXBITS; bits++) {
+	for (bits = RoadMapOSMBits; bits <= TILE_MAXBITS; bits++) {
 	    sprintf(bitsdir, "qt%d", bits);
 	    path = roadmap_scan ("maps", bitsdir);
 	    if (path) {

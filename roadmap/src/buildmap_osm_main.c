@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <ctype.h>
 #include <errno.h>
+#include <signal.h>
 
 #include "roadmap.h"
 #include "roadmap_types.h"
@@ -54,9 +55,6 @@
 
 int BuildMapNoLongLines;
 
-#define BUILDMAP_FORMAT_OSMBIN    1
-
-static char *BuildMapFormat;
 static int   BuildMapReplaceAll = 0;
 static char *BuildMapFileName = 0;
 
@@ -64,7 +62,7 @@ char *BuildMapResult;
 
 
 struct opt_defs options[] = {
-   {"format", "f", opt_string, "osmbinary",
+   {"format", "f", opt_string, "osmtext",
         "Input format (OSM protocol)"},
    {"class", "c", opt_string, "default/All",
         "The class file to create the map for"},
@@ -74,15 +72,15 @@ struct opt_defs options[] = {
         "Re-request maps that are already present"},
    {"maps", "m", opt_string, "",
         "Location for the generated map files"},
-   {"source", "s", opt_string, "osmgetbmap",
-        "commandname or URL for accessing map data"},
+   {"fetcher", "F", opt_string, "osm_fetch_tile",
+        "commandname for accessing map data to stdout"},
    {"tileid", "t", opt_int, "",
         "Fetch the given numeric tileid (use 0x for hex)"},
    {"decode", "d", opt_string, "",
         "Analyze given tileid (or quadtile filename) (hex only)"},
    {"encode", "e", opt_string, "",
         "Report tileid for given lat,lon"},
-   {"listonly", "l", opt_int, "0",
+   {"listonly", "l", opt_flag, "0",
         "Dump the list of filenames and bounding boxes for the request"},
    {"quiet", "q", opt_flag, "0",
         "Show less progress information"},
@@ -107,6 +105,7 @@ static int buildmap_osm_save_custom (const char *filename, int writeit) {
    char *parent;
    int ret = 0;
 
+   /* create all parents of our file */
    parent = roadmap_path_parent(BuildMapResult, filename);
    roadmap_path_create (parent);
    roadmap_path_free(parent);
@@ -127,6 +126,9 @@ static int buildmap_osm_save_custom (const char *filename, int writeit) {
    if (ret != 0) {
 	   ret = buildmap_db_remove (BuildMapResult, filename);
    }
+
+   buildmap_osm_text_save_wayids(BuildMapResult, filename);
+
    return 0;
 }
 
@@ -139,7 +141,7 @@ static void buildmap_osm_save (int tileid, int writeit) {
 
    char db_name[128];
 
-   roadmap_osm_filename(db_name, 1, tileid);
+   roadmap_osm_filename(db_name, 1, tileid, ".rdm");
 
    buildmap_osm_save_custom(db_name, writeit);
 }
@@ -181,7 +183,7 @@ buildmap_osm_neighbors_to_mask(int tileid) {
     for (dir = TILE_SOUTHEAST; dir < TILE_NORTHWEST+1; dir++) {
         bit = (1 << dir);
         n = roadmap_osm_tileid_to_neighbor(tileid, dir);
-        roadmap_osm_filename(filename, 1, n);
+        roadmap_osm_filename(filename, 1, n, ".rdm");
         if (roadmap_file_exists (BuildMapResult, filename))
             have |= bit;
     }
@@ -195,19 +197,21 @@ buildmap_osm_neighbors_to_mask(int tileid) {
 /**
  * @brief query the web server using the OSM binary protocol, and process it
  * @param tileid
- * @param source
- * @param cmdfmt is a printf style format string used to format the web query
+ * @param fetcher
  * @return
  */
 static int
-buildmap_osm_process_one_tile
-        (int tileid, const char *source, const char *cmdfmt)
+buildmap_osm_process_one_tile (int tileid, const char *fetcher, const char *format)
 {
 
-    char urlcmd[256];
+    char cmd[512];
+    char bbox[100], *bbp;
     FILE *fdata;
     int have = 0;
     int ret, bits, trutile;
+    RoadMapArea edges[1];
+    char *xmlfile;
+    char *parent;
 
     bits = tileid2bits(tileid);
     buildmap_verbose("called for tileid 0x%x, bits %d", tileid, bits);
@@ -217,48 +221,117 @@ buildmap_osm_process_one_tile
     buildmap_verbose ("tileid %d, have 0x%02x", tileid, have);
 
     trutile = tileid2trutile(tileid);
-    snprintf(urlcmd, sizeof(urlcmd), cmdfmt, source, trutile, bits, have);
 
-    buildmap_info("command is \"%s\"", urlcmd);
+   
+    roadmap_osm_tileid_to_bbox(tileid, edges);
+    /* w, s, e, n */
+    bbp = bbox;
+    bbp += sprintf(bbp, "%s,",
+    		roadmap_math_to_floatstring(0, edges->west, MILLIONTHS));
+    bbp += sprintf(bbp, "%s,", 
+    		roadmap_math_to_floatstring(0, edges->south, MILLIONTHS));
+    bbp += sprintf(bbp, "%s,", 
+    		roadmap_math_to_floatstring(0, edges->east, MILLIONTHS));
+    bbp += sprintf(bbp, "%s", 
+    		roadmap_math_to_floatstring(0, edges->north, MILLIONTHS));
+        
+    /* create all parents of our file */
+    parent = roadmap_path_parent(BuildMapResult,
+		roadmap_osm_filename(0, 1, tileid, ".osm"));
+    roadmap_path_create(parent);
+    roadmap_path_free(parent);
 
-    fdata = popen(urlcmd, "r");
-    if (fdata == NULL) {
-        buildmap_fatal(0, "couldn't open \"%s\"", urlcmd);
+    xmlfile = roadmap_path_join(BuildMapResult,
+		roadmap_osm_filename(0, 1, tileid, ".osm"));
+
+    snprintf(cmd, sizeof(cmd), "%s --trutile %d "
+    		"--bits %d --have %d --bbox %s --xmlfile %s",
+    		fetcher, trutile, bits, have, bbox, xmlfile);
+
+// sprintf(cmd, "cat /tmp/out.xml > %s", xmlfile);
+
+    if (strcasecmp(format, "osmbinary") == 0) {
+	buildmap_info("command is \"%s\"", cmd);
+
+	fdata = popen(cmd, "r");
+	if (fdata == NULL) {
+	    buildmap_fatal(0, "couldn't open \"%s\"", cmd);
+	}
+
+	buildmap_osm_common_find_layers();
+
+	ret = buildmap_osm_binary_read(fdata);
+
+	if (pclose(fdata) != 0) {
+	    buildmap_error(0, "problem fetching data (pclose: %s)", strerror(errno));
+	    ret = -1;
+	}
+
+	/*
+	 * When the OSM server is congested, it returns
+	 * HTTP/1.1 509 Bandwidth Limit Exceeded
+	 *
+	 * Don't fail on this, but retry after a while.
+	 */
+	int cnt = 0;
+	while (ret == -509 && cnt++ < 100) {
+	   sleep(30);
+	   fdata = popen(cmd, "r");
+	   if (fdata == NULL) {
+	      buildmap_fatal(0, "couldn't open \"%s\"", cmd);
+	   }
+
+	   buildmap_osm_common_find_layers();
+
+	   ret = buildmap_osm_binary_read(fdata);
+
+	   if (pclose(fdata) != 0) {
+	      buildmap_error(0, "problem fetching data (pclose: %s), continuing", strerror(errno));
+	      ret = -1;
+	   }
+	}
+
+    } else {
+	struct stat statbuf;
+	if (!BuildMapReplaceAll &&
+		stat(xmlfile, &statbuf) == 0 &&
+		statbuf.st_size != 0)
+	    ret = 0;
+	else
+	    ret = system(cmd);
+
+	if ((WEXITSTATUS(ret) != 0) ||
+	    (WIFSIGNALED(ret) &&
+		(WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))) {
+	    ret = -1;
+        } else {
+	    fdata = fopen(xmlfile, "r");
+	    if (!fdata) {
+		buildmap_fatal(0, "couldn't open \"%s\"", xmlfile);
+	    }
+	    ret = buildmap_osm_text_read(fdata, 0, 0);
+	    fclose(fdata);
+	}
     }
 
-    buildmap_osm_common_find_layers();
-
-    ret = buildmap_osm_binary_read(fdata);
-
-    if (pclose(fdata) != 0) {
-        buildmap_error(0, "problem fetching data (pclose: %s), continuing", strerror(errno));
-        // ret = -1;
-    }
-
-    /*
-     * When the OSM server is congested, it returns
-     * HTTP/1.1 509 Bandwidth Limit Exceeded
-     *
-     * Don't fail on this, but retry after a while.
-     */
-    int cnt = 0;
-    while (ret == -509 && cnt++ < 100) {
-       sleep(30);
-       fdata = popen(urlcmd, "r");
-       if (fdata == NULL) {
-          buildmap_fatal(0, "couldn't open \"%s\"", urlcmd);
-       }
-
-       buildmap_osm_common_find_layers();
-
-       ret = buildmap_osm_binary_read(fdata);
-
-       if (pclose(fdata) != 0) {
-	  buildmap_error(0, "problem fetching data (pclose: %s), continuing", strerror(errno));
-	  // ret = -1;
-       }
-    }
     return ret;
+}
+
+int buildmap_osm_filename_to_tileid(char *fn, int *ptileid, char *suffix)
+{
+	int	n;
+	char	pattern[32], tileid[32], *p;
+
+	/* Find last path separator, if any */
+	p = strrchr(fn, '/');
+
+	sprintf(pattern, "qt%%[0-9a-fA-F]%s", suffix);
+	n = sscanf(p ? p+1 : fn, pattern, tileid);
+	if (n == 1 && strlen(tileid) == 8) {
+		*ptileid = strtol(tileid, 0, 16);
+		return 1;
+	}
+	return 0;
 }
 
 /**
@@ -266,12 +339,13 @@ buildmap_osm_process_one_tile
  * @param fn the file name
  * @return success indicator
  */
-int buildmap_osm_text_process_file(char *fn)
+int buildmap_osm_text_process_file(char *fn, char *ofn)
 {
     int         n, ret = 0, ret2;
     FILE        *f;
     char        country[6], division[6];
     int         fips, country_num = 0, division_num = 0;
+    int		tileid;
 
     f = fopen(fn, "r");
     if (f == NULL) {
@@ -300,9 +374,12 @@ int buildmap_osm_text_process_file(char *fn)
 
             country_num = fips / 1000;
             division_num = fips % 1000;
+    } else if (buildmap_osm_filename_to_tileid(fn, &tileid, ".osm")) {
+	    country_num = division_num = 0;
     } else {
-            buildmap_fatal(0,
-                "Invalid file name \"%s\" should be ISO or USC shape", fn);
+            buildmap_info(
+                "Proper file name \"%s\" should be quadtile, ISO or USC shape.", fn);
+	    country_num = division_num = 0;
     }
 
     buildmap_metadata_add_attribute ("Class", "Name",   "All");
@@ -317,12 +394,40 @@ int buildmap_osm_text_process_file(char *fn)
     }
 
     buildmap_db_sort();
-    ret2 = buildmap_osm_save_custom(BuildMapFileName, (ret == 0) ? 1 : 0);
+    ret2 = buildmap_osm_save_custom(ofn, (ret == 0) ? 1 : 0);
     if (ret2 != 0)
 	    return ret2;
 
     return ret;
      
+}
+
+int qsort_compare_tiles(const void *t1, const void *t2)
+{
+    int tile1 = *(int *)t1;
+    int tile2 = *(int *)t2;
+    RoadMapArea edges1, edges2;
+
+    roadmap_osm_tileid_to_bbox(tile1, &edges1);
+    roadmap_osm_tileid_to_bbox(tile2, &edges2);
+
+    if (edges1.north > edges2.north)  // tile 1 is further north
+	return -1;
+    if (edges1.north < edges2.north)  // tile 1 is further south
+	return 1;
+    if (edges1.west < edges2.west)  // tile 1 is further west
+	return -1;
+    if (edges1.west > edges2.west)  // tile 1 is further east
+	return 1;
+    return 1;
+}
+
+void
+buildmap_osm_sort_tiles(int **tilesp, int count)
+{
+    int *tiles = *tilesp;
+
+    qsort(tiles, count, sizeof(int), qsort_compare_tiles);
 }
 
 /**
@@ -358,9 +463,14 @@ int buildmap_osm_by_position
     width = 1;
     ofound = -1;
     while (found != ofound) {
-        /* we keep checking until a trip around the block says
-         * that we haven't found any visibility overlaps
-         * in a full circuit.
+	/* start with one square in the middle, at our requested
+	 * point.  go northwest, then start walking east across 3
+	 * blocks testing visibility as we go, then south, west, and
+	 * north.  repeat by going northwest again, increasing width
+	 * to 5, etc.  we keep checking until a trip around the block
+	 * says that we haven't found any visibility overlaps in a
+	 * full circuit.  (note that the northwest block isn't
+	 * actually checked and recorded until the _end_ of the loop.)
          */
         ofound = found;
         tileid = roadmap_osm_tileid_to_neighbor(tileid, TILE_NORTHWEST);
@@ -499,7 +609,7 @@ static int roadmap_osm_tile_has_coverage(int tileid) {
     int childid, bits, j;
 
     if (roadmap_file_exists (BuildMapResult,
-            roadmap_osm_filename(NULL, 1, tileid))) {
+            roadmap_osm_filename(NULL, 1, tileid, ".rdm"))) {
         return 1;
     }
 
@@ -521,77 +631,77 @@ static int roadmap_osm_tile_has_coverage(int tileid) {
  * @param tiles
  * @param bits
  * @param count
- * @param source
- * @param cmdfmt
+ * @param fetcher
  * @return
  */
 static int
 buildmap_osm_process_tiles (int *tiles, int bits, int count,
-                const char *source, const char *cmdfmt)
+                const char *fetcher, const char *format)
 {
     int i, ret = 0;
     int nbits;
-    char name[64];
+    char name[128];
+    char osmfile[128];
 
     for (i = 0; i < count; i++) {
 
         int tileid = tiles[i];
 
-        roadmap_osm_filename(name, 1, tileid);
+        roadmap_osm_filename(name, 1, tileid, ".rdm");
         if (!BuildMapReplaceAll && roadmap_osm_tile_has_coverage(tileid)) {
             buildmap_info("have coverage for tile %s already, skipping", name);
             continue;
         }
 
-        if (strcasecmp(BuildMapFormat, "osmbinary") == 0) {
+	buildmap_info("");
+	buildmap_info
+	    ("processing tile %d of %d, file '%s'", i+1, count, name);
 
-            buildmap_info("");
-            buildmap_info
-                ("processing tile %d of %d, file '%s'", i, count, name);
+        roadmap_osm_filename(osmfile, 1, tileid, ".osm");
+	ret = buildmap_osm_process_one_tile (tileid, fetcher, format);
 
-            ret = buildmap_osm_process_one_tile (tileid, source, cmdfmt);
+	if (ret == -2) {
+	    /* we got a "tile too big" error.  try for four
+	     * subtiles instead.
+	     */
+	    int n;
 
-            if (ret == -2) {
-                /* we got a "tile too big" error.  try for four
-                 * subtiles instead.
-                 */
-		int n;
+	    nbits = tileid2bits(tileid);
+	    if (nbits >= TILE_MAXBITS-1) {
+		buildmap_info("can't split tile 0x%x further", tileid);
+		continue;
+	    }
+	    buildmap_info
+		("splitting tile 0x%x, new bits %d", tileid, nbits+2);
 
-                nbits = tileid2bits(tileid);
-                if (nbits >= TILE_MAXBITS-1) {
-                    buildmap_info("can't split tile 0x%x further", tileid);
-                    continue;
-                }
-                buildmap_info
-                    ("splitting tile 0x%x, new bits %d", tileid, nbits+2);
+	    count += 3;
+	    tiles = realloc(tiles, sizeof(*tiles) * count);
+	    buildmap_check_allocated(tiles);
 
-                count += 3;
-                tiles = realloc(tiles, sizeof(*tiles) * count);
-                buildmap_check_allocated(tiles);
+	    /* insert new tiles in-place, so that we try the new size right away.
+	     * this doesn't matter, except for the user who is trying
+	     * to figure out what tile size is needed.
+	     */
+	    for (n = count - 1; n >= i + 3; n--) {
+		    tiles[n] = tiles[n-4];
+	    }
+	    roadmap_osm_tilesplit(tileid, &tiles[i], 2);
+	    i--;
+	    continue;
+	}
 
-		/* insert new tiles in-place, so that we try the new size right away.
-		 * this doesn't matter, except for the user who is trying
-		 * to figure out what tile size is needed.
-		 */
-		for (n = count - 1; n >= i + 3; n--) {
-			tiles[n] = tiles[n-4];
-		}
-                roadmap_osm_tilesplit(tileid, &tiles[i], 2);
-		i--;
-                continue;
-            }
-    
-            if (ret < 0) break;
+	if (ret < 0) break;
+
+        if (ret >= 0) {
+	    buildmap_db_sort();
+
+            if (buildmap_is_verbose()) {
+        	roadmap_hash_summary();
+        	buildmap_db_summary();
+	    }
+
+            buildmap_osm_save(tileid, 1);
         }
-
-        if (ret > 0) buildmap_db_sort();
-
-        if (buildmap_is_verbose()) {
-           roadmap_hash_summary();
-           buildmap_db_summary();
-        }
-
-        buildmap_osm_save(tileid, ret);
 
         buildmap_db_reset();
         roadmap_hash_reset();
@@ -772,6 +882,25 @@ void usage(char *progpath, const char *msg) {
     exit(1);
 }
 
+void buildmap_osm_list_tiles(int *tileslist, int count)
+{
+    int i, n;
+    char filename[128];
+    RoadMapArea edges[1];
+
+    for (i = 0; i < count; i++) {
+	n = tileslist[i];
+	roadmap_osm_filename(filename, 1, n, ".rdm");
+	printf("%s	", filename);
+	roadmap_osm_tileid_to_bbox(n, edges);
+	/* w, s, e, n */
+	printf("%s,", roadmap_math_to_floatstring(0, edges->west, MILLIONTHS));
+	printf("%s,", roadmap_math_to_floatstring(0, edges->south, MILLIONTHS));
+	printf("%s,", roadmap_math_to_floatstring(0, edges->east, MILLIONTHS));
+	printf("%s\n", roadmap_math_to_floatstring(0, edges->north, MILLIONTHS));
+    }
+}
+
 /**
  * @brief main program
  * @param argc
@@ -790,7 +919,8 @@ main(int argc, char **argv)
     char *decode, *encode;
     int listonly;
     int tileid;
-    char *class, *latlonarg, *source, *cmdfmt, *inputfile;
+    char *class, *latlonarg, *fetcher, *inputfile;
+    char *format;
 
     BuildMapResult = strdup(roadmap_path_preferred("maps")); /* default. */
 
@@ -802,12 +932,12 @@ main(int argc, char **argv)
     error = opt_val("verbose", &verbose) ||
             opt_val("debug", &debug) ||
             opt_val("quiet", &quiet) ||
-            opt_val("format", &BuildMapFormat) ||
+            opt_val("format", &format) ||
             opt_val("class", &class) ||
             opt_val("bits", &osm_bits) ||
             opt_val("replace", &BuildMapReplaceAll) ||
             opt_val("maps", &BuildMapResult) ||
-            opt_val("source", &source) ||
+            opt_val("fetcher", &fetcher) ||
             opt_val("tileid", &tileid) ||
             opt_val("decode", &decode) ||
             opt_val("encode", &encode) ||
@@ -831,22 +961,17 @@ main(int argc, char **argv)
         exit ( buildmap_osm_encode(encode, osm_bits) );
     }
 
-    if (strcasecmp(BuildMapFormat, "osmtext") != 0) {
-    } else if (strcasecmp(BuildMapFormat, "osmbinary") != 0) {
+    if (strcasecmp(format, "osmtext") != 0 &&
+	strcasecmp(format, "osmbinary") != 0) {
         fprintf (stderr,
-            "unsupported protocol input format %s", BuildMapFormat);
+            "unsupported protocol input format %s", format);
         exit(1);
     }
 
-    if (!*source) {
-        usage (argv[0], "missing source (commandname or URL) option");
+    if (!*fetcher) {
+        usage (argv[0], "missing fetcher command option");
     }
 
-    if (strncmp(source, "http:", 5) == 0) {
-        cmdfmt = "wget -q -O - '%s?tile=%d&ts=%d&have=%d'";
-    } else {
-        cmdfmt = "%s -t %d -b %d -h %d";
-    }
 
     if (debug)
         buildmap_message_adjust_level (BUILDMAP_MESSAGE_DEBUG);
@@ -867,7 +992,8 @@ main(int argc, char **argv)
         count = 1;
 
     } else if (*inputfile && *BuildMapFileName) {
-            exit(buildmap_osm_text_process_file(inputfile));
+            int r = buildmap_osm_text_process_file(inputfile, BuildMapFileName);
+            exit(r);
     } else if (*inputfile) {
             usage(argv[0], "cannot specify -i without -o");
     } else if (*BuildMapFileName) {
@@ -885,33 +1011,22 @@ main(int argc, char **argv)
 	buildmap_info("processing with bits '%d'", osm_bits);
 
         count = buildmap_osm_which_tiles(latlonarg, &tileslist, osm_bits);
+
+	/* we did a center-out spiral search to find the tiles we
+	 * need.  but we want to process them from their northwest
+	 * corner to the southwest, because that matches our tile merge
+	 * heuristic.  sort the tiles to that order now.
+	 */
+	buildmap_osm_sort_tiles(&tileslist, count);
+
 	if (listonly) {
-	    int i, n;
-	    char filename[128];
-	    RoadMapArea edges[1];
-
-	    for (i = 0; i < count; i++) {
-		n = tileslist[i];
-        	roadmap_osm_filename(filename, 1, n);
-		printf("%s	", filename);
-		roadmap_osm_tileid_to_bbox(n, edges);
-		/* w, s, e, n */
-		printf("%s,",
-		    roadmap_math_to_floatstring(0, edges->west, MILLIONTHS));
-		printf("%s,",
-		    roadmap_math_to_floatstring(0, edges->south, MILLIONTHS));
-		printf("%s,",
-		    roadmap_math_to_floatstring(0, edges->east, MILLIONTHS));
-		printf("%s\n",
-		    roadmap_math_to_floatstring(0, edges->north, MILLIONTHS));
-	    }
-
+	    buildmap_osm_list_tiles(tileslist, count);
 	    exit(0);
 	}
     }
 
     error = buildmap_osm_process_tiles
-                (tileslist, osm_bits, count, source, cmdfmt);
+                (tileslist, osm_bits, count, fetcher, format);
 
     free (tileslist);
 
