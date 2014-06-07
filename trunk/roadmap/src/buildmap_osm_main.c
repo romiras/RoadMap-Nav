@@ -1019,10 +1019,11 @@ main(int argc, char **argv)
 	 */
 	buildmap_osm_sort_tiles(&tileslist, count);
 
-	if (listonly) {
-	    buildmap_osm_list_tiles(tileslist, count);
-	    exit(0);
-	}
+    }
+
+    if (listonly) {
+	buildmap_osm_list_tiles(tileslist, count);
+	exit(0);
     }
 
     error = buildmap_osm_process_tiles
