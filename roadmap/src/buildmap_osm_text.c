@@ -263,72 +263,6 @@ buildmap_osm_text_point_get(int id)
         return -1;
 }
 
-/**
- * @brief collect node data in pass 1
- * @param data
- * @return an error indicator
- *
- * The input line is discarded if a bounding box is specified and
- * the node is outside.
- *
- * Example input line :
- *   <node id="123295" timestamp="2005-07-05T03:26:11Z" user="LA2"
- *      lat="50.4443626" lon="3.6855288"/>
- */
-void
-buildmap_osm_text_node_read_lat_lon(char *data)
-{
-    int         nchars;
-#if 1
-    double      flat, flon;
-#endif
-    char        *p;
-    int         NodeLatRead, NodeLonRead;
-    char	tag[512], value[512];
-    int		s;
-
-    s = sscanf(data, "node id=%*[\"']%u%*[\"']%n", &ni.NodeId, &nchars);
-    if (s != 1)
-	    buildmap_fatal(0, "buildmap_osm_text(%s) node error", data);
-
-    p = data + nchars;
-
-    ni.NodeLat = ni.NodeLon = 0;
-    NodeLatRead = NodeLonRead = 0;
-
-    while (NodeLatRead == 0 || NodeLonRead == 0) {
-
-            for (; *p && isspace(*p); p++) ;
-
-            s = sscanf(p, "%[a-zA-Z0-9_]=%*[\"']%[^\"']%*[\"']%n",
-                        	tag, value, &nchars);
-	    if (s != 2)
-		    buildmap_fatal(0, "bad tag read at '%s'\n", p);
-
-#if 1
-            if (strcmp(tag, "lat") == 0) {
-                    sscanf(value, "%lf", &flat);
-                    ni.NodeLat = flat * 1000000;
-                    NodeLatRead++;
-            } else if (strcmp(tag, "lon") == 0) {
-                    sscanf(value, "%lf", &flon);
-                    ni.NodeLon = flon * 1000000;
-                    NodeLonRead++;
-            }
-#else
-            if (strcmp(tag, "lat") == 0) {
-                    ni.NodeLat = roadmap_math_from_floatstring(value, MILLIONTHS);
-                    NodeLatRead++;
-            } else if (strcmp(tag, "lon") == 0) {
-                    ni.NodeLon = roadmap_math_from_floatstring(value, MILLIONTHS);
-                    NodeLonRead++;
-            }
-#endif
-
-            p += nchars;
-    }
-
-}
 
 /**
  * @brief At the end of a node, process its data
@@ -565,6 +499,71 @@ buildmap_osm_text_save_way_nodes(char *data)
 		buildmap_check_allocated(WayNodes);
         }
         WayNodes[wi.nWayNodes++] = node;
+}
+
+/**
+ * @brief collect node data in pass 1
+ * @param data
+ * @return an error indicator
+ *
+ * The input line is discarded if a bounding box is specified and
+ * the node is outside.
+ *
+ * Example input line :
+ *   <node id="123295" timestamp="2005-07-05T03:26:11Z" user="LA2"
+ *      lat="50.4443626" lon="3.6855288"/>
+ */
+void
+buildmap_osm_text_node_read_lat_lon(char *data)
+{
+    int         nchars;
+#if 1
+    double      flat, flon;
+#endif
+    char        *p;
+    int         NodeLatRead, NodeLonRead;
+    char	tag[512], value[512];
+    int		s;
+
+    s = sscanf(data, "node id=%*[\"']%u%*[\"']%n", &ni.NodeId, &nchars);
+    if (s != 1)
+	    buildmap_fatal(0, "buildmap_osm_text(%s) node error", data);
+
+    p = data + nchars;
+
+    ni.NodeLat = ni.NodeLon = 0;
+    NodeLatRead = NodeLonRead = 0;
+
+    while (NodeLatRead == 0 || NodeLonRead == 0) {
+
+            for (; *p && isspace(*p); p++) ;
+
+            s = sscanf(p, "%[a-zA-Z0-9_]=%*[\"']%[^\"']%*[\"']%n",
+                        	tag, value, &nchars);
+	    if (s != 2)
+		    buildmap_fatal(0, "bad tag read at '%s'\n", p);
+
+            if (strcmp(tag, "lat") == 0) {
+                    sscanf(value, "%lf", &flat);
+                    ni.NodeLat = flat * 1000000;
+                    NodeLatRead++;
+            } else if (strcmp(tag, "lon") == 0) {
+                    sscanf(value, "%lf", &flon);
+                    ni.NodeLon = flon * 1000000;
+                    NodeLonRead++;
+            }
+
+            p += nchars;
+    }
+
+    /* if the node is finished ("\>"), then finish it off */
+    for (; *p && isspace(*p); p++) ;
+    if (*p == '/' && *(p+1) == '>') {
+	    if (isNodeInteresting(ni.NodeId)) {
+		    buildmap_osm_text_node_finish();
+	    } 
+    }
+
 }
 
 /**
@@ -1401,6 +1400,7 @@ buildmap_osm_text_read(char *fn, int tileid, int country_num, int division_num)
 		continue;
 
         } else if (strncasecmp(p, "node", 4) == 0) {
+#if 0
 		/*
 		 * Avoid figuring out whether we're in a
 		 *	<node ... />
@@ -1412,19 +1412,26 @@ buildmap_osm_text_read(char *fn, int tileid, int country_num, int division_num)
 		 */
 		if (ni.NodeId && isNodeInteresting(ni.NodeId))
 			buildmap_osm_text_node_finish();
+#endif
 
 		s = sscanf(p, "node id=%*[\"']%u%*[\"']", &ni.NodeId);
 		if (s != 1)
                 	buildmap_fatal(0, "buildmap_osm_text(%s) node error", p);
 
+		/* will read lat/lon k/v tags, and also call _finish()
+		 * if necessary.  */
 		buildmap_osm_text_node_read_lat_lon(p);
 
 		NumNodes++;
                 continue;
         } else if (strncasecmp(p, "/node", 5) == 0) {
 
-		if (isNodeInteresting(ni.NodeId))
+		/* if what we had was <node ....  />, then we won't get
+		 * here.  buildmap_osm_text_node_finish() was called
+		 * already, from buildmap_osm_text_node_read_lat_lon() */
+		if (isNodeInteresting(ni.NodeId)) {
 			buildmap_osm_text_node_finish();
+		}
                 continue;
 
         } else if (strncasecmp(p, "tag", 3) == 0) {
