@@ -414,6 +414,7 @@ buildmap_osm_text_way(char *data)
 
         if (wi.inWay == 0)
                 buildmap_fatal(0, "buildmap_osm_text_way(%s) error", data);
+
         return 0;
 }
 
@@ -422,10 +423,8 @@ int nWayTable = 0;
 int *WayTable = NULL;
 
 static void
-WayIsInteresting(int wayid, int ni)
+WayIsInteresting(int wayid)
 {
-
-	if (ni) return;
 
 	if (nWayTable == maxWayTable) {
 		if (WayTable)
@@ -440,6 +439,12 @@ WayIsInteresting(int wayid, int ni)
 	nWayTable++;
 }
 
+int
+qsort_compare_ints(const void *id1, const void *id2)
+{
+    return *(int *)id1 - *(int *)id2;
+}
+
 /**
  * @brief find out if this way is interesting
  * @param wayid
@@ -450,35 +455,18 @@ WayIsInteresting(int wayid, int ni)
 static int
 IsWayInteresting(int wayid)
 {
-	static int	ptr = 0;
+	int *r;
+	r = bsearch(&wayid, WayTable, nWayTable,
+                             sizeof(*WayTable), qsort_compare_ints);
+	if (!r) return 0;
 
-	if ((ptr < nWayTable) && wayid == WayTable[ptr])
-		return 1;
-	if ((ptr < nWayTable - 1) && wayid == WayTable[ptr+1]) {
-		ptr++;
-		return 1;
-	}
-
-	for (ptr=0; ptr<nWayTable; ptr++)
-		if (wayid == WayTable[ptr])
-			return 1;
-
-	return 0;
+	return *r;
 }
 
 static int maxNodeTable = 0;
 static int nNodeTable = 0;
-typedef struct NodeTableStruct {
-	int	nodeid;
-} NodeTableStruct;
-static NodeTableStruct *NodeTable = NULL;
+static int *NodeTable = NULL;
 
-
-int
-qsort_compare_wayid(const void *id1, const void *id2)
-{
-    return *(int *)id1 - *(int *)id2;
-}
 
 void
 buildmap_osm_text_save_wayids(const char *path, const char *outfile)
@@ -491,7 +479,6 @@ buildmap_osm_text_save_wayids(const char *path, const char *outfile)
     if (p) *p = '\0';
     strcat(nfn, ".ways");
 
-    qsort(WayTable, nWayTable, sizeof(*WayTable), qsort_compare_wayid);
 
     roadmap_file_save(path, nfn, WayTable, nWayTable * sizeof(int));
 }
@@ -506,39 +493,24 @@ NodeIsInteresting(int node)
 		    maxNodeTable *= 2;
 		else
 		    maxNodeTable = 1000;
-		NodeTable = (struct NodeTableStruct *) realloc(NodeTable,
-				sizeof(struct NodeTableStruct) * maxNodeTable);
+		NodeTable = (int *) realloc(NodeTable,
+				sizeof(int) * maxNodeTable);
 	}
 
-	NodeTable[nNodeTable].nodeid = node;
+	NodeTable[nNodeTable] = node;
 	nNodeTable++;
 }
 
-/* FIX ME */
 static int
-IsNodeInteresting(int node)
+IsNodeInteresting(int nodeid)
 {
-	return 1;
-}
+	int *r;
 
-/**
- * @brief this <nd> is interesting, register it so we can later treat its <node>
- * @param data
- * @return
- */
-static int
-buildmap_osm_text_nd_interesting(char *data)
-{
-        int     node;
+        r = bsearch(&nodeid, NodeTable, nNodeTable,
+                             sizeof(*NodeTable), qsort_compare_ints);
+	if (!r) return 0;
 
-        if (sscanf(data, "nd ref=%*[\"']%d%*[\"']", &node) != 1) {
-                return -1;
-	}
-
-	NodeIsInteresting(node);
-
-        // CountNode(node);
-        return 0;
+	return *r;
 }
 
 static int
@@ -553,7 +525,7 @@ buildmap_osm_text_node_interesting(char *data)
 	 *	</node>
 	 * case, by resetting first if needed.
 	 */
-	if (ni.NodeId)
+	if (ni.NodeId && IsNodeInteresting(ni.NodeId))
 		buildmap_osm_text_node_end_and_process("");
 
         if (sscanf(data, "node id=%*[\"']%d%*[\"']", &ni.NodeId) != 1) {
@@ -566,7 +538,8 @@ buildmap_osm_text_node_interesting(char *data)
 }
 
 /**
- * @build this is called on every node, but should figure out whether it is interesting
+ * @build this is called on every node, but should figure out whether
+ *	it is interesting
  */
 static int
 buildmap_osm_text_node_interesting_end(char *data)
@@ -627,7 +600,7 @@ buildmap_osm_text_nd(char *data)
  * @return error indication
  */
 static int
-buildmap_osm_text_node_tag(char *data)
+buildmap_osm_text_node_tag(char *data, int catalog)
 {
         static char *tagk = 0;
         static char *tagv = 0;
@@ -645,19 +618,19 @@ buildmap_osm_text_node_tag(char *data)
                 if (ni.NodePostalCode)
                         free(ni.NodePostalCode);
                 ni.NodePostalCode = strdup(tagv);
-		NodeIsInteresting(ni.NodeId);
+		if (catalog) NodeIsInteresting(ni.NodeId);
         } else if (strcmp(tagk, "place") == 0) {
                 /* <tag k="place" v="town"/> */
                 if (ni.NodePlace)
                         free(ni.NodePlace);
                 ni.NodePlace = strdup(tagv);
-		NodeIsInteresting(ni.NodeId);
+		if (catalog) NodeIsInteresting(ni.NodeId);
         } else if (strcmp(tagk, "name") == 0) {
                 /* <tag k="name" v="Herent"/> */
                 if (ni.NodeTownName)
                         free(ni.NodeTownName);
                 ni.NodeTownName = FromXmlAndDup(tagv);
-		NodeIsInteresting(ni.NodeId);
+		if (catalog) NodeIsInteresting(ni.NodeId);
         }
 
         return 0;
@@ -859,8 +832,8 @@ buildmap_osm_text_way_end(char *data)
 		int     *lonsbuf, *latsbuf;
 
 		/* Map begin and end points to internal point id */
-		from_point = buildmap_osm_text_point_get(WayNodes[0]);
-		to_point = buildmap_osm_text_point_get(WayNodes[wi.nWayNodes-1]);
+		// from_point = buildmap_osm_text_point_get(WayNodes[0]);
+		// to_point = buildmap_osm_text_point_get(WayNodes[wi.nWayNodes-1]);
 
 		/* Street name */
 		if (wi.WayStreetName)
@@ -995,8 +968,8 @@ buildmap_osm_text_ways_shapeinfo(void)
  * (Note that this simplistic approach may raise eyebrows, but this is
  * not a big time consumer !)
  *
- * Pass 1 deals with way definitions.
- * Pass 2 deals with node definitions only.
+ * Pass 1 deals with way definitions -- make a list of interesting ways.
+ * Pass 2 catalogs interesting nodes, based on references from ways.
  * Pass 3 interprets ways and a few tags.
  *
  * All underlying processing is passed to other functions.
@@ -1012,6 +985,7 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
     int		passid, NumNodes, NumWays;
     struct stat st;
     int		interesting_way;
+    int		in_relation;
 
     fstat(fileno(fdata), &st);
 
@@ -1074,7 +1048,14 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
         p++; /* point to character after '<' now */
         for (; *p && isspace(*p); p++) ;
 
-        if (strncasecmp(p, "way", 3) == 0) {
+	in_relation = 0;
+        if (strncasecmp(p, "relation", 8) == 0) {
+		in_relation = 1;
+        } else if (strncasecmp(p, "/relation", 9) == 0) {
+		in_relation = 0;
+        } else if (in_relation) {
+		continue;
+        } else if (strncasecmp(p, "way", 3) == 0) {
 		wi.WayNotInteresting = 0;
 		if (sscanf(p, "way id=%*[\"']%d%*[\"']", &wi.inWay) != 1) {
 		    wi.inWay = 0;
@@ -1082,13 +1063,13 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
 		NumWays++;
                 continue;
         } else if (strncasecmp(p, "/way", 4) == 0) {
-		if (wi.inWay)
-		    WayIsInteresting(wi.inWay, wi.WayNotInteresting);
+		if (wi.inWay && ! wi.WayNotInteresting)
+		    WayIsInteresting(wi.inWay);
 		buildmap_osm_text_reset_way();
                 continue;
         } else if (strncasecmp(p, "tag", 3) == 0) {
 		if (! wi.inWay)
-			ret += buildmap_osm_text_node_tag(p);
+			ret += buildmap_osm_text_node_tag(p, 1);
 		else
                 	ret += buildmap_osm_text_way_tag(p);
                 continue;
@@ -1096,6 +1077,8 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
     }
     buildmap_progress(ftell(fdata), st.st_size);
     putchar('\n');
+
+    qsort(WayTable, nWayTable, sizeof(*WayTable), qsort_compare_ints);
 
     (void) time(&t[passid]);
     buildmap_info("Pass %d : %d lines read (%d seconds)",
@@ -1126,47 +1109,45 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
         for (p=buf; *p && isspace(*p); p++) ;
         if (*p == '\n' || *p == '\r') 
                 continue;
-        if (*p != '<') {
-		/*
-		 * Assume we're in a continuation line such as
-		 *
-		 * <tag k='opening_hours' v='Mo 09:30-19:00;
-		 * Tu 09:30-17:00;
-		 * We 09:30-17:00;
-		 * Th 09:30-19:00;
-		 * Fr 09:30-17:00;
-		 * Sa 09:30-16:00;
-		 * Su 10:00-14:00'/>
-		 *
-		 * and just continue with the next line and hope we'll pick up
-		 * a new tag soon.
-		 */
+        if (*p != '<') // continuation line?
 		continue;
-	}
 
+	in_relation = 0;
         p++; /* point to character after '<' now */
         for (; *p && isspace(*p); p++) ;
 
-        if (strncasecmp(p, "way", 3) == 0) {
-		if (sscanf(p, "way id=%*[\"']%d%*[\"']", &wi.inWay) != 1) {
+        if (strncasecmp(p, "relation", 8) == 0) {
+		in_relation = 1;
+        } else if (strncasecmp(p, "/relation", 9) == 0) {
+		in_relation = 0;
+        } else if (in_relation) {
+		continue;
+        } else if (strncasecmp(p, "way", 3) == 0) {
+		if (sscanf(p, "way id=%*[\"']%d%*[\"']", &wi.inWay) == 1) {
+		    interesting_way = IsWayInteresting(wi.inWay);
+		} else {
 		    wi.inWay = 0;
 		    interesting_way = 0;
-		} else {
-		    interesting_way = IsWayInteresting(wi.inWay);
 		}
                 continue;
         } else if (strncasecmp(p, "/way", 4) == 0) {
 		buildmap_osm_text_reset_way();
-		interesting_way = 0;
                 continue;
         } else if (strncasecmp(p, "nd", 2) == 0) {
-                if (wi.inWay && interesting_way)
-			buildmap_osm_text_nd_interesting(p);
+		/* nodes referenced by interesting ways are interesting */
+                if (wi.inWay && interesting_way) {
+		    int     node;
+		    if (sscanf(p, "nd ref=%*[\"']%d%*[\"']", &node) == 1) {
+			NodeIsInteresting(node);
+		    }
+		}
                 continue;
         }
     }
     buildmap_progress(ftell(fdata), st.st_size);
     putchar('\n');
+
+    qsort(NodeTable, nNodeTable, sizeof(*NodeTable), qsort_compare_ints);
 
     (void) time(&t[passid]);
     buildmap_info("Pass %d : %d lines read (%d seconds)",
@@ -1198,52 +1179,44 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
         for (p=buf; *p && isspace(*p); p++) ;
         if (*p == '\n' || *p == '\r') 
                 continue;
-        if (*p != '<') {
-		/*
-		 * Assume we're in a continuation line such as
-		 *
-		 * <tag k='opening_hours' v='Mo 09:30-19:00;
-		 * Tu 09:30-17:00;
-		 * We 09:30-17:00;
-		 * Th 09:30-19:00;
-		 * Fr 09:30-17:00;
-		 * Sa 09:30-16:00;
-		 * Su 10:00-14:00'/>
-		 *
-		 * and just continue with the next line and hope we'll pick up
-		 * a new tag soon.
-		 */
+        if (*p != '<') // continuation line?
 		continue;
-	}
 
+	in_relation = 0;
         p++; /* point to character after '<' now */
         for (; *p && isspace(*p); p++) ;
 
-	// nodes get added to the buildmap tables here...
-        if (strncasecmp(p, "node", 4) == 0) {
+        if (strncasecmp(p, "relation", 8) == 0) {
+		in_relation = 1;
+        } else if (strncasecmp(p, "/relation", 9) == 0) {
+		in_relation = 0;
+        } else if (in_relation) {
+		continue;
+        } else if (strncasecmp(p, "node", 4) == 0) {
+		// nodes get added to the buildmap tables here...
 		ret += buildmap_osm_text_node_interesting(p);
 		NumNodes++;
                 continue;
-	// ...and here
         } else if (strncasecmp(p, "/node", 5) == 0) {
+		// ...and here
 		ret += buildmap_osm_text_node_interesting_end(p);
                 continue;
         } else if (strncasecmp(p, "tag", 3) == 0) {
 		if (! wi.inWay)
-			ret += buildmap_osm_text_node_tag(p);
+			ret += buildmap_osm_text_node_tag(p, 0);
 		else
                 	ret += buildmap_osm_text_way_tag(p);
                 continue;
-	// ways get added to the buildmap tables (if interesting) here...
 	} else if (strncasecmp(p, "way", 3) == 0) {
+		// ways get added to the buildmap tables (if interesting) here...
                 ret += buildmap_osm_text_way(p);
                 continue;
-	// ...and here
         } else if (strncasecmp(p, "/way", 4) == 0) {
+		// ...and here
                 ret += buildmap_osm_text_way_end(p);
                 continue;
-	// the nd node references gets put on WayNodes list
         } else if (strncasecmp(p, "nd", 2) == 0) {
+		// the nd node references gets put on WayNodes list
                 ret += buildmap_osm_text_nd(p);
                 continue;
         }
@@ -1265,6 +1238,7 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
     buildmap_info("Number of nodes : %d, interesting %d", NumNodes, nNodeTable);
     buildmap_info("Final: (%d seconds)",
 		    passid, t[passid] - t[passid - 1]);
+
 
     return ret;
 }
