@@ -103,7 +103,10 @@ void buildmap_square_adjust_limits(int longitude, int latitude) {
 	/* okay */ ;
    } else {
       static int warned;
-      if (!warned++) fprintf(stderr, "\nWarning -- 180'th meridian wrap\n\n");
+      if (!warned++) {
+	fprintf(stderr, "\nWarning -- 180'th meridian wrap\n");
+	fprintf(stderr, "longitude %d, first longitude %d\n\n", longitude, firstlongitude);
+      }
    }
 
 
