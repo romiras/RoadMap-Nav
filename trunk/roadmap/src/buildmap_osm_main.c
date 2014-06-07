@@ -610,6 +610,15 @@ int buildmap_osm_decode(char *decode) {
     RoadMapArea e[1];
     char lat[16], lon[16];
     RoadMapPosition pos1, pos2;
+    int i;
+
+    /* if it was a pathname, find the last path element */
+    p = strrchr(decode, '/');
+    if (p && *(p+1)) {
+	p++;
+	decode = p;
+    }
+
 
     /* strip leading "0x", or non-hex characters */
     if (strncasecmp("0x", decode, 2) == 0) {
@@ -637,6 +646,10 @@ int buildmap_osm_decode(char *decode) {
 
     if (*end) return 1;
 
+    roadmap_math_working_context();
+    roadmap_math_use_imperial();
+    roadmap_math_compute_scale();
+
     roadmap_osm_tileid_to_bbox(tileid, e);
 
     printf("tileid:\t0x%08x\t%d\n", tileid, tileid);
@@ -646,7 +659,7 @@ int buildmap_osm_decode(char *decode) {
 
     pos1.latitude = (e->north + e->south)/2;
     pos1.longitude = (e->west + e->east)/2;
-    printf("center:\t%s\t%s\n", 
+    printf("center:\t%s,%s\n", 
         roadmap_math_to_floatstring(lat, pos1.latitude, MILLIONTHS),
         roadmap_math_to_floatstring(lon, pos1.longitude, MILLIONTHS));
     printf("north:\t%s\n", 
@@ -658,26 +671,28 @@ int buildmap_osm_decode(char *decode) {
     printf("west:\t%s\n", 
         roadmap_math_to_floatstring(NULL, e->west, MILLIONTHS));
 
-    roadmap_math_use_metric ();
     roadmap_math_set_center (&pos1);
+
     /* upper left */
     pos1.latitude = e->north;
     pos1.longitude = e->west;
-    /* upper right */
-    pos2.latitude = e->north;
-    pos2.longitude = e->east;
+    for (i = 0; i < 2; i++, roadmap_math_use_metric()) {
+	/* upper right */
+	pos2.latitude = e->north;
+	pos2.longitude = e->east;
 
-    printf("width km:\t%s\n",
-        roadmap_math_to_floatstring
-            (NULL, roadmap_math_to_trip_distance_tenths
-                        (roadmap_math_distance(&pos1, &pos2)) , TENTHS));
-    /* lower left */
-    pos2.latitude = e->south;
-    pos2.longitude = e->west;
-    printf("height km:\t%s\n",
-        roadmap_math_to_floatstring
-            (NULL, roadmap_math_to_trip_distance_tenths
-                        (roadmap_math_distance(&pos1, &pos2)) , TENTHS));
+	printf("%s%s wide by ",
+	    roadmap_math_to_floatstring
+		(NULL, roadmap_math_to_trip_distance_tenths
+			    (roadmap_math_distance(&pos1, &pos2)) , TENTHS), roadmap_math_trip_unit());
+	/* lower left */
+	pos2.latitude = e->south;
+	pos2.longitude = e->west;
+	printf("%s%s high\n",
+	    roadmap_math_to_floatstring
+		(NULL, roadmap_math_to_trip_distance_tenths
+			    (roadmap_math_distance(&pos1, &pos2)) , TENTHS), roadmap_math_trip_unit());
+    }
     
     return 0;
 
