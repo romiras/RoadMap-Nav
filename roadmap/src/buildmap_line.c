@@ -699,7 +699,7 @@ static int buildmap_line_save (void) {
       if (square != square_current) {
 
          if (square < square_current) {
-            buildmap_error (0, "abnormal square order: %d following %d",
+            buildmap_error (0, "abnormal square order (1): %d following %d",
                                square, square_current);
 	    return 1;
          }
@@ -755,7 +755,7 @@ static int buildmap_line_save (void) {
       if (square != square_current) {
 
          if (square < square_current) {
-            buildmap_error (0, "abnormal square order: d following %d",
+            buildmap_error (0, "abnormal square order (2): %d following %d",
                                square, square_current);
 	    return 1;
          }
