@@ -352,11 +352,11 @@ void roadmap_math_compute_scale (void) {
    RoadMapContext->upright_screen.south = position.latitude;
    RoadMapContext->upright_screen.east  = position.longitude;
 
-   roadmap_math_trip_set_distance
-            ('x', RoadMapContext->width * RoadMapContext->zoom_x *
+   roadmap_math_trip_set_distance ('x',
+   	RoadMapContext->width * RoadMapContext->zoom_x *
                     RoadMapContext->units->unit_per_longitude);
-   roadmap_math_trip_set_distance
-            ('y', RoadMapContext->height * RoadMapContext->zoom_y *
+   roadmap_math_trip_set_distance ('y',
+	RoadMapContext->height * RoadMapContext->zoom_y *
                     RoadMapContext->units->unit_per_latitude);
 
    roadmap_math_set_orientation (orientation);
