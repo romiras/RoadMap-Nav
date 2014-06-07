@@ -209,8 +209,12 @@ static void buildus_scan_maps (void) {
 
 	     fips = roadmap_iso_alpha_to_num(country_iso) * 1000 + 1000000;
 	     if (n == 2) {
-                 fips += roadmap_iso_division_to_num(country_iso,
+		 int i = roadmap_iso_division_to_num(country_iso,
 				 country_division);
+		 if (i < 0) {
+                    buildmap_fatal (0, "couldn't find division number");
+		 }
+                 fips += i; 
 		 buildmap_info("Country %s division %s fips %d",
 				 country_iso, country_division, fips);
 	     } else {

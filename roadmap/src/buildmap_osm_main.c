@@ -281,9 +281,13 @@ int buildmap_osm_text_process_file(char *fn)
             buildmap_metadata_add_value ("Territory", "Parent", country);
 
             country_num = roadmap_iso_alpha_to_num(country);
-            if (n == 2)
+            if (n == 2) {
                     division_num =
                         roadmap_iso_division_to_num(country, division);
+		    if (division_num < 0)
+			buildmap_fatal(0, "couldn't get division num");
+	    }
+
     } else if (buildmap_osm_filename_usc(fn, &fips)) {
             /* ?? */
             buildmap_metadata_add_attribute ("Territory", "Id", fn);
