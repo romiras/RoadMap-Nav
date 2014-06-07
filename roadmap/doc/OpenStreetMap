@@ -136,7 +136,7 @@ work-in-progress.  It does work, but may change in detail.
     country xx). The codes xx and yyy are defined in the ISO-3166-1 (country)
     and ISO-3166-2 (country subdivision). Note that the latter is incomplete.
 
-  - Limitations
+  - Overall OpenStreetMap Limitations
     
     - Because the OSM maps are loaded based on geographic location, they
       currently have no notion of political locality.  This means that
@@ -146,7 +146,7 @@ work-in-progress.  It does work, but may change in detail.
       needs to be done to integrate a buildmap_osm "method" into RoadMap's map
       download scheme.
 
-    - When a tile is fetched, it will include all roads (and other lines --
+    - When a quadtile is fetched, it will include all roads (and other lines --
       "ways" in OSM parlance) which start or end in that tile.  This leads to
       two interesting issues:
 
@@ -168,14 +168,6 @@ work-in-progress.  It does work, but may change in detail.
         requested.  The order in which RoadMap fetches tiles might need to be
         changed to help with this problem, as well.
 
-    - Because tiles can provide overlapping data, map rendering near the edges
-      of tiles can be somewhat messy -- the lines on one tile may be
-      rendered before the polygons of the next, for instance, and labels
-      placed when rendering one may collide with labels placed when
-      rendering the next.  For this reason, tiles should be kept fairly
-      large -- RoadMap already has the means to make rendering relatively
-      large areas efficiently.  The only reason to choose small tiles is to
-      reduce "latency" when requesting data on-demand.
 
 
 
