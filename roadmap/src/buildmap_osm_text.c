@@ -730,17 +730,19 @@ buildmap_osm_text_way_finish(char *data)
         if (wi.WayId == 0)
                 buildmap_fatal(0, "Wasn't in a way (%s)", data);
 
-	/* if a way is both a coast and a boundary, treat it only as coast */
-	if (wi.WayCoast) {
-		wi.WayLayer = l_shoreline;
-	} else if (wi.WayAdminLevel) {
-		/* national == 2, state == 4, ignore lesser boundaries */
-		/* also ignore territorial (marine) borders */
-		if  (wi.WayAdminLevel > 4 || wi.WayTerritorial) {
-			wi.WayIsInteresting = 0;
-		}
+	if (wi.WayLayer == 0) {
+		/* if a way is both a coast and a boundary, treat it only as coast */
+		if (wi.WayCoast) {
+			wi.WayLayer = l_shoreline;
+		} else if (wi.WayAdminLevel) {
+			/* national == 2, state == 4, ignore lesser boundaries */
+			/* also ignore territorial (marine) borders */
+			if  (wi.WayAdminLevel > 4 || wi.WayTerritorial) {
+				wi.WayIsInteresting = 0;
+			}
 
-		wi.WayLayer = l_boundary;
+			wi.WayLayer = l_boundary;
+		}
 	}
 
         if ( !wi.WayIsInteresting || wi.WayLayer == 0) {
