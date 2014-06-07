@@ -72,7 +72,7 @@ struct opt_defs options[] = {
         "Rebuild .rdm files, reuse existing .osm if possible"},
    {"maps", "m", opt_string, "",
         "Location for the generated map files"},
-   {"fetcher", "F", opt_string, "osm_fetch_tile",
+   {"fetcher", "F", opt_string, "rdm_osm_fetch_tile",
         "commandname for accessing map data to stdout"},
    {"tileid", "t", opt_int, "",
         "Fetch the given numeric tileid (use 0x for hex)"},

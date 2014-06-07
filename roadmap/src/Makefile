@@ -331,7 +331,8 @@ MISCFILES = roadmap.desktop roadmap.menu default/All \
 		roadmap.toolbar.ex roadmap.actionlabels.ex \
 		app_a02.txt usstates.txt roadmap.doxy
 SCRIPTS = rdmdownload rdmcompare \
-		rdmgenmaps rdmgenshpmaps rdmgenstatemaps rdmgendcwmaps
+		rdmgenmaps rdmgenshpmaps rdmgenstatemaps rdmgendcwmaps \
+		rdm_osm_fetch_tile
 MKFILES = Makefile config.mk options.mk
 
 # this font is GPL, and comes from RedHat's "liberation-fonts-ttf-3.tar.gz"
