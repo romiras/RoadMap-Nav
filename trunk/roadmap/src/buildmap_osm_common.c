@@ -333,11 +333,11 @@ layer_info_t natural_to_layer[] = {
 
 layer_info_t boundary_to_layer[] = {
         { 0,                    NULL,           0 },
-        { "administrative",     NULL,           AREA },         /* 1 */
+        { "administrative",     NULL,           0 },         	/* 1 */
         { "civil",              NULL,           AREA },         /* 2 */
-        { "political",          NULL,           AREA },         /* 3 */
+        { "political",          NULL,           0 },            /* 3 */
         { "national_park",      NULL,           AREA },         /* 4 */
-	{ "world_country",	NULL,		AREA },		/* 5 */
+	{ "world_country",	NULL,		0 },		/* 5 */
         { 0,                    NULL,           0 },
 };
 
@@ -424,16 +424,16 @@ layer_info_t amenity_to_layer[] = {
 
 layer_info_t place_to_layer[] = {
         { 0,                    NULL,           0 },
-        { "continent",          NULL,           AREA },         /* 1 */
-        { "country",            NULL,           AREA },         /* 2 */
-        { "state",              NULL,           AREA },         /* 3 */
-        { "region",             NULL,           AREA },         /* 4 */
-        { "county",             NULL,           AREA },         /* 5 */
-        { "city",               NULL,           AREA },         /* 6 */
-        { "town",               NULL,           AREA },         /* 7 */
-        { "village",            NULL,           AREA },         /* 8 */
-        { "hamlet",             NULL,           AREA },         /* 9 */
-        { "suburb",             SUBURBS,        AREA },         /* 10 */
+        { "continent",          NULL,           0 },         /* 1 */
+        { "country",            NULL,           0 },         /* 2 */
+        { "state",              NULL,           0 },         /* 3 */
+        { "region",             NULL,           0 },         /* 4 */
+        { "county",             NULL,           0 },         /* 5 */
+        { "city",               NULL,           0 },         /* 6 */
+        { "town",               NULL,           0 },         /* 7 */
+        { "village",            NULL,           0 },         /* 8 */
+        { "hamlet",             NULL,           0 },         /* 9 */
+        { "suburb",             SUBURBS,        0 },         /* 10 */
         { 0,                    NULL,           0 },
 };
 
