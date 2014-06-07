@@ -67,11 +67,15 @@
 #include "buildmap_osm_text.h"
 
 
+/* OSM has over 2G nodes already -- enough to overflow a 32 bit signed int */
+typedef unsigned int nodeid_t;
+typedef unsigned int wayid_t;
+
 /**
  * @brief a couple of variables to keep track of the way we're dealing with
  */
 static struct WayInfo {
-    unsigned int WayId;              /**< are we in a way (its id) */
+    wayid_t WayId;              /**< are we in a way (its id) */
     int      nWayNodes;          /**< number of nodes known for 
 						     this way */
     int      WayLayer;           /**< the layer for this way */
@@ -90,7 +94,7 @@ static struct WayInfo {
  * @brief variables referring to the current node
  */
 static struct NodeInfo {
-    unsigned int      NodeId;             /**< which node */
+    nodeid_t      NodeId;             /**< which node */
     char     *NodePlace;         /**< what kind of place is this */
     char     *NodeTownName;      /**< which town */
     char     *NodePostalCode;    /**< postal code */
@@ -374,10 +378,10 @@ static struct shapeinfo *shapes;
 
 static int maxWayTable = 0;
 int nWayTable = 0;
-unsigned int *WayTable = NULL;
+wayid_t *WayTable = NULL;
 
 static void
-saveInterestingWay(unsigned int wayid)
+saveInterestingWay(wayid_t wayid)
 {
 
 	if (nWayTable == maxWayTable) {
@@ -385,8 +389,8 @@ saveInterestingWay(unsigned int wayid)
 		    maxWayTable *= 2;
 		else
 		    maxWayTable = 1000;
-		WayTable = (unsigned int *) realloc(WayTable,
-				sizeof(unsigned int) * maxWayTable);
+		WayTable = (wayid_t *) realloc(WayTable,
+				sizeof(wayid_t) * maxWayTable);
 	}
 
 	WayTable[nWayTable] = wayid;
@@ -411,8 +415,8 @@ qsort_compare_unsigneds(const void *id1, const void *id2)
  *
  * Note : relies on the order of ways encountered in the file, for performance
  */
-static unsigned int
-isWayInteresting(unsigned int wayid)
+static wayid_t
+isWayInteresting(wayid_t wayid)
 {
 	int *r;
 	r = bsearch(&wayid, WayTable, nWayTable,
@@ -424,7 +428,7 @@ isWayInteresting(unsigned int wayid)
 
 static int maxNodeTable = 0;
 static int nNodeTable = 0;
-static unsigned int *NodeTable = NULL;
+static nodeid_t *NodeTable = NULL;
 
 
 void
@@ -444,7 +448,7 @@ buildmap_osm_text_save_wayids(const char *path, const char *outfile)
 
 
 static void
-saveInterestingNode(unsigned int node)
+saveInterestingNode(nodeid_t node)
 {
 
 	if (nNodeTable == maxNodeTable) {
@@ -452,7 +456,7 @@ saveInterestingNode(unsigned int node)
 		    maxNodeTable *= 2;
 		else
 		    maxNodeTable = 1000;
-		NodeTable = (unsigned int *) realloc(NodeTable,
+		NodeTable = (nodeid_t *) realloc(NodeTable,
 				sizeof(*NodeTable) * maxNodeTable);
 	}
 
@@ -461,7 +465,7 @@ saveInterestingNode(unsigned int node)
 }
 
 static int
-isNodeInteresting(unsigned int nodeid)
+isNodeInteresting(nodeid_t nodeid)
 {
 	int *r;
 
@@ -488,7 +492,7 @@ int      *WayNodes;     /**< the array to keep track of this way's nodes */
 void
 buildmap_osm_text_save_way_nodes(char *data)
 {
-        unsigned int node;
+        nodeid_t node;
 	int s;
 
         if (!wi.WayId)
@@ -953,7 +957,7 @@ buildmap_osm_text_read(char *fn, int country_num, int division_num)
     time_t	t[10];
     int		passid, NumNodes, NumWays;
     struct stat st;
-    unsigned int interesting_way;
+    wayid_t interesting_way;
     int		in_relation;
     int		need_xml_header = 1;
     int		need_osm_header = 1;
@@ -1058,9 +1062,9 @@ buildmap_osm_text_read(char *fn, int country_num, int division_num)
         } else if (strncasecmp(p, "/way", 4) == 0) {
 
 		/* if the way is still flagged interesting, save it */
-		if (wi.WayId && wi.WayIsInteresting) {
-		    saveInterestingWay(wi.WayId);
-		}
+		if (wi.WayId && wi.WayIsInteresting)
+			saveInterestingWay(wi.WayId);
+
 		buildmap_osm_text_reset_way();
                 continue;
 
@@ -1153,7 +1157,7 @@ buildmap_osm_text_read(char *fn, int country_num, int division_num)
 
         } else if (strncasecmp(p, "nd", 2) == 0) {
 
-		unsigned int     node;
+		nodeid_t     node;
 		/* nodes referenced by interesting ways are interesting */
                 if (wi.WayId && interesting_way) {
 		    s = sscanf(p, "nd ref=%*[\"']%u%*[\"']", &node);
