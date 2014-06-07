@@ -177,7 +177,7 @@ char *roadmap_locator_filename(char *buf, int fips) {
    if (fips > 1000000) {
       roadmap_iso_mapfile_from_fips(buf, fips);
    } else if (fips < 0) {
-      roadmap_osm_filename(buf, 1, fips);
+      roadmap_osm_filename(buf, 1, fips, ".rdm");
    } else {
       roadmap_county_filename(buf, fips);
    }
