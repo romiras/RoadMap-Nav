@@ -64,7 +64,6 @@
 
 #include "buildmap_layer.h"
 #include "buildmap_osm_common.h"
-#include "buildmap_osm_binary.h"
 
 /* Road layers. */
 

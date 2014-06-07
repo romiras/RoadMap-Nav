@@ -47,7 +47,6 @@
 #include "buildmap_metadata.h"
 #include "buildmap_layer.h"
 #include "buildmap_osm_common.h"
-#include "buildmap_osm_binary.h"
 #include "buildmap_osm_text.h"
 
 #include "roadmap_osm.h"
@@ -62,8 +61,6 @@ char *BuildMapResult;
 
 
 struct opt_defs options[] = {
-   {"format", "f", opt_string, "osmtext",
-        "Input format (OSM protocol)"},
    {"class", "c", opt_string, "default/All",
         "The class file to create the map for"},
    {"bits", "b", opt_int, ROADMAP_OSM_DEFAULT_BITS,
@@ -89,9 +86,9 @@ struct opt_defs options[] = {
    {"debug", "d", opt_flag, "0",
         "Show debug information"},
    {"inputfile", "i", opt_string, "",
-        "Convert this OSM file into a map"},
+        "Convert arbitrary (non-quadtile) OSM xml data file"},
    {"outputfile", "o", opt_string, "",
-        "Write output in this file"},
+        "Write output to this file (use with --inputfile)"},
    OPT_DEFS_END
 };
 
@@ -196,33 +193,26 @@ buildmap_osm_neighbors_to_mask(int tileid) {
     ( 1<<TILE_EAST | 1<<TILE_SOUTHEAST | 1<<TILE_SOUTH | 1<<TILE_SOUTHWEST )
 
 /**
- * @brief query the web server using the OSM binary protocol, and process it
+ * @brief use a helper command to fetch OSM data for a tile, and process it
  * @param tileid
  * @param fetcher
  * @return
  */
 static int
-buildmap_osm_process_one_tile (int tileid, const char *fetcher, const char *format)
+buildmap_osm_process_one_tile (int tileid, const char *fetcher)
 {
 
     char cmd[512];
     char bbox[100], *bbp;
-    int have = 0;
-    int ret, bits, trutile;
+    int ret, bits;
     RoadMapArea edges[1];
     char *xmlfile;
     char *parent;
 
     bits = tileid2bits(tileid);
-    buildmap_verbose("called for tileid 0x%x, bits %d", tileid, bits);
+    buildmap_verbose("buildmap_osm_process_one_tile: tileid 0x%x, bits %d",
+    		tileid, bits);
 
-    have = DEFAULT_NEIGHBORS;
-
-    buildmap_verbose ("tileid %d, have 0x%02x", tileid, have);
-
-    trutile = tileid2trutile(tileid);
-
-   
     roadmap_osm_tileid_to_bbox(tileid, edges);
     /* w, s, e, n */
     bbp = bbox;
@@ -244,65 +234,18 @@ buildmap_osm_process_one_tile (int tileid, const char *fetcher, const char *form
     xmlfile = roadmap_path_join(BuildMapResult,
 		roadmap_osm_filename(0, 1, tileid, ".osm.gz"));
 
-    snprintf(cmd, sizeof(cmd), "%s --trutile %d "
-    		"--bits %d --have %d --bbox %s --xmlfile %s",
-    		fetcher, trutile, bits, have, bbox, xmlfile);
+    snprintf(cmd, sizeof(cmd), "%s "
+    		"--bits %d --bbox %s --xmlfile %s",
+    		fetcher, bits, bbox, xmlfile);
 
-// sprintf(cmd, "cat /tmp/out.xml > %s", xmlfile);
-
-    if (strcasecmp(format, "osmbinary") == 0) {
-	FILE *fdata;
-
-	buildmap_info("command is \"%s\"", cmd);
-
-	fdata = popen(cmd, "r");
-	if (fdata == NULL) {
-	    buildmap_fatal(0, "couldn't open \"%s\"", cmd);
-	}
-
-	buildmap_osm_common_find_layers();
-
-	ret = buildmap_osm_binary_read(fdata);
-
-	if (pclose(fdata) != 0) {
-	    buildmap_error(0, "problem fetching data (pclose: %s)", strerror(errno));
-	    ret = -1;
-	}
-
-	/*
-	 * When the OSM server is congested, it returns
-	 * HTTP/1.1 509 Bandwidth Limit Exceeded
-	 *
-	 * Don't fail on this, but retry after a while.
-	 */
-	int cnt = 0;
-	while (ret == -509 && cnt++ < 100) {
-	   sleep(30);
-	   fdata = popen(cmd, "r");
-	   if (fdata == NULL) {
-	      buildmap_fatal(0, "couldn't open \"%s\"", cmd);
-	   }
-
-	   buildmap_osm_common_find_layers();
-
-	   ret = buildmap_osm_binary_read(fdata);
-
-	   if (pclose(fdata) != 0) {
-	      buildmap_error(0, "problem fetching data (pclose: %s), continuing", strerror(errno));
-	      ret = -1;
-	   }
-	}
-
+    ret = system(cmd);
+    if ((WEXITSTATUS(ret) != 0) || 
+	(WIFSIGNALED(ret) &&
+	    (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))) {
+	ret = -1;
     } else {
-	ret = system(cmd);
-	if ((WEXITSTATUS(ret) != 0) ||
-	    (WIFSIGNALED(ret) &&
-		(WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))) {
-	    ret = -1;
-        } else {
-	    buildmap_osm_text_read(xmlfile, tileid, 0, 0);
-	    ret = 0;
-	}
+	buildmap_osm_text_read(xmlfile, tileid, 0, 0);
+	ret = 0;
     }
 
     return ret;
@@ -616,7 +559,7 @@ static int roadmap_osm_tile_has_coverage(int tileid) {
  */
 static int
 buildmap_osm_process_tiles (int *tiles, int bits, int count,
-                const char *fetcher, const char *format)
+                const char *fetcher)
 {
     int i, ret = 0;
     int nbits;
@@ -638,7 +581,7 @@ buildmap_osm_process_tiles (int *tiles, int bits, int count,
 	    ("processing tile %d of %d, file '%s'", i+1, count, name);
 
         roadmap_osm_filename(osmfile, 1, tileid, ".osm");
-	ret = buildmap_osm_process_one_tile (tileid, fetcher, format);
+	ret = buildmap_osm_process_one_tile (tileid, fetcher);
 
 	if (ret == -2) {
 	    /* we got a "tile too big" error.  try for four
@@ -900,7 +843,6 @@ main(int argc, char **argv)
     int listonly;
     int tileid;
     char *class, *latlonarg, *fetcher, *inputfile;
-    char *format;
 
     BuildMapResult = strdup(roadmap_path_preferred("maps")); /* default. */
 
@@ -912,7 +854,6 @@ main(int argc, char **argv)
     error = opt_val("verbose", &verbose) ||
             opt_val("debug", &debug) ||
             opt_val("quiet", &quiet) ||
-            opt_val("format", &format) ||
             opt_val("class", &class) ||
             opt_val("bits", &osm_bits) ||
             opt_val("replace", &BuildMapReplaceAll) ||
@@ -939,13 +880,6 @@ main(int argc, char **argv)
 
     if (*encode) {
         exit ( buildmap_osm_encode(encode, osm_bits) );
-    }
-
-    if (strcasecmp(format, "osmtext") != 0 &&
-	strcasecmp(format, "osmbinary") != 0) {
-        fprintf (stderr,
-            "unsupported protocol input format %s", format);
-        exit(1);
     }
 
     if (!*fetcher) {
@@ -1007,7 +941,7 @@ main(int argc, char **argv)
     }
 
     error = buildmap_osm_process_tiles
-                (tileslist, osm_bits, count, fetcher, format);
+                (tileslist, osm_bits, count, fetcher);
 
     free (tileslist);
 

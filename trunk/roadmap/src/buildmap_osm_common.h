@@ -58,7 +58,6 @@
 #include "buildmap_polygon.h"
 
 #include "buildmap_layer.h"
-#include "buildmap_osm_binary.h"
 
 #define AREA 1
 
