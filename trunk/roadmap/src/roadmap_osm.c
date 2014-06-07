@@ -36,7 +36,7 @@
  * We use a slightly modified format for describing the tiles, since
  * the full address of the smallest quadtile as described on that page
  * would take 32 bits, and we need to set some aside.
- * First, since we want to avoid the sign bit, so we lose one there.
+ * First, we want to avoid the sign bit, so we lose one there.
  * Second, we want to encode the number of bits used in the encoding,
  * in the tileid itself.  There's a tradeoff here -- the more bits we
  * set aside for describing the encoding bits, the fewer we have for
@@ -64,7 +64,7 @@
  * Except for the semantics of the sign bit, these encodings are
  * entirely contained within a few macros in roadmap_osm.h.  The use
  * of negation to distinguish fips values from tileids is mainly here
- * (this code deals with postitive tileids) and in roadmap_locator.c
+ * (this code deals with positive tileids) and in roadmap_locator.c
  * (which knows that tileids are negative).
  *
  * A few of the routines in this file which transform lat/lon pairs
