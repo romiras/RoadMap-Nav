@@ -299,7 +299,7 @@ buildmap_osm_process_one_tile (int tileid, const char *fetcher, const char *form
 		(WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))) {
 	    ret = -1;
         } else {
-	    buildmap_osm_text_read(xmlfile, 0, 0);
+	    buildmap_osm_text_read(xmlfile, tileid, 0, 0);
 	    ret = 0;
 	}
     }
@@ -370,7 +370,7 @@ int buildmap_osm_text_process_file(char *fn, char *ofn)
 
     buildmap_osm_common_find_layers();
     buildmap_debug("reading file %s", fn);
-    buildmap_osm_text_read(fn, country_num, division_num);
+    buildmap_osm_text_read(fn, 0, country_num, division_num);
 
     buildmap_db_sort();
     ret2 = buildmap_osm_save_custom(ofn, (ret == 0) ? 1 : 0);

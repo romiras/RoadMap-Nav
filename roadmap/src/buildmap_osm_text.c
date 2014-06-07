@@ -66,6 +66,7 @@
 #include "buildmap_osm_common.h"
 #include "buildmap_osm_text.h"
 
+extern char *BuildMapResult;
 
 /* OSM has over 2G nodes already -- enough to overflow a 32 bit signed int */
 typedef unsigned int nodeid_t;
@@ -235,8 +236,7 @@ buildmap_osm_text_point_add(int id, int npoint)
 			roadmap_hash_resize(PointsHash, nPointsAlloc);
 
                 points = realloc(points, sizeof(struct points) * nPointsAlloc);
-                if (!points)
-                        buildmap_fatal(0, "allocate %d points", nPointsAlloc);
+		buildmap_check_allocated(points);
         }
 
 	roadmap_hash_add(PointsHash, id, nPoints);
@@ -376,9 +376,27 @@ static int nallocshapes = 0;
  */
 static struct shapeinfo *shapes;
 
+struct neighbor_ways {
+    int tileid;		    // these are the ways for this tileid
+    RoadMapFileContext fc;  // file context for the mmap
+    int count;	    	    // how many ways
+    const wayid_t *ways;    // the way ids for that tileid.
+			    // (also serves as the "populated" flag.)
+} Neighbor_Ways[8];
+
 static int maxWayTable = 0;
 int nWayTable = 0;
 wayid_t *WayTable = NULL;
+
+wayid_t *WayTableCopy = NULL;
+
+static void
+copyWayTable(void)
+{
+	WayTableCopy = (wayid_t *) malloc(sizeof(wayid_t) * nWayTable);
+	buildmap_check_allocated(WayTableCopy);
+	memcpy(WayTableCopy, WayTable, nWayTable * sizeof(wayid_t));
+}
 
 static void
 saveInterestingWay(wayid_t wayid)
@@ -391,6 +409,7 @@ saveInterestingWay(wayid_t wayid)
 		    maxWayTable = 1000;
 		WayTable = (wayid_t *) realloc(WayTable,
 				sizeof(wayid_t) * maxWayTable);
+		buildmap_check_allocated(WayTable);
 	}
 
 	WayTable[nWayTable] = wayid;
@@ -415,15 +434,13 @@ qsort_compare_unsigneds(const void *id1, const void *id2)
  *
  * Note : relies on the order of ways encountered in the file, for performance
  */
-static wayid_t
+static wayid_t *
 isWayInteresting(wayid_t wayid)
 {
-	int *r;
-	r = bsearch(&wayid, WayTable, nWayTable,
+	wayid_t *r;
+	r = (wayid_t *)bsearch(&wayid, WayTable, nWayTable,
                              sizeof(*WayTable), qsort_compare_unsigneds);
-	if (!r) return 0;
-
-	return *r;
+	return r;
 }
 
 static int maxNodeTable = 0;
@@ -436,14 +453,25 @@ buildmap_osm_text_save_wayids(const char *path, const char *outfile)
 {
     char nfn[1024];
     char *p;
+    FILE *fp;
+    wayid_t *wp;
 
     strcpy(nfn, outfile);
     p = strrchr(nfn, '.');
     if (p) *p = '\0';
     strcat(nfn, ".ways");
 
+    fp = roadmap_file_fopen (path, nfn, "w");
 
-    roadmap_file_save(path, nfn, WayTable, nWayTable * sizeof(*WayTable));
+    /* write out the list.  it's already sorted, and unwanted entries
+     * have been zeroed.  */
+    for (wp = WayTableCopy; wp < &WayTableCopy[nWayTable]; wp++) {
+	if (*wp) {
+	    fwrite(wp, sizeof(wayid_t), 1, fp);
+	}
+    }
+
+    fclose(fp);
 }
 
 
@@ -458,6 +486,7 @@ saveInterestingNode(nodeid_t node)
 		    maxNodeTable = 1000;
 		NodeTable = (nodeid_t *) realloc(NodeTable,
 				sizeof(*NodeTable) * maxNodeTable);
+		buildmap_check_allocated(NodeTable);
 	}
 
 	NodeTable[nNodeTable] = node;
@@ -513,9 +542,7 @@ buildmap_osm_text_save_way_nodes(char *data)
                     nWayNodeAlloc = 1000;
                 WayNodes = 
                     (int *)realloc(WayNodes, sizeof(*WayNodes) * nWayNodeAlloc);
-                if (WayNodes == 0)
-                        buildmap_fatal
-                            (0, "allocation failed for %d ints", nWayNodeAlloc);
+		buildmap_check_allocated(WayNodes);
         }
         WayNodes[wi.nWayNodes++] = node;
 }
@@ -670,10 +697,8 @@ buildmap_osm_text_way_finish(char *data)
 
 	/* if a way is both a coast and a boundary, treat it only as coast */
 	if (wi.WayCoast) {
-		wi.WayIsInteresting = 1;
 		wi.WayLayer = l_shoreline;
 	} else if (wi.WayAdminLevel) {
-
 		/* national == 2, state == 4, ignore lesser boundaries */
 		if  (wi.WayAdminLevel > 4) {
 			wi.WayIsInteresting = 0;
@@ -683,7 +708,12 @@ buildmap_osm_text_way_finish(char *data)
 	}
 
         if ( !wi.WayIsInteresting || wi.WayLayer == 0) {
+		wayid_t *wp;
                 buildmap_verbose("discarding way %d, not interesting (%s)", wi.WayId, data);
+		wp = isWayInteresting(wi.WayId);
+		if (wp) {
+		    WayTableCopy[wp-WayTable] = 0;
+		}
 
                 buildmap_osm_text_reset_way();
                 return;
@@ -848,6 +878,103 @@ buildmap_osm_text_way_finish(char *data)
 
 }
 
+/*
+ * @brief memory maps the way list for the give tileid, if it exists
+ */
+void
+buildmap_osm_text_load_neighbor_ways(int neighbor,
+			struct neighbor_ways *neighbor_ways)
+{
+	const char *waysmap;
+        RoadMapFileContext fc;
+
+	waysmap = roadmap_file_map(BuildMapResult,
+		    roadmap_osm_filename(0, 1, neighbor, ".ways"), "r", &fc);
+	if (waysmap) {
+	    neighbor_ways->tileid = neighbor;
+	    neighbor_ways->fc = fc;
+	    neighbor_ways->count = roadmap_file_size(fc) / sizeof(wayid_t);
+	}
+	neighbor_ways->ways = (wayid_t *)waysmap;
+}
+
+void
+buildmap_osm_text_unload_neighbor_ways(int i)
+{
+	roadmap_file_unmap (&Neighbor_Ways[i].fc);
+	Neighbor_Ways[i].ways = 0;
+}
+
+/*
+ * @brief populates the correct way maps for all of our neighbors.
+ *        we don't really care which neighbor map is which.
+ */
+void
+buildmap_osm_text_neighbor_way_maps(int tileid)
+{
+	struct neighbor_ways new_neighbor_ways[8];
+	int neighbor_tile;
+	int i, j;
+
+	/* stage a new set of neighbor way lists.  we reuse those
+	 * that we can, and load new lists when we can't.
+	 */
+	for (i = 0; i < 8; i++) {
+	    neighbor_tile = roadmap_osm_tileid_to_neighbor(tileid, i);
+	    // fprintf(stderr, "loading ways list for neighbor 0x%x\n", neighbor_tile);
+
+	    /* if we already have that neighbor's ways, reuse */
+	    for (j = 0; j < 8; j++) {
+		if (Neighbor_Ways[j].tileid == neighbor_tile) {
+		    // fprintf(stderr, "reusing neighbor 0x%x\n", neighbor_tile);
+		    new_neighbor_ways[i] = Neighbor_Ways[j];
+		    Neighbor_Ways[j].ways = 0;
+		    break;
+		}
+	    }
+
+	    /* didn't find it -- fetch the neighbor's ways */
+	    if (j == 8) {
+		// fprintf(stderr, "fetching neighbor 0x%x\n", neighbor_tile);
+		buildmap_osm_text_load_neighbor_ways(neighbor_tile,
+				&new_neighbor_ways[i]);
+	    }
+	}
+
+	/* release any old way lists we're not reusing */
+	for (i = 0; i < 8; i++)
+	    if (Neighbor_Ways[i].ways)
+		buildmap_osm_text_unload_neighbor_ways(i);
+
+	/* our new set of reused or freshly loaded way lists into place */
+	for (i = 0; i < 8; i++)
+	    Neighbor_Ways[i] = new_neighbor_ways[i];
+
+}
+
+/*
+ * @brief check to see if the given way exists in any of
+ *        our neighbors.
+ */
+int
+buildmap_osm_text_check_neighbors(wayid_t wayid)
+{
+	int i;
+	wayid_t *r;
+
+	for (i = 0; i < 8; i++) {
+		if (Neighbor_Ways[i].ways) {
+			r = bsearch(&wayid, Neighbor_Ways[i].ways,
+				Neighbor_Ways[i].count,
+				sizeof(*(Neighbor_Ways[i].ways)),
+				 qsort_compare_unsigneds);
+			if (r)
+				return 1;
+		}
+	}
+	return 0;
+}
+
 /**
  * @brief a postprocessing step to load shape info
  *
@@ -947,7 +1074,7 @@ int buildmap_osm_text_fclose(FILE *fp)
  * All underlying processing is passed to other functions.
  */
 void
-buildmap_osm_text_read(char *fn, int country_num, int division_num)
+buildmap_osm_text_read(char *fn, int tileid, int country_num, int division_num)
 {
     FILE 	*fdata;
     int		lines;
@@ -968,6 +1095,9 @@ buildmap_osm_text_read(char *fn, int country_num, int division_num)
     fstat(fileno(fdata), &st);
 
     ni.NodeFakeFips = 1000000 + country_num * 1000 + division_num;
+
+    if (tileid)
+	    buildmap_osm_text_neighbor_way_maps(tileid);
 
     buildmap_osm_text_point_hash_reset();
 
@@ -1061,6 +1191,15 @@ buildmap_osm_text_read(char *fn, int country_num, int division_num)
 
         } else if (strncasecmp(p, "/way", 4) == 0) {
 
+		/* if we're processing a quadtile, don't include any
+		 * ways that our neighbors already include */
+		if (tileid && wi.WayId && wi.WayIsInteresting &&
+			    buildmap_osm_text_check_neighbors(wi.WayId)) {
+			buildmap_verbose("dropping way %d because a neighbor "
+				"already has it", wi.WayId);
+			wi.WayIsInteresting = 0;
+		}
+
 		/* if the way is still flagged interesting, save it */
 		if (wi.WayId && wi.WayIsInteresting)
 			saveInterestingWay(wi.WayId);
@@ -1101,7 +1240,7 @@ buildmap_osm_text_read(char *fn, int country_num, int division_num)
     LineNo = 0;
     buildmap_set_source("pass 2");
     buildmap_osm_text_fclose(fdata);
-    buildmap_osm_text_fopen(fn);
+    fdata = buildmap_osm_text_fopen(fn);
     buildmap_osm_text_reset_way();
     buildmap_osm_text_reset_node();
 
@@ -1146,7 +1285,7 @@ buildmap_osm_text_read(char *fn, int country_num, int division_num)
 		if (s != 1)
 			buildmap_fatal(0, "buildmap_osm_text(%s) way error", p);
 
-		interesting_way = isWayInteresting(wi.WayId);
+		interesting_way = !!isWayInteresting(wi.WayId);
                 continue;
 
         } else if (strncasecmp(p, "/way", 4) == 0) {
@@ -1193,9 +1332,14 @@ buildmap_osm_text_read(char *fn, int country_num, int division_num)
     NumNodes = 0;
     buildmap_set_source("pass 3");
     buildmap_osm_text_fclose(fdata);
-    buildmap_osm_text_fopen(fn);
+    fdata = buildmap_osm_text_fopen(fn);
     buildmap_osm_text_reset_way();
     buildmap_osm_text_reset_node();
+
+    /* we've finished saving ways.  we need a fresh place to mark
+     * the ones we're discarding, while still keeping the original list
+     * quickly searchable. */
+    copyWayTable();
 
     while (! feof(fdata)) {
 	buildmap_progress(LineNo, lines);
@@ -1270,18 +1414,20 @@ buildmap_osm_text_read(char *fn, int country_num, int division_num)
         	if (s != 1)
                 	buildmap_fatal(0, "buildmap_osm_text(%s) way error", p);
 
-        	wi.WayIsInteresting = 1;
+        	wi.WayIsInteresting = !!isWayInteresting(wi.WayId);
                 continue;
 
         } else if (strncasecmp(p, "/way", 4) == 0) {
 
-                buildmap_osm_text_way_finish(p);
+		if (wi.WayIsInteresting)
+                	buildmap_osm_text_way_finish(p);
                 continue;
 
         } else if (strncasecmp(p, "nd", 2) == 0) {
 
 		// the nd node references gets put on WayNodes list
-                buildmap_osm_text_save_way_nodes(p);
+		if (wi.WayIsInteresting)
+                	buildmap_osm_text_save_way_nodes(p);
                 continue;
         }
     }
