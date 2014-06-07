@@ -12,7 +12,7 @@ work-in-progress.  It does work, but may change in detail.
     The maps that RoadMap renders come from several sources (TIGER, various
     shapefile formats, OpenStreetMap). They all need to be indexed for use
     by RoadMap for several reasons. First, we don't want to overload RoadMap
-    to be with several ways to interpret the same data. Second, there's not
+    with several ways to interpret the same data. Second, there's not
     always a direct mapping between the coordinates on the screen where
     RoadMap is trying to display a map, and the name of the map file(s) that
     contain(s) information for that region.
