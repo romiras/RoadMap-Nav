@@ -33,7 +33,7 @@ January 2009
 == Files ==
 
      The syntax of most RoadMap configuration files is similar to the X
-     ressources file format (the exceptions are the sprites file and the
+     resources file format (the exceptions are the sprites file and the
      trip files). Each configuration item is represented by one line of text,
      using the following format:
 
@@ -583,7 +583,7 @@ January 2009
      : Map.Path
          The map database search path.
           - //Format:// a comma-separated list of directory paths.
-          - //Default:// empty string (i.e. RoadMap uses the hardcoded default)
+          - //Default:// empty (RoadMap uses the hardcoded default, if any)
           - //Comment:// The hardcoded default also includes the directories
                        /usr/local/share/roadmap and /usr/share/roadmap, for
                        compatibility purposes.  These two directories were the
