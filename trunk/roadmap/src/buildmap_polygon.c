@@ -985,7 +985,7 @@ static int buildmap_polygon_save (void) {
          if (square != square_current) {
 
             if (square < square_current) {
-               buildmap_error (0, "abnormal square order: %d following %d",
+               buildmap_error (0, "abnormal square order (4): %d following %d",
                                   square, square_current);
 	       return 1;
             }
