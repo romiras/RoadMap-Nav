@@ -71,7 +71,7 @@
  * @brief a couple of variables to keep track of the way we're dealing with
  */
 static struct WayInfo {
-    unsigned int inWay;              /**< are we in a way (its id) */
+    unsigned int WayId;              /**< are we in a way (its id) */
     int      nWayNodes;          /**< number of nodes known for 
 						     this way */
     int      WayLayer;           /**< the layer for this way */
@@ -409,10 +409,10 @@ buildmap_osm_text_way(char *data)
         /* Severely cut in pieces.
          * This only remembers which way we're in...
          */
-        sscanf(data, "way id=%*[\"']%u%*[\"']", &wi.inWay);
+        sscanf(data, "way id=%*[\"']%u%*[\"']", &wi.WayId);
         wi.WayNotInteresting = 0;
 
-        if (wi.inWay == 0)
+        if (wi.WayId == 0)
                 buildmap_fatal(0, "buildmap_osm_text_way(%s) error", data);
 
         return 0;
@@ -575,7 +575,7 @@ buildmap_osm_text_nd(char *data)
         unsigned int node;
 	int ix;
 
-        if (! wi.inWay)
+        if (! wi.WayId)
                 buildmap_fatal(0, "Wasn't in a way (%s)", data);
 
         if (sscanf(data, "nd ref=%*[\"']%u%*[\"']", &node) != 1) {
@@ -755,7 +755,7 @@ buildmap_osm_text_way_end(char *data)
                 return 0;
 	}
 
-        if (wi.inWay == 0)
+        if (wi.WayId == 0)
                 buildmap_fatal(0, "Wasn't in a way (%s)", data);
 
 	/* if a way is both a coast and a boundary, treat it only as coast */
@@ -773,7 +773,7 @@ buildmap_osm_text_way_end(char *data)
 	}
 
         if (wi.WayNotInteresting || wi.WayLayer == 0) {
-                buildmap_verbose("discarding way %d, not interesting (%s)", wi.inWay, data);
+                buildmap_verbose("discarding way %d, not interesting (%s)", wi.WayId, data);
 
                 wi.WayNotInteresting = 0;
                 buildmap_osm_text_reset_way();
@@ -850,7 +850,7 @@ buildmap_osm_text_way_end(char *data)
 			rms_name = str2dict(DictionaryStreet, wi.WayStreetName);
 		else if (wi.WayStreetRef)
 			rms_name = str2dict(DictionaryStreet, wi.WayStreetRef);
-		buildmap_verbose ("Way %d [%s] ref [%s]", wi.inWay,
+		buildmap_verbose ("Way %d [%s] ref [%s]", wi.WayId,
 				wi.WayStreetName ? wi.WayStreetName : "",
 				wi.WayStreetRef ? wi.WayStreetRef : "");
 
@@ -1067,19 +1067,19 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
 		continue;
         } else if (strncasecmp(p, "way", 3) == 0) {
 		wi.WayNotInteresting = 0;
-		if (sscanf(p, "way id=%*[\"']%u%*[\"']", &wi.inWay) != 1) {
-		    wi.inWay = 0;
+		if (sscanf(p, "way id=%*[\"']%u%*[\"']", &wi.WayId) != 1) {
+		    wi.WayId = 0;
 		}
 		NumWays++;
                 continue;
         } else if (strncasecmp(p, "/way", 4) == 0) {
-		if (wi.inWay && ! wi.WayNotInteresting) {
-		    WayIsInteresting(wi.inWay);
+		if (wi.WayId && ! wi.WayNotInteresting) {
+		    WayIsInteresting(wi.WayId);
 		}
 		buildmap_osm_text_reset_way();
                 continue;
         } else if (strncasecmp(p, "tag", 3) == 0) {
-		if (! wi.inWay)
+		if (! wi.WayId)
 			ret += buildmap_osm_text_node_tag(p, 1);
 		else
                 	ret += buildmap_osm_text_way_tag(p);
@@ -1134,10 +1134,10 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
         } else if (in_relation) {
 		continue;
         } else if (strncasecmp(p, "way", 3) == 0) {
-		if (sscanf(p, "way id=%*[\"']%u%*[\"']", &wi.inWay) == 1) {
-		    interesting_way = IsWayInteresting(wi.inWay);
+		if (sscanf(p, "way id=%*[\"']%u%*[\"']", &wi.WayId) == 1) {
+		    interesting_way = IsWayInteresting(wi.WayId);
 		} else {
-		    wi.inWay = 0;
+		    wi.WayId = 0;
 		    interesting_way = 0;
 		}
                 continue;
@@ -1148,7 +1148,7 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
         } else if (strncasecmp(p, "nd", 2) == 0) {
 		unsigned int     node;
 		/* nodes referenced by interesting ways are interesting */
-                if (wi.inWay && interesting_way) {
+                if (wi.WayId && interesting_way) {
 		    if (sscanf(p, "nd ref=%*[\"']%u%*[\"']", &node) == 1) {
 			NodeIsInteresting(node);
 		    }
@@ -1214,7 +1214,7 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
 		ret += buildmap_osm_text_node_interesting_end(p);
                 continue;
         } else if (strncasecmp(p, "tag", 3) == 0) {
-		if (! wi.inWay)
+		if (! wi.WayId)
 			ret += buildmap_osm_text_node_tag(p, 0);
 		else
                 	ret += buildmap_osm_text_way_tag(p);
