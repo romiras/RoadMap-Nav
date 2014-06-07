@@ -903,8 +903,8 @@ static int buildmap_polygon_save (void) {
    /* Create the new-style "polygons" (note new name) tables,
     * based on lines, instead of points).
     */
-   if (PolygonLineCount > 0xffff) {
-      buildmap_error (0, "too many polygon lines - %d, max %d", PolygonLineCount, 0xffff);
+   if (PolygonLineCount > MAX_POLYGON_LINE_COUNT) {
+      buildmap_error (0, "too many polygon lines - %d, max %d", PolygonLineCount, MAX_POLYGON_LINE_COUNT);
       return 1;
    }
 
@@ -974,8 +974,8 @@ static int buildmap_polygon_save (void) {
          buildmap_polygon_set_first(db_poly, i);
          db_poly->cfcc  = one_polygon->cfcc;
 
-         if (one_polygon->count > 0xfffff) {
-            buildmap_error (0, "too many polygon lines (%d, max %d)", one_polygon->count, 0xfffff);
+         if (one_polygon->count > MAX_POLYGON_LINE_COUNT) {
+            buildmap_error (0, "too many polygon lines (%d, max %d)", one_polygon->count, MAX_POLYGON_LINE_COUNT);
 	    return 1;
          }
          buildmap_polygon_set_count(db_poly, one_polygon->count);

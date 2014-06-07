@@ -83,5 +83,7 @@ typedef int RoadMapPolygonLine;
                 sethifirst(this, (f) / 65536); \
         } while(0)
 
+#define MAX_POLYGON_LINE_COUNT  0xfffff
+
 #endif // INCLUDED__ROADMAP_DB_POLYGON__H
 
