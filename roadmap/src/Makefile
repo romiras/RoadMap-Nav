@@ -161,21 +161,21 @@ BUSRC = buildus_main.c \
 BUOBJS = $(BUSRC:.c=.o)
 
 
-XCHGSRC = rdmxchange_main.c \
-	rdmxchange_dictionary.c \
-	rdmxchange_index.c \
-	rdmxchange_metadata.c \
-	rdmxchange_point.c \
-	rdmxchange_line.c \
-	rdmxchange_shape.c \
-	rdmxchange_square.c \
-	rdmxchange_street.c \
-	rdmxchange_range.c \
-	rdmxchange_zip.c \
-	buildmap_messages.c \
-	buildmap_dbwrite.c
-
-XCHGOBJS = $(XCHGSRC:.c=.o)
+# XCHGSRC = rdmxchange_main.c \
+# 	rdmxchange_dictionary.c \
+# 	rdmxchange_index.c \
+# 	rdmxchange_metadata.c \
+# 	rdmxchange_point.c \
+# 	rdmxchange_line.c \
+# 	rdmxchange_shape.c \
+# 	rdmxchange_square.c \
+# 	rdmxchange_street.c \
+# 	rdmxchange_range.c \
+# 	rdmxchange_zip.c \
+# 	buildmap_messages.c \
+# 	buildmap_dbwrite.c
+# 
+# XCHGOBJS = $(XCHGSRC:.c=.o)
 
 
 MISCSRC = \
@@ -212,8 +212,8 @@ BMHEADERS = \
 	buildus_fips.h \
 	buildmap_turn_restrictions.h
 
-XCHGHEADERS = \
-	rdmxchange.h
+# XCHGHEADERS = \
+# 	rdmxchange.h
 
 RGHEADERS = \
 	roadgps_logger.h \
@@ -319,7 +319,7 @@ RMDBHEADERS = \
 	roadmap_dbread.h \
 	roadmap_db_turns.h
 
-HEADERS = $(BMHEADERS) $(XCHGHEADERS) $(RGHEADERS) $(RMHEADERS) $(RMDBHEADERS)
+HEADERS = $(BMHEADERS) $(RGHEADERS) $(RMHEADERS) $(RMDBHEADERS) # $(XCHGHEADERS) 
 
 # more sources
 PKGDATAFILES = sprites preferences session drivers \
@@ -352,7 +352,7 @@ BUILD = # buildus
 else
 BUILD = buildmap buildmap_osm buildus buildplace dumpmap
 RUNTIME += libguiroadgps.a
-DRIVERS = rdmkismet rdmghost rdmfriends rdmtrace rdmxchange
+DRIVERS = rdmkismet rdmghost rdmfriends rdmtrace # rdmxchange
 TOOLS = sunrise
 # rdmindex -- removed from default build.  it's unfinished s/w, and
 # its presence is confusing.
@@ -364,7 +364,8 @@ endif
 C_SRC = $(RMLIBSRC) $(RMGUISRC) $(RGGUISRC) \
 	$(RMPLUGINSRC) $(DMSRC) $(BMLIBSRC) $(BMSRC) \
 	$(BMOSMSRC) \
-	$(BPSRC) $(BUSRC) $(XCHGSRC) $(MISCSRC)
+	$(BPSRC) $(BUSRC) $(MISCSRC)
+#	$(XCHGSRC) 
 
 ALL_SRC = $(MKFILES) $(C_SRC) $(HEADERS) \
 	$(PKGDATAFILES) $(MISCFILES) $(MANPAGES) $(SCRIPTS) $(FONT) $(MANUAL)
@@ -545,7 +546,7 @@ strip:
 icons:
 	$(MAKE) -C icons all
 
-basefiles: build
+basefiles: build   # need buildmap_osm and builus to be built
 	$(MAKE) -C basefiles all
 
 topclean:
@@ -662,8 +663,8 @@ sunrise: roadmap_sunrise.c
 rdmindex : rdmindex_main.o libbuildmap.a $(RDMLIBS)
 	$(CC) $(LDFLAGS) rdmindex_main.o -o rdmindex libbuildmap.a $(RDMLIBS) $(LIBS)
 
-rdmxchange : $(XCHGOBJS) $(RDMLIBS)
-	$(CC) $(LDFLAGS) -o rdmxchange $(XCHGOBJS) $(RDMLIBS) $(LIBS)
+# rdmxchange : $(XCHGOBJS) $(RDMLIBS)
+# 	$(CC) $(LDFLAGS) -o rdmxchange $(XCHGOBJS) $(RDMLIBS) $(LIBS)
 
 rdmkismet: roadmap_kismet.o $(RDMLIBS)
 	$(CC) $(LDFLAGS) roadmap_kismet.o -o rdmkismet $(RDMLIBS) $(RDMLIBS) -lm
