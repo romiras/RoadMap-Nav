@@ -29,5 +29,5 @@
 #define LINELEN 2048
 
 void buildmap_osm_text_find_layers (void);
-int buildmap_osm_text_read(char *filename, int country_num, int division_num);
+void buildmap_osm_text_read(char *filename, int country_num, int division_num);
 void buildmap_osm_text_save_wayids(const char *path, const char *outfile);
