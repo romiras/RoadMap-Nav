@@ -69,7 +69,7 @@ struct opt_defs options[] = {
    {"bits", "b", opt_int, ROADMAP_OSM_DEFAULT_BITS,
         "The number of bits of quadtile address"},
    {"replace", "r", opt_flag, "0",
-        "Re-request maps that are already present"},
+        "Rebuild .rdm files, reuse existing .osm if possible"},
    {"maps", "m", opt_string, "",
         "Location for the generated map files"},
    {"fetcher", "F", opt_string, "osm_fetch_tile",
@@ -293,7 +293,7 @@ buildmap_osm_process_one_tile (int tileid, const char *fetcher, const char *form
 
     } else {
 	struct stat statbuf;
-	if (!BuildMapReplaceAll &&
+	if (/* !BuildMapReplaceAll && */
 		stat(xmlfile, &statbuf) == 0 &&
 		statbuf.st_size != 0)
 	    ret = 0;
