@@ -14,8 +14,8 @@ program=${0##*/}
 
 : args: $*
 
-#server="www.overpass-api.de/api/xapi?*"
-server="overpass.osm.rambler.ru/cgi/xapi?*"
+server="www.overpass-api.de/api/xapi?*"
+#server="overpass.osm.rambler.ru/cgi/xapi?*"
 
 
 if ! opts="$(getopt -o t:b:h:B:x: \
@@ -44,21 +44,40 @@ done
 
 bbox="[bbox=$bbox]"
 
-case $xmlfile in
-*.gz)	pipe="gzip -c" ;;
-*)	pipe="cat" ;;
-esac
-
-set -o pipefail
-
 trap "rm -f $xmlfile.tmp" 0
 
 if [ -e $xmlfile ]
 then
     echo Already have $xmlfile
-elif wget -O - "http://$server$bbox$query$me" | $pipe >$xmlfile.tmp 
-then
-    mv $xmlfile.tmp $xmlfile
-else
-    rm $xmlfile.tmp
+    exit
 fi
+
+case $xmlfile in
+*.gz) want_compressed=1 ;;
+esac
+
+url="http://$server$bbox$query$me"
+
+if [ "$want_compressed" ]
+then
+    wget_opt="--header=Accept-Encoding: gzip"
+    if wget "$wget_opt" -O - "$url" >$xmlfile.tmp
+    then
+	case $(file $xmlfile.tmp) in
+	*gzip*)
+	    mv $xmlfile.tmp $xmlfile
+	    ;;
+	*)
+	    echo "Note: download didn't use gzip encoding."
+	    echo "Compressing now..."
+	    gzip -c -d $xmlfile.tmp > $xmlfile
+	    ;;
+	esac
+    fi
+else
+    if wget $wget_opt -O - "$url" >$xmlfile.tmp
+    then
+	mv $xmlfile.tmp $xmlfile
+    fi
+fi
+
