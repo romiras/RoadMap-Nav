@@ -536,6 +536,13 @@ void roadmap_start_request_repaint_map (int priority) {
     roadmap_start_request_repaint (ROADMAP_MAP, priority);
 }
 
+void roadmap_start_toggle_basemap(void)
+{
+    static int basemap = 1;
+    basemap = !basemap;
+    roadmap_locator_use_counties(basemap);
+    roadmap_start_request_repaint_map(REPAINT_NOW);
+}
 /* The RoadMap menu and toolbar items: ----------------------------------- */
 
 #ifdef ANDROID
@@ -710,6 +717,9 @@ static RoadMapAction RoadMapStartActions[] = {
 
    {"toggleview", "2D/3D View", "M", NULL,
       "Toggle view mode 2D / 3D", NULL, roadmap_screen_toggle_view_mode},
+
+   {"togglebasemap", "Basemap On/Off", "M", NULL,
+      "Turn the basemap on or off", NULL, roadmap_start_toggle_basemap},
 
    {"togglelabels", "Show/Hide Street Labels", "Labels", NULL,
       "Show or Hide the names of streets", NULL, roadmap_screen_toggle_labels},
@@ -954,6 +964,7 @@ static const char *RoadMapStartMenu[] = {
 
    ROADMAP_SUBMENU "Display modes...",
 
+      "togglebasemap",
       "togglelabels",
       "toggleorientation",
       "toggleview",

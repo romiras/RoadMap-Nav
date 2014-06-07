@@ -53,5 +53,7 @@ RoadMapString roadmap_locator_get_state (const char *state);
 int roadmap_locator_get_decluttered(int fips);
 void roadmap_locator_set_decluttered(int fips);
 
+void roadmap_locator_use_counties(int yesno);
+
 #endif // _ROADMAP_LOCATOR__H_
 
