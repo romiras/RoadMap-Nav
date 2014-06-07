@@ -225,7 +225,6 @@ buildmap_osm_process_one_tile
     }
 
     buildmap_osm_common_find_layers();
-    buildmap_debug("reading file %s", fn);
 
     ret = buildmap_osm_binary_read(fdata);
 
@@ -556,11 +555,11 @@ buildmap_osm_process_tiles (int *tiles, int bits, int count,
                  */
 		int n;
 
-                if (bits >= TILE_MAXBITS-1) {
+                nbits = tileid2bits(tileid);
+                if (nbits >= TILE_MAXBITS-1) {
                     buildmap_info("can't split tile 0x%x further", tileid);
                     continue;
                 }
-                nbits = tileid2bits(tileid);
                 buildmap_info
                     ("splitting tile 0x%x, new bits %d", tileid, nbits+2);
 
