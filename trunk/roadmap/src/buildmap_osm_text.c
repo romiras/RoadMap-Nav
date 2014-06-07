@@ -989,6 +989,40 @@ buildmap_osm_text_ways_shapeinfo(void)
     return 1;
 }
 
+
+static int text_file_is_pipe;
+FILE *buildmap_osm_text_fopen(char *fn)
+{
+    FILE *fdata;
+    int len;
+
+    len = strlen(fn);
+    if (len > 3 && strcmp(&fn[len-3], ".gz") == 0) {
+	char command[1024];
+	sprintf(command, "gzip -d -c %s", fn);
+	fdata = popen(command, "r");
+	text_file_is_pipe = 1;
+    } else {
+	fdata = fopen(fn, "r");
+	text_file_is_pipe = 0;
+    }
+    
+    if (fdata == NULL) {
+            buildmap_fatal(0, "couldn't open \"%s\"", fn);
+            return NULL;
+    }
+
+    return fdata;
+}
+
+int buildmap_osm_text_fclose(FILE *fp)
+{
+    if (text_file_is_pipe)
+	return pclose(fp);
+    else
+	return fclose(fp);
+}
+
 /**
  * @brief This is the gut of buildmap_osm_text : parse an OSM XML file
  * @param fdata an open file pointer, this will get read twice
@@ -1008,8 +1042,10 @@ buildmap_osm_text_ways_shapeinfo(void)
  * All underlying processing is passed to other functions.
  */
 int
-buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
+buildmap_osm_text_read(char *fn, int country_num, int division_num)
 {
+    FILE 	*fdata;
+    int		lines;
     char	*got;
     static char	buf[LINELEN];
     int		ret = 0;
@@ -1020,6 +1056,7 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
     unsigned int interesting_way;
     int		in_relation;
 
+    fdata = buildmap_osm_text_fopen(fn);
     fstat(fileno(fdata), &st);
 
     ni.NodeFakeFips = 1000000 + country_num * 1000 + division_num;
@@ -1047,8 +1084,8 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
     NumWays = 0;
 
     while (! feof(fdata)) {
-	buildmap_progress(ftell(fdata), st.st_size);
         buildmap_set_line(++LineNo);
+	if (LineNo % 1000 == 0) buildmap_progress(LineNo, 0);
         got = fgets(buf, LINELEN, fdata);
         if (got == NULL) {
             if (feof(fdata))
@@ -1109,8 +1146,9 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
                 continue;
         } 
     }
-    buildmap_progress(ftell(fdata), st.st_size);
+    buildmap_progress(LineNo, 0);
     putchar('\n');
+    lines = LineNo;
 
     qsort(WayTable, nWayTable, sizeof(*WayTable), qsort_compare_unsigneds);
 
@@ -1125,12 +1163,13 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
      */
     LineNo = 0;
     buildmap_set_source("pass 2");
-    fseek(fdata, 0L, SEEK_SET);
+    buildmap_osm_text_fclose(fdata);
+    buildmap_osm_text_fopen(fn);
     buildmap_osm_text_reset_way();
     buildmap_osm_text_reset_node();
 
     while (! feof(fdata)) {
-	buildmap_progress(ftell(fdata), st.st_size);
+	buildmap_progress(LineNo, lines);
         buildmap_set_line(++LineNo);
         got = fgets(buf, LINELEN, fdata);
         if (got == NULL) {
@@ -1179,7 +1218,7 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
                 continue;
         }
     }
-    buildmap_progress(ftell(fdata), st.st_size);
+    buildmap_progress(LineNo, lines);
     putchar('\n');
 
     qsort(NodeTable, nNodeTable, sizeof(*NodeTable), qsort_compare_unsigneds);
@@ -1196,12 +1235,13 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
     LineNo = 0;
     NumNodes = 0;
     buildmap_set_source("pass 3");
-    fseek(fdata, 0L, SEEK_SET);
+    buildmap_osm_text_fclose(fdata);
+    buildmap_osm_text_fopen(fn);
     buildmap_osm_text_reset_way();
     buildmap_osm_text_reset_node();
 
     while (! feof(fdata)) {
-	buildmap_progress(ftell(fdata), st.st_size);
+	buildmap_progress(LineNo, lines);
         buildmap_set_line(++LineNo);
         got = fgets(buf, LINELEN, fdata);
         if (got == NULL) {
@@ -1256,8 +1296,10 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
                 continue;
         }
     }
-    buildmap_progress(ftell(fdata), st.st_size);
+    buildmap_progress(LineNo, lines);
     putchar('\n');
+
+    buildmap_osm_text_fclose(fdata);
 
     (void) time(&t[passid]);
     buildmap_info("Pass %d : %d lines read (%d seconds)",

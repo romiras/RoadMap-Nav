@@ -44,7 +44,15 @@ done
 
 bbox="[bbox=$bbox]"
 
-if wget -O $xmlfile.tmp "http://$server$bbox$query$me"
+case $xmlfile in
+*.gz)	pipe="gzip -c" ;;
+*)	pipe="cat" ;;
+esac
+
+if [ -e $xmlfile ]
+then
+    echo Already have $xmlfile
+elif wget -O - "http://$server$bbox$query$me" | $pipe >$xmlfile.tmp 
 then
     mv $xmlfile.tmp $xmlfile
 else

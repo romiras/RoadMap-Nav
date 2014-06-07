@@ -206,7 +206,6 @@ buildmap_osm_process_one_tile (int tileid, const char *fetcher, const char *form
 
     char cmd[512];
     char bbox[100], *bbp;
-    FILE *fdata;
     int have = 0;
     int ret, bits, trutile;
     RoadMapArea edges[1];
@@ -237,12 +236,12 @@ buildmap_osm_process_one_tile (int tileid, const char *fetcher, const char *form
         
     /* create all parents of our file */
     parent = roadmap_path_parent(BuildMapResult,
-		roadmap_osm_filename(0, 1, tileid, ".osm"));
+		roadmap_osm_filename(0, 1, tileid, ".osm.gz"));
     roadmap_path_create(parent);
     roadmap_path_free(parent);
 
     xmlfile = roadmap_path_join(BuildMapResult,
-		roadmap_osm_filename(0, 1, tileid, ".osm"));
+		roadmap_osm_filename(0, 1, tileid, ".osm.gz"));
 
     snprintf(cmd, sizeof(cmd), "%s --trutile %d "
     		"--bits %d --have %d --bbox %s --xmlfile %s",
@@ -251,6 +250,8 @@ buildmap_osm_process_one_tile (int tileid, const char *fetcher, const char *form
 // sprintf(cmd, "cat /tmp/out.xml > %s", xmlfile);
 
     if (strcasecmp(format, "osmbinary") == 0) {
+	FILE *fdata;
+
 	buildmap_info("command is \"%s\"", cmd);
 
 	fdata = popen(cmd, "r");
@@ -292,25 +293,13 @@ buildmap_osm_process_one_tile (int tileid, const char *fetcher, const char *form
 	}
 
     } else {
-	struct stat statbuf;
-	if (/* !BuildMapReplaceAll && */
-		stat(xmlfile, &statbuf) == 0 &&
-		statbuf.st_size != 0)
-	    ret = 0;
-	else
-	    ret = system(cmd);
-
+	ret = system(cmd);
 	if ((WEXITSTATUS(ret) != 0) ||
 	    (WIFSIGNALED(ret) &&
 		(WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))) {
 	    ret = -1;
         } else {
-	    fdata = fopen(xmlfile, "r");
-	    if (!fdata) {
-		buildmap_fatal(0, "couldn't open \"%s\"", xmlfile);
-	    }
-	    ret = buildmap_osm_text_read(fdata, 0, 0);
-	    fclose(fdata);
+	    ret = buildmap_osm_text_read(xmlfile, 0, 0);
 	}
     }
 
@@ -342,16 +331,9 @@ int buildmap_osm_filename_to_tileid(char *fn, int *ptileid, char *suffix)
 int buildmap_osm_text_process_file(char *fn, char *ofn)
 {
     int         n, ret = 0, ret2;
-    FILE        *f;
     char        country[6], division[6];
     int         fips, country_num = 0, division_num = 0;
     int		tileid;
-
-    f = fopen(fn, "r");
-    if (f == NULL) {
-            buildmap_fatal(0, "couldn't open \"%s\"", fn);
-            return -1;
-    }
 
     if ((n = buildmap_osm_filename_iso(fn, country, division, ".osm"))) {
             buildmap_metadata_add_attribute ("Territory", "Id", country);
@@ -387,11 +369,10 @@ int buildmap_osm_text_process_file(char *fn, char *ofn)
 
     buildmap_osm_common_find_layers();
     buildmap_debug("reading file %s", fn);
-    ret = buildmap_osm_text_read(f, country_num, division_num);
-    if (fclose(f) != 0) {
-        buildmap_error(0, "problem fetching data (fclose: %s)", strerror(errno));
-        ret = -1;
-    }
+    ret = buildmap_osm_text_read(fn, country_num, division_num);
+    if (ret < 0)
+	    return ret;
+
 
     buildmap_db_sort();
     ret2 = buildmap_osm_save_custom(ofn, (ret == 0) ? 1 : 0);
