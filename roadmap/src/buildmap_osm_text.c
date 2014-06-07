@@ -70,37 +70,35 @@
 /**
  * @brief a couple of variables to keep track of the way we're dealing with
  */
-static int      in_way = 0;             /**< are we in a way (its id) */
-static int      nWayNodes = 0;          /**< number of nodes known for 
-                                                        this way */
-static int      nWayNodeAlloc = 0;      /**< size of the allocation of
-                                                        the array */
-static int      *WayNodes = 0;          /**< the array to keep track of
-                                                        this way's nodes */
-static int      WayLayer = 0;           /**< the layer for this way */
-static char     *WayStreetName = 0;     /**< the street name */
-static char	*WayStreetRef = 0;	/**< street code,
-					  to be used when no name (e.g. motorway) */
-static int      WayFlags = 0;           /**< properties of this way, from
-                                                        the table flags */
-static int      WayInvalid = 0;         /**< this way contains invalid nodes */
-static int	WayIsOneWay = ROADMAP_LINE_DIRECTION_BOTH;
-					/**< is this way one direction only */
-static int	WayAdminLevel = 0;	/**< boundaries */
-static int	WayCoast = 0;		/**< coastline */
+static struct WayInfo {
+    int      inWay;              /**< are we in a way (its id) */
+    int      nWayNodes;          /**< number of nodes known for 
+						     this way */
+    int      WayLayer;           /**< the layer for this way */
+    char     *WayStreetName;     /**< the street name */
+    char     *WayStreetRef;	 /**< street code,
+				       to be used when no name (e.g. motorway) */
+    int      WayFlags;           /**< properties of this way, from
+						     the table flags */
+    int      WayInvalid;         /**< this way contains invalid nodes */
+    int      WayIsOneWay;        /**< is this way one direction only */
+    int      WayAdminLevel;	 /**< boundaries */
+    int      WayCoast;           /**< coastline */
+    int      WayNotInteresting;  /**< this way is not interesting for RoadMap */
+} wi;
 
 /**
  * @brief variables referring to the current node
  */
-static int      NodeId = 0;             /**< which node */
-static char     *NodePlace = 0;         /**< what kind of place is this */
-static char     *NodeTownName = 0;      /**< which town */
-static char     *NodePostalCode = 0;    /**< postal code */
-static int      NodeLon,                /**< coordinates */
-                NodeLat;                /**< coordinates */
-
-static int      NodeFakeFips;           /**< fake postal code */
-static int      WayNotInteresting = 0;	/**< this way is not interesting for RoadMap */
+static struct NodeInfo {
+    int      NodeId;             /**< which node */
+    char     *NodePlace;         /**< what kind of place is this */
+    char     *NodeTownName;      /**< which town */
+    char     *NodePostalCode;    /**< postal code */
+    int      NodeLon,            /**< coordinates */
+	     NodeLat;            /**< coordinates */
+    int      NodeFakeFips;       /**< fake postal code */
+} ni;
 
 /**
  * @brief some global variables
@@ -108,13 +106,7 @@ static int      WayNotInteresting = 0;	/**< this way is not interesting for Road
 static int      LineNo;                 /**< line number in the input file */
 static int      nPolygons = 0;          /**< current polygon id (number of
                                                         polygons until now) */
-
 static int      LineId = 0;             /**< for buildmap_line_add */
-static int      nsplits = 0;            /**< number of times we've split
-                                                        a way */
-static int	WaysSplit = 0,		/**< Number of ways that were split */
-                WaysNotSplit = 0,       /**< Number of ways not split */
-		WaysMissingNode = 0;	/**< Number of ways discarded due to missing nodes */
 
 /**
  * @brief table for translating the names in XML strings into readable format
@@ -172,16 +164,9 @@ static char *FromXmlAndDup(const char *s)
 static void
 buildmap_osm_text_reset_way(void)
 {
-        in_way = 0;
-        nWayNodes = 0;
-        free(WayStreetName); WayStreetName = 0;
-        free(WayStreetRef); WayStreetRef = 0;
-        WayLayer = 0;
-        WayFlags = 0;
-        WayInvalid = 0;
-	WayIsOneWay = ROADMAP_LINE_DIRECTION_BOTH;
-	WayAdminLevel = 0;
-	WayCoast = 0;
+	if (wi.WayStreetName) free(wi.WayStreetName); 
+	if (wi.WayStreetRef) free(wi.WayStreetRef);
+	memset(&wi, 0, sizeof(wi));
 }
 
 /**
@@ -190,12 +175,12 @@ buildmap_osm_text_reset_way(void)
 static void
 buildmap_osm_text_reset_node(void)
 {
-//	buildmap_info("reset node %d", NodeId);
+//	buildmap_info("reset node %d", ni.NodeId);
 
-        NodeId = 0;
-        free(NodePlace); NodePlace = 0;
-        free(NodeTownName); NodeTownName = 0;
-        free(NodePostalCode); NodePostalCode = 0;
+	if (ni.NodePlace) free(ni.NodePlace);
+	if (ni.NodeTownName) free(ni.NodeTownName);
+	if (ni.NodePostalCode) free(ni.NodePostalCode);
+	memset(&ni, 0, sizeof(ni));
 }
 
 /**
@@ -206,7 +191,7 @@ buildmap_osm_text_reset_node(void)
  */
 static RoadMapString str2dict (BuildMapDictionary d, const char *string) {
 
-   if (string == 0 || !strlen(string)) {
+   if (string == 0 || *string == 0) {
       return buildmap_dictionary_add (d, "", 0);
    }
 
@@ -226,6 +211,16 @@ static struct points {
 #define	NPOINTSINC	10000
 
 RoadMapHash	*PointsHash = NULL;
+
+static void
+buildmap_osm_text_point_hash_reset(void)
+{
+    nPoints = 0;
+    PointsHash = 0;
+    if (points) free(points);
+    points = 0;
+    nPointsAlloc = 0;
+}
 
 static void
 buildmap_osm_text_point_add(int id, int npoint)
@@ -283,21 +278,17 @@ int
 buildmap_osm_text_node(char *data)
 {
     int         nchars, r;
+#if 0
     double      flat, flon;
+#endif
     char        *p;
-    static char *tag = 0, *value = 0;
     int         NodeLatRead, NodeLonRead;
+    char	tag[512], value[512];
 
-    sscanf(data, "node id=%*[\"']%d%*[\"']%n", &NodeId, &nchars);
+    sscanf(data, "node id=%*[\"']%d%*[\"']%n", &ni.NodeId, &nchars);
     p = data + nchars;
 
-    /* Initialize/allocate these only once, never free them. */
-    if (! tag)
-            tag = malloc(512);
-    if (! value)
-            value = malloc(512);
-
-    NodeLat = NodeLon = 0;
+    ni.NodeLat = ni.NodeLon = 0;
     NodeLatRead = NodeLonRead = 0;
 
     while (NodeLatRead == 0 || NodeLonRead == 0) {
@@ -308,15 +299,25 @@ buildmap_osm_text_node(char *data)
 	    if (r != 2)
 		buildmap_error(0, "bad tag read at '%s'\n", p);
 
+#if 0
             if (strcmp(tag, "lat") == 0) {
                     sscanf(value, "%lf", &flat);
-                    NodeLat = flat * 1000000;
+                    ni.NodeLat = flat * 1000000;
                     NodeLatRead++;
             } else if (strcmp(tag, "lon") == 0) {
                     sscanf(value, "%lf", &flon);
-                    NodeLon = flon * 1000000;
+                    ni.NodeLon = flon * 1000000;
                     NodeLonRead++;
             }
+#else
+            if (strcmp(tag, "lat") == 0) {
+                    ni.NodeLat = roadmap_math_from_floatstring(value, MILLIONTHS);
+                    NodeLatRead++;
+            } else if (strcmp(tag, "lon") == 0) {
+                    ni.NodeLon = roadmap_math_from_floatstring(value, MILLIONTHS);
+                    NodeLonRead++;
+            }
+#endif
 
             p += nchars;
     }
@@ -334,31 +335,33 @@ buildmap_osm_text_node_end_and_process(char *data)
 {
 	int npoints;
 
-        if (NodePlace && (strcmp(NodePlace, "town") == 0
-			|| strcmp(NodePlace, "village") == 0
-			|| strcmp(NodePlace, "city") == 0)) {
+	if (ni.NodeFakeFips) {
+	    if (ni.NodePlace && (strcmp(ni.NodePlace, "town") == 0
+			|| strcmp(ni.NodePlace, "village") == 0
+			|| strcmp(ni.NodePlace, "city") == 0)) {
                 /* We have a town, process it */
 
-                if (NodeTownName) {
-                        NodeFakeFips++;
+                if (ni.NodeTownName) {
+                        ni.NodeFakeFips++;
                         int year = 2008;
                         RoadMapString s;
 
                         s = buildmap_dictionary_add (DictionaryCity,
-                                (char *) NodeTownName, strlen(NodeTownName));
-                        buildmap_city_add(NodeFakeFips, year, s);
+                                (char *) ni.NodeTownName, strlen(ni.NodeTownName));
+                        buildmap_city_add(ni.NodeFakeFips, year, s);
                 }
-                if (NodePostalCode) {
+                if (ni.NodePostalCode) {
                         int zip = 0;
-                        sscanf(NodePostalCode, "%d", &zip);
+                        sscanf(ni.NodePostalCode, "%d", &zip);
                         if (zip)
-                                buildmap_zip_add(zip, NodeLon, NodeLat);
+                                buildmap_zip_add(zip, ni.NodeLon, ni.NodeLat);
                 }
+	    }
         }
 
 	/* Add the node */
-	npoints = buildmap_point_add(NodeLon, NodeLat);
-	buildmap_osm_text_point_add(NodeId, npoints);
+	npoints = buildmap_point_add(ni.NodeLon, ni.NodeLat);
+	buildmap_osm_text_point_add(ni.NodeId, npoints);
 
         buildmap_osm_text_reset_node();
         return 0;
@@ -406,21 +409,17 @@ buildmap_osm_text_way(char *data)
         /* Severely cut in pieces.
          * This only remembers which way we're in...
          */
-        sscanf(data, "way id=%*[\"']%d%*[\"']", &in_way);
-        WayNotInteresting = 0;
+        sscanf(data, "way id=%*[\"']%d%*[\"']", &wi.inWay);
+        wi.WayNotInteresting = 0;
 
-        if (in_way == 0)
+        if (wi.inWay == 0)
                 buildmap_fatal(0, "buildmap_osm_text_way(%s) error", data);
         return 0;
 }
 
 static int maxWayTable = 0;
-static int nWayTable = 0;
-static int interestingWays = 0;
-typedef struct WayTableStruct {
-	int	wayid;
-} WayTableStruct;
-static WayTableStruct *WayTable = NULL;
+int nWayTable = 0;
+int *WayTable = NULL;
 
 static void
 WayIsInteresting(int wayid, int ni)
@@ -433,13 +432,12 @@ WayIsInteresting(int wayid, int ni)
 		    maxWayTable *= 2;
 		else
 		    maxWayTable = 1000;
-		WayTable = (struct WayTableStruct *) realloc(WayTable,
-				sizeof(struct WayTableStruct) * maxWayTable);
+		WayTable = (int *) realloc(WayTable,
+				sizeof(int) * maxWayTable);
 	}
 
-	WayTable[nWayTable].wayid = wayid;
+	WayTable[nWayTable] = wayid;
 	nWayTable++;
-	interestingWays++;
 }
 
 /**
@@ -454,15 +452,15 @@ IsWayInteresting(int wayid)
 {
 	static int	ptr = 0;
 
-	if (wayid == WayTable[ptr].wayid)
+	if ((ptr < nWayTable) && wayid == WayTable[ptr])
 		return 1;
-	if (wayid == WayTable[ptr+1].wayid) {
+	if ((ptr < nWayTable - 1) && wayid == WayTable[ptr+1]) {
 		ptr++;
 		return 1;
 	}
 
 	for (ptr=0; ptr<nWayTable; ptr++)
-		if (wayid == WayTable[ptr].wayid)
+		if (wayid == WayTable[ptr])
 			return 1;
 
 	return 0;
@@ -474,6 +472,30 @@ typedef struct NodeTableStruct {
 	int	nodeid;
 } NodeTableStruct;
 static NodeTableStruct *NodeTable = NULL;
+
+
+int
+qsort_compare_wayid(const void *id1, const void *id2)
+{
+    return *(int *)id1 - *(int *)id2;
+}
+
+void
+buildmap_osm_text_save_wayids(const char *path, const char *outfile)
+{
+    char nfn[1024];
+    char *p;
+
+    strcpy(nfn, outfile);
+    p = strrchr(nfn, '.');
+    if (p) *p = '\0';
+    strcat(nfn, ".ways");
+
+    qsort(WayTable, nWayTable, sizeof(*WayTable), qsort_compare_wayid);
+
+    roadmap_file_save(path, nfn, WayTable, nWayTable * sizeof(int));
+}
+
 
 static void
 NodeIsInteresting(int node)
@@ -522,8 +544,6 @@ buildmap_osm_text_nd_interesting(char *data)
 static int
 buildmap_osm_text_node_interesting(char *data)
 {
-	int	r = 0;
-
 	/*
 	 * Avoid figuring out whether we're in a
 	 *	<node ... />
@@ -533,16 +553,16 @@ buildmap_osm_text_node_interesting(char *data)
 	 *	</node>
 	 * case, by resetting first if needed.
 	 */
-	if (NodeId)
+	if (ni.NodeId)
 		buildmap_osm_text_node_end_and_process("");
 
-        if (sscanf(data, "node id=%*[\"']%d%*[\"']", &NodeId) != 1) {
+        if (sscanf(data, "node id=%*[\"']%d%*[\"']", &ni.NodeId) != 1) {
                 return -1;
 	}
 
-	r += buildmap_osm_text_node(data);
+	buildmap_osm_text_node(data);
 
-	return r;
+	return 0;
 }
 
 /**
@@ -551,7 +571,7 @@ buildmap_osm_text_node_interesting(char *data)
 static int
 buildmap_osm_text_node_interesting_end(char *data)
 {
-	if (IsNodeInteresting(NodeId))
+	if (IsNodeInteresting(ni.NodeId))
 		buildmap_osm_text_node_end_and_process(data);
 	return 0;
 }
@@ -565,12 +585,16 @@ buildmap_osm_text_node_interesting_end(char *data)
  * Example line :
  *     <nd ref="997470"/>
  */
+
+int      nWayNodeAlloc; /**< size of the allocation of the array */
+int      *WayNodes;     /**< the array to keep track of this way's nodes */
+
 static int
 buildmap_osm_text_nd(char *data)
 {
         int     node, ix;
 
-        if (! in_way)
+        if (! wi.inWay)
                 buildmap_fatal(0, "Wasn't in a way (%s)", data);
 
         if (sscanf(data, "nd ref=%*[\"']%d%*[\"']", &node) != 1)
@@ -581,7 +605,7 @@ buildmap_osm_text_nd(char *data)
                 return 0;
         }
 
-        if (nWayNodes == nWayNodeAlloc) {
+        if (wi.nWayNodes == nWayNodeAlloc) {
 		if (WayNodes)
                     nWayNodeAlloc *= 2;
 		else
@@ -592,7 +616,7 @@ buildmap_osm_text_nd(char *data)
                         buildmap_fatal
                             (0, "allocation failed for %d ints", nWayNodeAlloc);
         }
-        WayNodes[nWayNodes++] = node;
+        WayNodes[wi.nWayNodes++] = node;
 
         return 0;
 }
@@ -618,22 +642,22 @@ buildmap_osm_text_node_tag(char *data)
 
         if (strcmp(tagk, "postal_code") == 0) {
                 /* <tag k="postal_code" v="3020"/> */
-                if (NodePostalCode)
-                        free(NodePostalCode);
-                NodePostalCode = strdup(tagv);
-		NodeIsInteresting(NodeId);
+                if (ni.NodePostalCode)
+                        free(ni.NodePostalCode);
+                ni.NodePostalCode = strdup(tagv);
+		NodeIsInteresting(ni.NodeId);
         } else if (strcmp(tagk, "place") == 0) {
                 /* <tag k="place" v="town"/> */
-                if (NodePlace)
-                        free(NodePlace);
-                NodePlace = strdup(tagv);
-		NodeIsInteresting(NodeId);
+                if (ni.NodePlace)
+                        free(ni.NodePlace);
+                ni.NodePlace = strdup(tagv);
+		NodeIsInteresting(ni.NodeId);
         } else if (strcmp(tagk, "name") == 0) {
                 /* <tag k="name" v="Herent"/> */
-                if (NodeTownName)
-                        free(NodeTownName);
-                NodeTownName = FromXmlAndDup(tagv);
-		NodeIsInteresting(NodeId);
+                if (ni.NodeTownName)
+                        free(ni.NodeTownName);
+                ni.NodeTownName = FromXmlAndDup(tagv);
+		NodeIsInteresting(ni.NodeId);
         }
 
         return 0;
@@ -666,27 +690,27 @@ buildmap_osm_text_way_tag(char *data)
 
 	/* street names */
 	if (strcasecmp(tag, "name") == 0) {
-		if (WayStreetName)
-			free(WayStreetName);
-		WayStreetName = FromXmlAndDup(value);
+		if (wi.WayStreetName)
+			free(wi.WayStreetName);
+		wi.WayStreetName = FromXmlAndDup(value);
 		return 0;	/* FIX ME ?? */
 	} else if (strcasecmp(tag, "landuse") == 0) {
-		WayNotInteresting = 1;
+		wi.WayNotInteresting = 1;
 	} else if (strcasecmp(tag, "oneway") == 0 && strcasecmp(value, "yes") == 0) {
-		WayIsOneWay = ROADMAP_LINE_DIRECTION_ONEWAY;
+		wi.WayIsOneWay = ROADMAP_LINE_DIRECTION_ONEWAY;
 	} else if (strcasecmp(tag, "building") == 0) {
 		if (strcasecmp(value, "yes") == 0) {
-			WayNotInteresting = 1;
+			wi.WayNotInteresting = 1;
 		}
 	} else if (strcasecmp(tag, "ref") == 0) {
-		if (WayStreetRef)
-			free(WayStreetRef);
-		WayStreetRef = FromXmlAndDup(value);
+		if (wi.WayStreetRef)
+			free(wi.WayStreetRef);
+		wi.WayStreetRef = FromXmlAndDup(value);
 		return 0;	/* FIX ME ?? */
 	} else if (strcasecmp(tag, "admin_level") == 0) {
-		WayAdminLevel = atoi(value);
+		wi.WayAdminLevel = atoi(value);
 	} else if (strcasecmp(tag, "natural") == 0 && strcasecmp(value, "coastline") == 0) {
-		WayCoast = 1;
+		wi.WayCoast = 1;
 	}
 
 	/* Scan list_info
@@ -706,7 +730,7 @@ buildmap_osm_text_way_tag(char *data)
 		if (list) {
 			for (i=1; list[i].name; i++) {
 				if (strcmp(value, list[i].name) == 0) {
-					WayFlags = list[i].flags;
+					wi.WayFlags = list[i].flags;
 					if (list[i].layerp)
 						ret = *(list[i].layerp);
 				}
@@ -718,7 +742,7 @@ buildmap_osm_text_way_tag(char *data)
 
 	/* FIX ME When are we supposed to do this */
 	if (ret)
-		WayLayer = ret;
+		wi.WayLayer = ret;
 
 	return 0;
 }
@@ -743,39 +767,39 @@ buildmap_osm_text_way_end(char *data)
 	if (l_boundary == 0)
 		l_boundary = buildmap_layer_get("boundaries");;
 
-        if (WayInvalid) {
+        if (wi.WayInvalid) { // REMOVEME
                 buildmap_osm_text_reset_way();
                 return 0;
 	}
 
-        if (in_way == 0)
+        if (wi.inWay == 0)
                 buildmap_fatal(0, "Wasn't in a way (%s)", data);
 
 	/* if a way is both a coast and a boundary, treat it only as coast */
-	if (WayCoast) {
-		WayNotInteresting = 0;
-		WayLayer = l_shoreline;
-	} else if (WayAdminLevel) {
+	if (wi.WayCoast) {
+		wi.WayNotInteresting = 0;
+		wi.WayLayer = l_shoreline;
+	} else if (wi.WayAdminLevel) {
 
 		/* national == 2, state == 4, ignore lesser boundaries */
-		if  (WayAdminLevel > 4) {
-			WayNotInteresting = 1;
+		if  (wi.WayAdminLevel > 4) {
+			wi.WayNotInteresting = 1;
 		}
 
-		WayLayer = l_boundary;
+		wi.WayLayer = l_boundary;
 	}
 
-        if (WayNotInteresting || WayLayer == 0) {
-                buildmap_verbose("discarding way %d, not interesting (%s)", in_way, data);
+        if (wi.WayNotInteresting || wi.WayLayer == 0) {
+                buildmap_verbose("discarding way %d, not interesting (%s)", wi.inWay, data);
 
-                WayNotInteresting = 0;
+                wi.WayNotInteresting = 0;
                 buildmap_osm_text_reset_way();
                 return 0;
         }
 
-	if (nWayNodes < 1) {
-		WayNotInteresting = 1;
+	if (wi.nWayNodes < 1) {
                 buildmap_osm_text_reset_way();
+		wi.WayNotInteresting = 1;
                 return 0;
 	}
 
@@ -785,14 +809,14 @@ buildmap_osm_text_way_end(char *data)
         RoadMapString rms_name = 0;
 
         from_point = buildmap_osm_text_point_get(WayNodes[0]);
-        to_point = buildmap_osm_text_point_get(WayNodes[nWayNodes-1]);
+        to_point = buildmap_osm_text_point_get(WayNodes[wi.nWayNodes-1]);
 
         fromlon = buildmap_point_get_longitude(from_point);
         fromlat = buildmap_point_get_latitude(from_point);
         tolon = buildmap_point_get_longitude(to_point);
         tolat = buildmap_point_get_latitude(to_point);
 
-        if ((WayFlags & AREA)  && (fromlon == tolon) && (fromlat == tolat)) {
+        if ((wi.WayFlags & AREA)  && (fromlon == tolon) && (fromlat == tolat)) {
                 static int polyid = 0;
                 static int cenid = 0;
 
@@ -803,11 +827,11 @@ buildmap_osm_text_way_end(char *data)
                 cenid++;
                 polyid++;
 
-                rms_name = str2dict(DictionaryStreet, WayStreetName);
-                buildmap_polygon_add_landmark (nPolygons, WayLayer, rms_name);
+                rms_name = str2dict(DictionaryStreet, wi.WayStreetName);
+                buildmap_polygon_add_landmark (nPolygons, wi.WayLayer, rms_name);
                 buildmap_polygon_add(nPolygons, cenid, polyid);
 
-                for (j=1; j<nWayNodes; j++) {
+                for (j=1; j<wi.nWayNodes; j++) {
                         int prevpoint =
                             buildmap_osm_text_point_get(WayNodes[j-1]);
                         int point =
@@ -815,7 +839,7 @@ buildmap_osm_text_way_end(char *data)
 
                         LineId++;
                         buildmap_line_add
-                                (LineId, WayLayer, prevpoint, point,
+                                (LineId, wi.WayLayer, prevpoint, point,
 				 ROADMAP_LINE_DIRECTION_BOTH);
 			buildmap_polygon_add_line (cenid, polyid, LineId, POLYGON_SIDE_RIGHT);
                 }
@@ -836,22 +860,22 @@ buildmap_osm_text_way_end(char *data)
 
 		/* Map begin and end points to internal point id */
 		from_point = buildmap_osm_text_point_get(WayNodes[0]);
-		to_point = buildmap_osm_text_point_get(WayNodes[nWayNodes-1]);
+		to_point = buildmap_osm_text_point_get(WayNodes[wi.nWayNodes-1]);
 
 		/* Street name */
-		if (WayStreetName)
-			rms_name = str2dict(DictionaryStreet, WayStreetName);
-		else if (WayStreetRef)
-			rms_name = str2dict(DictionaryStreet, WayStreetRef);
-		buildmap_verbose ("Way %d [%s] ref [%s]", in_way,
-				WayStreetName ? WayStreetName : "",
-				WayStreetRef ? WayStreetRef : "");
+		if (wi.WayStreetName)
+			rms_name = str2dict(DictionaryStreet, wi.WayStreetName);
+		else if (wi.WayStreetRef)
+			rms_name = str2dict(DictionaryStreet, wi.WayStreetRef);
+		buildmap_verbose ("Way %d [%s] ref [%s]", wi.inWay,
+				wi.WayStreetName ? wi.WayStreetName : "",
+				wi.WayStreetRef ? wi.WayStreetRef : "");
 
 		LineId++;
 		line = buildmap_line_add(LineId,
-			WayLayer, from_point, to_point, WayIsOneWay);
+			wi.WayLayer, from_point, to_point, wi.WayIsOneWay);
 
-		street = buildmap_street_add(WayLayer,
+		street = buildmap_street_add(wi.WayLayer,
 				rms_dirp, rms_name, rms_type,
 				rms_dirs, line);
 		buildmap_range_add_no_address(line, street);
@@ -869,10 +893,10 @@ buildmap_osm_text_way_end(char *data)
 		 * free this for us.
 		 */
 
-		lonsbuf = calloc(nWayNodes, sizeof(int));
-		latsbuf = calloc(nWayNodes, sizeof(int));
+		lonsbuf = calloc(wi.nWayNodes, sizeof(int));
+		latsbuf = calloc(wi.nWayNodes, sizeof(int));
 
-		for (j=0; j<nWayNodes; j++) {
+		for (j=0; j<wi.nWayNodes; j++) {
 			int point =
 			    buildmap_osm_text_point_get(WayNodes[j]);
 			int lon = buildmap_point_get_longitude(point);
@@ -897,11 +921,12 @@ buildmap_osm_text_way_end(char *data)
 			buildmap_check_allocated(shapes);
 		}
 
-		buildmap_verbose("lineid %d not split, nWayNodes %d\n", LineId, nWayNodes);
+		buildmap_verbose("lineid %d wi.nWayNodes %d\n",
+			LineId, wi.nWayNodes);
 		/* Keep info for the shapes */
 		shapes[numshapes].lons = lonsbuf;
 		shapes[numshapes].lats = latsbuf;
-		shapes[numshapes].count = nWayNodes;
+		shapes[numshapes].count = wi.nWayNodes;
 		shapes[numshapes].lineid = LineId;
 
 		numshapes++;
@@ -990,7 +1015,9 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
 
     fstat(fileno(fdata), &st);
 
-    NodeFakeFips = 1000000 + country_num * 1000 + division_num;
+    ni.NodeFakeFips = 1000000 + country_num * 1000 + division_num;
+
+    buildmap_osm_text_point_hash_reset();
 
     (void) time(&t[0]);
     passid = 1;
@@ -1048,19 +1075,19 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
         for (; *p && isspace(*p); p++) ;
 
         if (strncasecmp(p, "way", 3) == 0) {
-		WayNotInteresting = 0;
-		if (sscanf(p, "way id=%*[\"']%d%*[\"']", &in_way) != 1) {
-		    in_way = 0;
+		wi.WayNotInteresting = 0;
+		if (sscanf(p, "way id=%*[\"']%d%*[\"']", &wi.inWay) != 1) {
+		    wi.inWay = 0;
 		}
 		NumWays++;
                 continue;
         } else if (strncasecmp(p, "/way", 4) == 0) {
-		if (in_way)
-		    WayIsInteresting(in_way, WayNotInteresting);
+		if (wi.inWay)
+		    WayIsInteresting(wi.inWay, wi.WayNotInteresting);
 		buildmap_osm_text_reset_way();
                 continue;
         } else if (strncasecmp(p, "tag", 3) == 0) {
-		if (! in_way)
+		if (! wi.inWay)
 			ret += buildmap_osm_text_node_tag(p);
 		else
                 	ret += buildmap_osm_text_way_tag(p);
@@ -1121,11 +1148,11 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
         for (; *p && isspace(*p); p++) ;
 
         if (strncasecmp(p, "way", 3) == 0) {
-		if (sscanf(p, "way id=%*[\"']%d%*[\"']", &in_way) != 1) {
-		    in_way = 0;
+		if (sscanf(p, "way id=%*[\"']%d%*[\"']", &wi.inWay) != 1) {
+		    wi.inWay = 0;
 		    interesting_way = 0;
 		} else {
-		    interesting_way = IsWayInteresting(in_way);
+		    interesting_way = IsWayInteresting(wi.inWay);
 		}
                 continue;
         } else if (strncasecmp(p, "/way", 4) == 0) {
@@ -1133,7 +1160,7 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
 		interesting_way = 0;
                 continue;
         } else if (strncasecmp(p, "nd", 2) == 0) {
-                if (in_way && interesting_way)
+                if (wi.inWay && interesting_way)
 			buildmap_osm_text_nd_interesting(p);
                 continue;
         }
@@ -1202,7 +1229,7 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
 		ret += buildmap_osm_text_node_interesting_end(p);
                 continue;
         } else if (strncasecmp(p, "tag", 3) == 0) {
-		if (! in_way)
+		if (! wi.inWay)
 			ret += buildmap_osm_text_node_tag(p);
 		else
                 	ret += buildmap_osm_text_way_tag(p);
@@ -1229,21 +1256,15 @@ buildmap_osm_text_read(FILE * fdata, int country_num, int division_num)
 		    passid, LineNo, t[passid] - t[passid - 1]);
     passid++;
 
-    /*
-     * End pass 4
-     */
+
     buildmap_osm_text_ways_shapeinfo();
 
     (void) time(&t[passid]);
-    buildmap_info("Ways %d, interesting %d, discarded (missing node) %d",
-	    NumWays, interestingWays, WaysMissingNode);
+    buildmap_info("Ways %d, interesting %d",
+	    NumWays, nWayTable);
     buildmap_info("Number of nodes : %d, interesting %d", NumNodes, nNodeTable);
-    buildmap_info("Pass %d : %d lines read (%d seconds)",
-		    passid, LineNo, t[passid] - t[passid - 1]);
-    passid++;
-
-    buildmap_info("Splits %d, ways split %d, not split %d",
-        nsplits, WaysSplit, WaysNotSplit);
+    buildmap_info("Final: (%d seconds)",
+		    passid, t[passid] - t[passid - 1]);
 
     return ret;
 }
