@@ -50,21 +50,31 @@ then
     exit
 fi
 
+# normally the .osm.gz files are stored alongside the .rdm files.
+# but for development, it can be convenient to be able to get the .osm from
+# somewhere else on the local system.
+localstore=/usr/local/share/roadmap/newquads
+
+# isolate the qt19/.../file.osm.gz partial path
+wantqtpath=qt$bits/${xmlfile##*/qt$bits}
+
+if [ -e "$localstore/$wantqtpath" ]
+then
+    mkdir -p $(dirname $xmlfile)
+    cp $localstore/$wantqtpath $xmlfile
+    exit
+fi
+
+# okay... we need to get it from the web.
+# one or two more layers of caching would be nice here -- a web
+# cache of .osm.gz files is an obvious thing (to avoid all the
+# clipping and slow transfer from the OSM servers), and maybe
+# even a web store of .rdm files -- but that should really be
+# checked long before we get to this point.
+
 case $xmlfile in
 *.gz) want_compressed=1 ;;
 esac
-
-# for development, convenient to be able to get the .osm from
-# somewhere on the local system, when maps targetted for somewhere
-# else.
-localstore=/usr/local/share/roadmap/newquads
-want=qt$bits/${xmlfile##*/qt$bits}
-
-if [ -e "$localstore/$want" ]
-then
-    cp -a $localstore/$want $xmlfile
-    exit
-fi
 
 url="http://$server$bbox$query$me"
 
