@@ -742,6 +742,8 @@ buildmap_osm_text_way_end(char *data)
         int             from_point, to_point, line, street;
         int             fromlon, tolon, fromlat, tolat;
         int             j;
+	char compound_name[512];
+	char *n;
 	static int	l_shoreline = 0,
 			l_boundary = 0;
        
@@ -846,14 +848,35 @@ buildmap_osm_text_way_end(char *data)
 		// to_point = buildmap_osm_text_point_get(WayNodes[wi.nWayNodes-1]);
 
 		/* Street name */
+#if 0
 		if (wi.WayStreetName)
 			rms_name = str2dict(DictionaryStreet, wi.WayStreetName);
 		else if (wi.WayStreetRef)
 			rms_name = str2dict(DictionaryStreet, wi.WayStreetRef);
+
 		buildmap_verbose ("Way %d [%s] ref [%s]", wi.WayId,
 				wi.WayStreetName ? wi.WayStreetName : "",
 				wi.WayStreetRef ? wi.WayStreetRef : "");
 
+#else
+		if (wi.WayStreetRef) {
+		    char *p = wi.WayStreetRef;
+		    do {  /* OSM separates multi-value refs with ';' */
+			if (*p == ';') *p = '/';
+		    } while (*p++);
+
+		    if (wi.WayStreetName) {
+        		snprintf(compound_name, sizeof(compound_name),
+				"%s/%s", wi.WayStreetRef, wi.WayStreetName);
+        		n = compound_name;
+        	    } else {
+			n = wi.WayStreetRef;
+        	    }
+		} else {
+        	    n = wi.WayStreetName;
+		}
+		rms_name = str2dict(DictionaryStreet, n);
+#endif
 		LineId++;
 		line = buildmap_line_add(LineId,
 			wi.WayLayer, from_point, to_point, wi.WayIsOneWay);
