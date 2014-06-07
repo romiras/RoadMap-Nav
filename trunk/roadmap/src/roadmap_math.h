@@ -160,6 +160,11 @@ int  roadmap_math_compare_points (const RoadMapPosition *p1,
 
 int  roadmap_math_delta_direction (int direction1, int direction2);
 
+#if 0
+void roadmap_math_reduce_points(int *pPointsX, int *pPointsY, int nPointsCount,
+	     int *pnUseFlag, int dTolerance);
+#endif
+
 #if NEEDED
 void roadmap_math_set_context (RoadMapPosition *position, unsigned int zoom);
 #endif
