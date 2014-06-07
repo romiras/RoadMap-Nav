@@ -461,6 +461,11 @@ buildmap_osm_text_save_wayids(const char *path, const char *outfile)
     if (p) *p = '\0';
     strcat(nfn, ".ways");
 
+    if (!nWayTable) {
+	unlink(nfn);
+	return;
+    }
+
     fp = roadmap_file_fopen (path, nfn, "w");
 
     /* write out the list.  it's already sorted, and unwanted entries
