@@ -1,5 +1,8 @@
 *.o
 *.a
+*.rdm
+*.ways
+*.xpm
 .depends.mk
 ID
 src/buildmap
