@@ -59,6 +59,10 @@ function emit_way(way_id)
 	}
 
     END {
+	    if (way_id == 1 && wayindex == 0) {
+		print "Error: shp2osm.awk got no input data" > "/dev/stderr"
+		exit 1
+	    }
 	    if (wayindex != 0)
 		emit_way(way_id++)
 	    printf "</osm>\n"
