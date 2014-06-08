@@ -1,4 +1,6 @@
-#!/bin/sh -x
+#!/bin/sh
+
+set -e
 
 # the shapefiles have the same name as their directory, and no suffix
 # is needed.
