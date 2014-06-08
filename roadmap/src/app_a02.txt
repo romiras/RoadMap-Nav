@@ -3242,6 +3242,12 @@ FIPS          County     State
 81     071     World Boundaries         SB
 81     072     World Boundaries         SB
 81     073     World Boundaries         SB
+81     074     World Boundaries         SB
+81     075     World Boundaries         SB
+81     076     World Boundaries         SB
+81     077     World Boundaries         SB
+81     078     World Boundaries         SB
+81     079     World Boundaries         SB
 82     001     Placenames     PN
 83     010     DCW Europe and North Asia     DW
 83     011     DCW Europe and North Asia     DW
