@@ -5,12 +5,21 @@
 # both in layout of individual elements, and in ordering of elements
 # within the file.
 
-# use sed to ensure spaces around some fields, to seperate them
-# from, or to replace, their punctuation.  makes the awk job easier.
-sed -e '/^Shape:[[:digit:]]/s/:/ /' -e 's/,/ /g' -e 's/[()]/ & /g' |
+west="$1"
+south="$2"
+east="$3"
+north="$4"
+sources="$5"
 
+# use sed first to ensure spaces around some fields, to separate them
+# from, or to replace, their punctuation.  makes the awk job easier.
 # "awk" is gawk on my system.  don't know if that matters.
-awk --assign sources="$1" '
+sed -e '/^Shape:[[:digit:]]/s/:/ /' -e 's/,/ /g' -e 's/[()]/ & /g' |
+awk --assign sources="$sources" \
+    --assign west="$west" \
+    --assign south="$south" \
+    --assign east="$east" \
+    --assign north="$north" '
 
 function emit_way(way_id)
 {
@@ -26,8 +35,9 @@ function emit_way(way_id)
 }
 
     BEGIN {
-	    nodeid=1;
-	    way_id=1;
+	    discard = 0
+	    nodeid = 1;
+	    way_id = 1;
 	    printf "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
 	    printf "<osm version=\"0.6\" generator=\"roadmap shp2osm.awk\">\n"
 	    printf "<note>Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com</note>\n"
@@ -38,22 +48,35 @@ function emit_way(way_id)
 	    if (wayindex != 0) {
 		emit_way(way_id++)
 	    }
-	    wayindex=0
+	    wayindex = 0
 
 	}
-    /^ *\+  *\(.*Ring/ {
+    /^ *Bounds:/ {
+
+	    lat=$4; lon=$3
+	    if ( lon >= west  && lon < east &&
+	         lat >= south && lat < north) {
+		discard = 0
+		wayindex = 0
+	    } else {
+		discard = 1
+	    }
+    }
+    /^ *\+  *\(.*Ring/ && !discard {
+
 	    if (wayindex != 0) {
 		emit_way(way_id++)
 	    }
-	    wayindex=0
+	    wayindex = 0
 
 	    lat=$4; lon=$3
 	    printf "    <node id=\"%s\" lat=\"%s\" lon=\"%s\"/>\n", nodeid, lat, lon
 	    waynode[wayindex++] = nodeid++;
 	}
 
-    /^ *\(/ {
-	    lat=$3; lon=$2
+    /^ *\(/ && !discard {
+
+	    lat = $3; lon = $2
 	    printf "    <node id=\"%s\" lat=\"%s\" lon=\"%s\"/>\n", nodeid, lat, lon
 	    waynode[wayindex++] = nodeid++;
 	}
