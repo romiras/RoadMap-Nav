@@ -102,6 +102,9 @@ static RoadMapConfigDescriptor RoadMapConfigStylePrettyDrag =
 static RoadMapConfigDescriptor RoadMapConfigStyleObjects =
                   ROADMAP_CONFIG_ITEM("Style", "Show Objects when Dragging");
 
+static RoadMapConfigDescriptor RoadMapConfigStyleFilledPolygonDrag =
+                  ROADMAP_CONFIG_ITEM("Style", "Fill Polygons when Dragging");
+
 static RoadMapConfigDescriptor RoadMapConfigMapLabels =
                         ROADMAP_CONFIG_ITEM("Map", "Labels");
 
@@ -631,8 +634,10 @@ static int roadmap_screen_flush_polygons (void) {
        (LinePoints.cursor - LinePoints.data, LinePoints.data);
 
    roadmap_canvas_draw_multiple_polygons
-      (count, RoadMapScreenObjects.data, LinePoints.data, 1,
-       RoadMapScreenDragging);
+      (count, RoadMapScreenObjects.data, LinePoints.data,
+	!RoadMapScreenDragging ||
+	    roadmap_config_match(&RoadMapConfigStyleFilledPolygonDrag, "yes") ,
+        RoadMapScreenDragging);
 
    RoadMapScreenObjects.cursor = RoadMapScreenObjects.data;
    LinePoints.cursor  = LinePoints.data;
@@ -1465,8 +1470,8 @@ void roadmap_screen_repaint (void) {
     int *in_view;
 
     int i;
-    int j;
-    int k;
+    int sq;
+    int pen;
     int count, sqcount;
     int *drawnlist;
     int max_pen = roadmap_layer_max_pen();
@@ -1570,13 +1575,12 @@ void roadmap_screen_repaint (void) {
         /* -- Look for the squares that are currently visible. */
         sqcount = roadmap_square_view (&in_view);
 
-        for (k = 0; k < max_pen; ++k) {
+        for (pen = 0; pen < max_pen; ++pen) {
 
             if (sqcount > 0) {
                static int *layers = NULL;
                static int  layers_size = 0;
                int layer_count;
-               int pen_type = k;
 
                roadmap_screen_reset_square_mask();
 
@@ -1586,18 +1590,18 @@ void roadmap_screen_repaint (void) {
                   roadmap_check_allocated(layers);
                }
                layer_count = roadmap_layer_visible_lines
-                                (layers, layers_size, k);
+                                (layers, layers_size, pen);
 
                if (!layer_count) continue;
 
-               for (j = sqcount - 1; j >= 0; --j) {
-                  drawnlist[i] += roadmap_screen_repaint_square (in_view[j], pen_type,
-                    layer_count, layers);
+               for (sq = sqcount - 1; sq >= 0; --sq) {
+                  drawnlist[i] += roadmap_screen_repaint_square (in_view[sq],
+		  	pen, layer_count, layers);
 
                }
             }
 
-            drawnlist[i] += roadmap_screen_draw_long_lines (k);
+            drawnlist[i] += roadmap_screen_draw_long_lines (pen);
 
         }
 
@@ -2276,6 +2280,9 @@ void roadmap_screen_initialize (void) {
 
    roadmap_config_declare_enumeration
        ("preferences", &RoadMapConfigStyleObjects, "yes", "no", NULL);
+
+   roadmap_config_declare_enumeration
+       ("preferences", &RoadMapConfigStyleFilledPolygonDrag, "yes", "no", NULL);
 
    roadmap_config_declare_enumeration
         ("preferences", &RoadMapConfigMapLabels, "on", "off", NULL);
