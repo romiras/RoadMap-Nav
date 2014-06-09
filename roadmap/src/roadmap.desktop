@@ -1,6 +1,6 @@
 [Desktop Entry]
 Comment=Car Navigation System
-Exec=roadmap
+Exec=%BIN%roadmap
 Icon=roadmap
 Type=Application
 Name=RoadMap
