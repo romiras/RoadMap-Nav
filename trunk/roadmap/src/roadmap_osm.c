@@ -178,6 +178,7 @@ int roadmap_osm_tileid_to_neighbor(int tileid, int dir) {
     int gridlon, gridlat;
     int lon, lat;
     char *delta;
+    int newtileid;
 
     int bits = tileid2bits(tileid);
 
@@ -204,7 +205,15 @@ int roadmap_osm_tileid_to_neighbor(int tileid, int dir) {
     else if (delta[LON] == '-')
             lon -= gridlon;
 
-    return roadmap_osm_latlon2tileid(lat, lon, bits);
+    newtileid = roadmap_osm_latlon2tileid(lat, lon, bits);
+
+    /* can happen if lat/lon go out of bounds (+-90/+-180) */
+    if (newtileid == tileid) {
+	roadmap_log(ROADMAP_DEBUG, "attempt to compute out-of-bounds tileid");
+	return -1;
+    }
+
+    return newtileid;
                 
 }
 
@@ -337,16 +346,31 @@ int roadmap_osm_by_position
             (position->latitude, position->longitude, roadmap_osm_maps_biggest);
     roadmap_osm_add_if_exists(tileid);
 
+
+// FIXME -- the "no more tiles" checks below aren't quite right. 
+// we're computing a contiguous square of tiles by spiraling outward,
+// moving northwest after every loop.  if we're on the "edge of the
+// world", we'll either hit an invalid tile right away, or after we've
+// gone some way around.  with the current checks we'll bail out right
+// away -- we should actually keep checking, at least once per side,
+// for more valid tiles.  changing the algorithm would help:  compute
+// the next ring out based on the outward neighbors of the existing
+// ring, rather than as a chain.
+
     width = 1;
     oreally = -1;
     reallyfound = 0;
     while (reallyfound != oreally) {
         oreally = reallyfound;
         tileid = roadmap_osm_tileid_to_neighbor(tileid, TILE_NORTHWEST);
+	if (tileid == -1) /* no more tiles */
+	    break;
         width += 2;
         for (d = 0; d < 4; d++) {
             for (i = 0; i < width-1; i++) {
                 tileid = roadmap_osm_tileid_to_neighbor(tileid, eswn[d]);
+		if (tileid == -1) /* no more tiles */
+		    break;
                 roadmap_osm_tileid_to_bbox(tileid, &tileedges);
                 if (roadmap_math_areas_intersect (&tileedges, focus))
                     reallyfound++;

@@ -1202,7 +1202,19 @@ void roadmap_math_set_size (int width, int height) {
 
 void roadmap_math_set_center (const RoadMapPosition *position) {
 
-   RoadMapContext->center = *position;
+   RoadMapPosition c;
+   c = *position;
+
+   /* impose limits:  roadmap doesn't have the math smarts to wrap
+    * around 180/-180 going west/east, and mercator-like projections
+    * just don't work past about 85 degrees.  */
+   if (c.longitude < -179000000) c.longitude = -179000000;
+   else if (c.longitude > 179000000) c.longitude = 179000000;
+
+   if (c.latitude < -86000000) c.latitude = -86000000;
+   else if (c.latitude > 86000000) c.latitude = 86000000;
+
+   RoadMapContext->center = c;
 
    roadmap_math_compute_scale ();
 }
