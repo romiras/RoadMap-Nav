@@ -24,7 +24,7 @@ ifneq ($(strip $(DESTDIR)),)
 override INSTALLDIR := $(DESTDIR)/$(INSTALLDIR)
 endif
 
-desktopdir = $(INSTALLDIR)/applications
+desktopdir = $(DESTDIR)/usr/share/applications
 bindir = $(INSTALLDIR)/bin
 pkgbindir = $(bindir)
 

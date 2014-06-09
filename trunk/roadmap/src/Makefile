@@ -620,6 +620,7 @@ installdesktop:
 	-test -d $(menudir) && cp roadmap.menu $(menudir)/roadmap
 	mkdir -p $(desktopdir)
 	cp -f roadmap.desktop $(desktopdir)/.
+	sed -i -e 's;%BIN%;$(pkgbindir)/;' $(desktopdir)/roadmap.desktop 
 
 installicons:
 	$(MAKE) -C icons install
