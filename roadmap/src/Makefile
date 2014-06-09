@@ -560,11 +560,19 @@ topclean:
 	$(RM) .#*
 
 clean:  topclean
-	for module in icons $(OSDIR) gpx $(RDMODULES) basefiles quadtiles ; \
+	for module in $(OSDIR) gpx $(RDMODULES) ; \
 	do \
 		$(MAKE) -C $$module clean || exit 1; \
 	done
 	rm -f agg_support/*.o agg_support/.depends.mk ${PLUGIN_CLEAN}
+
+miscclean:
+	for module in icons basefiles quadtiles ; \
+	do \
+		$(MAKE) -C $$module clean || exit 1; \
+	done
+
+clobber: clean misclean
 
 
 install: all installdata installbin installicons \
