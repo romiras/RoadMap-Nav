@@ -85,9 +85,6 @@ void roadmap_canvas_register_configure_handler(
 void roadmap_canvas_get_text_extents(const char *text, int size,
    int *width, int *ascent, int *descent, int *can_tilt) {
 
-#if !defined(ROADMAP_ADVANCED_STYLE)
-   roadMapCanvas->setFontSize(size);
-#endif
    roadMapCanvas->getTextExtents(text, width, ascent, descent, can_tilt);
 }
 
@@ -121,7 +118,6 @@ void roadmap_canvas_erase (void) {
    roadMapCanvas->erase();
 }
 
-#if defined(ROADMAP_ADVANCED_STYLE)
 int  roadmap_canvas_get_thickness  (RoadMapPen pen) { 
   return roadMapCanvas->getPenThickness(pen); 
 }
@@ -271,15 +267,11 @@ int roadmap_canvas_get_label_buffer_size(RoadMapPen pen) {
   return roadMapCanvas->getFontBufferSize(pen);
 }
 
-#endif /* ROADMAP_ADVANCED_STYLE */
 
 void roadmap_canvas_draw_string(RoadMapGuiPoint *position, int corner,
    int size,
    const char *text) {
 
-#if !defined(ROADMAP_ADVANCED_STYLE)
-   roadMapCanvas->setFontSize(size);
-#endif
    roadMapCanvas->drawString(position, corner, text);
 }
 
@@ -288,9 +280,6 @@ void roadmap_canvas_draw_string_angle (RoadMapGuiPoint *position,
                                        int angle, const char *text)
 {
 
-#if !defined(ROADMAP_ADVANCED_STYLE)
-   roadMapCanvas->setFontSize(size);
-#endif
    roadMapCanvas->drawStringAngle(position, 0, text, angle);
 }
 

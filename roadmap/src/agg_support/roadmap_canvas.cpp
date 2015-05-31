@@ -298,7 +298,6 @@ void roadmap_canvas_set_opacity (int opacity) {
    roadmap_canvas_select_pen(CurrentPen);
 }
 
-#if defined(ROADMAP_ADVANCED_STYLE)
 /* this are stubs */
 void roadmap_canvas_set_linejoin(const char *join) {}
 void roadmap_canvas_set_linecap(const char *cap) {}
@@ -315,7 +314,6 @@ void roadmap_canvas_set_label_font_style(int style) {}
 
 void roadmap_canvas_set_label_buffer_color(const char *color) {}
 void roadmap_canvas_set_label_buffer_size(int size) {}
-#endif /* ROADMAP_ADVANCED_STYLE */
 
 void roadmap_canvas_erase (void) {
 
