@@ -278,35 +278,6 @@ void
 buildmap_osm_text_node_finish(void)
 {
 
-#ifdef BEFORE
-	int point, s;
-	if (ni.NodeFakeFips) {
-	    if (ni.NodePlace && (strcmp(ni.NodePlace, "town") == 0
-			|| strcmp(ni.NodePlace, "village") == 0
-			|| strcmp(ni.NodePlace, "hamlet") == 0
-			|| strcmp(ni.NodePlace, "city") == 0)) {
-                /* We have a town, process it */
-
-                if (ni.NodeName) {
-                        ni.NodeFakeFips++;
-                        int year = 2008;
-                        RoadMapString s;
-
-                        s = buildmap_dictionary_add (DictionaryCity,
-                                (char *) ni.NodeName, strlen(ni.NodeName));
-                        buildmap_city_add(ni.NodeFakeFips, year, s);
-                }
-                if (ni.NodePostalCode) {
-                        int zip = 0;
-                        s = sscanf(ni.NodePostalCode, "%d", &zip);
-			if (s != 1)
-				buildmap_fatal(0, "bad zip read at '%s'\n", ni.NodePostalCode);
-                        if (zip)
-                                buildmap_zip_add(zip, ni.NodeLon, ni.NodeLat);
-                }
-	    }
-        }
-#else
 	int point;
 	RoadMapString s;
 
@@ -316,10 +287,9 @@ buildmap_osm_text_node_finish(void)
 
 	if (ni.NodeName && ni.NodePlace) {
 	    if (ni.NodeLayer) {
-		buildmap_verbose("finishing %f %f %s %s",
+		buildmap_verbose("finishing %f %f %s %s layer: %d",
 		    (float)ni.NodeLat/1000000.0, (float)ni.NodeLon/1000000.0,
-		    ni.NodePlace, ni.NodeName);
-
+		    ni.NodePlace, ni.NodeName, ni.NodeLayer);
 		s = buildmap_dictionary_add (DictionaryCity,
 			(char *) ni.NodeName, strlen(ni.NodeName));
 		buildmap_place_add(s, ni.NodeLayer, point);
@@ -327,7 +297,6 @@ buildmap_osm_text_node_finish(void)
 		buildmap_verbose("dropping %s %s", ni.NodePlace, ni.NodeName);
 	    }
 	}
-#endif
 
         buildmap_osm_text_reset_node();
 }
@@ -585,7 +554,7 @@ buildmap_osm_text_node_read_lat_lon(char *p)
 
 }
 
-void
+int
 buildmap_osm_get_layer(char *tag, char *value, int *flags, int *layer)
 {
     int		i;
@@ -600,13 +569,14 @@ buildmap_osm_get_layer(char *tag, char *value, int *flags, int *layer)
 			*flags = list[i].flags;
 			if (list[i].layerp)
 				*layer = *(list[i].layerp);
-			break;
+			return 1;
 		    }
 		}
 	    }
 	    break;
 	}
     }
+    return 0;
 }
 
 /**
@@ -631,29 +601,23 @@ buildmap_osm_text_node_tag(char *data, int catalog)
 	if (s != 2)
 		buildmap_fatal(0, "fail to scanf tag k and v (%s)", data);
 
-#ifdef BEFORE
-        if (strcmp(tagk, "postal_code") == 0) {
-                /* <tag k="postal_code" v="3020"/> */
-                if (ni.NodePostalCode)
-                        free(ni.NodePostalCode);
-                ni.NodePostalCode = strdup(tagv);
-		if (catalog) {
-		    saveInterestingNode(ni.NodeId);
-		    // buildmap_verbose("saving node info k %s v %s", tagk, tagv);
-		}
-        } else 
-#endif
-	if (strcmp(tagk, "place") == 0) {
-                /* <tag k="place" v="town"/> */
+	if (strcmp(tagk, "place") == 0 ||     /* <tag k="place" v="town"/> */
+	    strcmp(tagk, "amenity") == 0) {   /* <tag k="amenity" v="fuel"/> */
                 if (ni.NodePlace)
                         free(ni.NodePlace);
                 ni.NodePlace = strdup(tagv);
 		if (catalog) {
 		    saveInterestingNode(ni.NodeId);
-		    // buildmap_verbose("saving node %u info k %s v %s",
-		    // 	ni.NodeId, tagk, tagv);
+		    buildmap_verbose("saving node %u info k %s v %s",
+			    ni.NodeId, tagk, tagv);
 		}
-		buildmap_osm_get_layer(tagk, tagv, &ni.NodeFlags, &ni.NodeLayer);
+		if (!buildmap_osm_get_layer(tagk, tagv,
+				&ni.NodeFlags, &ni.NodeLayer)) {
+		    buildmap_verbose("no layer found for node %u info k %s v %s",
+			    ni.NodeId, tagk, tagv);
+		}
+		buildmap_verbose("layer for node %u info k %s v %s is %d",
+			    ni.NodeId, tagk, tagv, ni.NodeLayer);
         } else if (strcmp(tagk, "name") == 0) {
                 /* <tag k="name" v="Herent"/> */
                 if (ni.NodeName)
@@ -664,7 +628,7 @@ buildmap_osm_text_node_tag(char *data, int catalog)
 		    // buildmap_verbose("saving node %u info k %s v %s", ni.NodeId, tagk, tagv);
 		}
         } else {
-		buildmap_debug("dropping node %u info k %s v%s", ni.NodeId, tagk, tagv);
+		buildmap_debug("dropping node %u info k %s v %s", ni.NodeId, tagk, tagv);
 	}
 
 }
