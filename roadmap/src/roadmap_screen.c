@@ -1826,6 +1826,10 @@ static int roadmap_screen_short_click (RoadMapGuiPoint *point) {
 
    if (roadmap_trip_retrieve_area_points(&area, &position)) {
        ;
+#if NEAREST_PLACE
+   } else if (roadmap_place_closest(
+               (&area, &position, &place, &distance) != -1) {
+#endif
    } else if (roadmap_navigate_retrieve_line
                (&area, &position, &line, &distance) != -1) {
 
