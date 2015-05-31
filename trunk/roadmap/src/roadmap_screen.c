@@ -2451,6 +2451,7 @@ void roadmap_screen_shutdown (void)
 	RoadMapScreenDeltaX = 0;
 	RoadMapScreenDeltaY = 0;
 
+	if (SquareOnScreen) free(SquareOnScreen);
 	SquareOnScreen = NULL;
 	SquareOnScreenCount = 0;
 
