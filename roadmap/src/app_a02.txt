@@ -3249,6 +3249,15 @@ FIPS          County     State
 81     078     World Boundaries         SB
 81     079     World Boundaries         SB
 82     001     Placenames     PN
+82     002     Placenames     PN
+82     003     Placenames     PN
+82     004     Placenames     PN
+82     005     Placenames     PN
+82     006     Placenames     PN
+82     007     Placenames     PN
+82     008     Placenames     PN
+82     009     Placenames     PN
+82     010     Placenames     PN
 83     010     DCW Europe and North Asia     DW
 83     011     DCW Europe and North Asia     DW
 83     012     DCW Europe and North Asia     DW
