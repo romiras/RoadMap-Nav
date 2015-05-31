@@ -1114,17 +1114,24 @@ int roadmap_math_zoom_in (void) {
    return 0;
 }
 
-void roadmap_math_zoom_set (int zoom) {
+int roadmap_math_zoom_set (int zoom) {
 
-   if (zoom < MIN_ZOOM_IN) {
+   int oldzoom;
+
+   if (!zoom) {
+     return RoadMapContext->zoom;
+   } else if (zoom < MIN_ZOOM_IN) {
       zoom = MIN_ZOOM_IN;
    } else if (zoom >= MAX_ZOOM_OUT) {
       zoom = MAX_ZOOM_OUT - 1;
    }
+   oldzoom = zoom;
    RoadMapContext->zoom = zoom;
 
    roadmap_config_set_integer (&RoadMapConfigGeneralZoom, RoadMapContext->zoom);
    roadmap_math_compute_scale ();
+
+   return oldzoom;
 }
 
 int roadmap_math_zoom_reset (void) {

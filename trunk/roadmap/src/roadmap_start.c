@@ -324,10 +324,12 @@ static void roadmap_start_mapinfo (void) {
 
    snprintf(map_info, sizeof(map_info),
             "Map view area: %s wide by %s high\n"
-            "Map center (lat,lon): %s, %s",
+            "Map center (lat,lon): %s, %s\n"
+	    "Current zoom level is %d",
              roadmap_message_get('x'),
              roadmap_message_get('y'),
-             clat, clon);
+             clat, clon,
+	     roadmap_math_zoom_set (0));
    roadmap_messagebox_wait ("Map Parameters", map_info);
 }
 
