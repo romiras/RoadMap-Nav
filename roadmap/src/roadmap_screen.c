@@ -41,6 +41,7 @@
 #include "roadmap_layer.h"
 #include "roadmap_square.h"
 #include "roadmap_line.h"
+#include "roadmap_place.h"
 #include "roadmap_shape.h"
 #include "roadmap_point.h"
 #include "roadmap_polygon.h"
@@ -1044,7 +1045,7 @@ static int roadmap_screen_draw_one_line(int line,
     return 1;
 }
 
-static int roadmap_screen_draw_square
+static int roadmap_screen_draw_square_lines
               (int square, int layer, int fully_visible, int pen_index) {
 
    int line;
@@ -1056,7 +1057,7 @@ static int roadmap_screen_draw_square
    int fips;
    int drawn = 0;
 
-   roadmap_log_push ("roadmap_screen_draw_square");
+   roadmap_log_push ("roadmap_screen_draw_square_lines");
 
    layer_pen = roadmap_layer_get_pen (layer, pen_index);
    if (layer_pen == NULL) return 0;
@@ -1271,6 +1272,55 @@ static int roadmap_screen_draw_long_lines (int pen_index) {
    return drawn;
 }
 
+static int roadmap_screen_draw_square_places
+              (int square, int layer, int fully_visible, int pen_index) {
+
+   int place;
+   int first_place;
+   int last_place;
+   RoadMapPen layer_pen;
+   int fips;
+   int drawn = 0;
+
+   roadmap_log_push ("roadmap_screen_draw_square_places");
+
+   layer_pen = roadmap_layer_get_pen (layer, pen_index);
+   if (layer_pen == NULL) return 0;
+   
+   fips = roadmap_locator_active ();
+
+   /* Draw each place that belongs to this square. */
+   if (roadmap_place_in_square (square, layer, &first_place, &last_place) > 0) {
+
+      for (place = first_place; place <= last_place; ++place) {
+	    RoadMapPosition pos;
+	    RoadMapGuiPoint guipoint;
+
+	    roadmap_place_point(place, &pos);
+            roadmap_math_coordinate (&pos, &guipoint);
+#if PLACE_MARK
+	    roadmap_sprite_draw ("PurpleCross" , &guipoint, 0);
+		    roadmap_math_rotate_coordinates (1, &guipoint);
+	    roadmap_canvas_set_foreground("black");
+#endif
+
+	    if ((pen_index == 0) &&   /* we do labels only for the first pen */
+		    !RoadMapScreenDragging &&
+		    RoadMapScreenLabels) {
+		PluginPlace p = {ROADMAP_PLUGIN_ID, place, layer, fips};
+#if defined(ROADMAP_ADVANCED_STYLE)
+		roadmap_label_add_place (&guipoint, &p, layer_pen);
+#else
+		roadmap_label_add_place (&guipoint, &p);
+#endif
+		drawn += 1;
+	    }
+      }
+   }
+
+   roadmap_log_pop ();
+   return drawn;
+}
 
 static void roadmap_screen_draw_sprite_object
                (const char               *name,
@@ -1388,7 +1438,7 @@ static void roadmap_screen_reset_square_mask (void) {
 
 
 static int roadmap_screen_repaint_square (int square, int pen_type, 
-                                          int layer_count, int *layers) {
+		      int layer_count, int *layers, int lines) {
 
    int i;
 
@@ -1433,13 +1483,20 @@ static int roadmap_screen_repaint_square (int square, int pen_type,
 
         category = layers[i];
 
-        drawn += roadmap_screen_draw_square
+	if (lines) {
+            drawn += roadmap_screen_draw_square_lines
                     (square, category, fully_visible, pen_type);
+	} else { // places
+            drawn += roadmap_screen_draw_square_places
+                    (square, category, fully_visible, pen_type);
+	}
 
    }
 
-   roadmap_screen_flush_lines();
-   roadmap_screen_flush_points();
+   if (lines) {
+       roadmap_screen_flush_lines();
+       roadmap_screen_flush_points();
+   }
 
    roadmap_log_pop ();
    
@@ -1474,7 +1531,7 @@ void roadmap_screen_repaint (void) {
     int pen;
     int count, sqcount;
     int *drawnlist;
-    int max_pen = roadmap_layer_max_pen();
+    int max_pen;
     static int nomap;
     
     if (!RoadMapScreenDragging && RoadMapScreenFrozen) return;
@@ -1483,6 +1540,8 @@ void roadmap_screen_repaint (void) {
     if (RoadMapScreenDragging &&
         (! roadmap_config_match(&RoadMapConfigStylePrettyDrag, "yes"))) {
        max_pen = 1;
+    } else {
+       max_pen = roadmap_layer_max_pen();
     }
 
     roadmap_math_display_context(1);
@@ -1534,6 +1593,7 @@ void roadmap_screen_repaint (void) {
     drawnlist = (int *)calloc(count, sizeof(int));
     roadmap_check_allocated(drawnlist);
 
+    /* -- debugging squares -- */
     if (roadmap_is_visible (ROADMAP_SHOW_GLOBAL_SQUARE)) {
 	/* draw global square outline (with "--square" or "--map-boxes") */
 	for (i = count-1; i >= 0; --i) {
@@ -1545,6 +1605,7 @@ void roadmap_screen_repaint (void) {
         }
     }
 
+    /* -- polygons -- */
     for (i = count-1; i >= 0; --i) {
         /* -- nothing to draw at this zoom? -- */
         if (roadmap_locator_get_decluttered(fipslist[i]))
@@ -1563,6 +1624,7 @@ void roadmap_screen_repaint (void) {
 
     }
 
+    /* -- lines -- */
     for (i = count-1; i >= 0; --i) {
         /* -- nothing to draw at this zoom? -- */
         if (roadmap_locator_get_decluttered(fipslist[i]))
@@ -1596,7 +1658,7 @@ void roadmap_screen_repaint (void) {
 
                for (sq = sqcount - 1; sq >= 0; --sq) {
                   drawnlist[i] += roadmap_screen_repaint_square (in_view[sq],
-		  	pen, layer_count, layers);
+		  	pen, layer_count, layers, 1);
 
                }
             }
@@ -1617,6 +1679,54 @@ void roadmap_screen_repaint (void) {
         
     }
 
+    /* -- places -- */
+    for (i = count-1; i >= 0; --i) {
+        /* -- nothing to draw at this zoom? -- */
+        if (roadmap_locator_get_decluttered(fipslist[i]))
+            continue;
+
+        /* -- Access the county's database. */
+        if (roadmap_locator_activate (fipslist[i]) != ROADMAP_US_OK)
+	    continue;
+
+        /* -- Look for the squares that are currently visible. */
+        sqcount = roadmap_square_view (&in_view);
+
+        for (pen = 0; pen < max_pen; ++pen) {
+
+            if (sqcount > 0) {
+               static int *layers = NULL;
+               static int  layers_size = 0;
+               int layer_count;
+
+               roadmap_screen_reset_square_mask();
+
+               if (layers == NULL) {
+                  layers_size = roadmap_layer_max_defined();
+                  layers = (int *)calloc (layers_size, sizeof(int));
+                  roadmap_check_allocated(layers);
+               }
+               layer_count = roadmap_layer_visible_places
+                                (layers, layers_size, pen);
+               if (!layer_count) continue;
+
+               for (sq = sqcount - 1; sq >= 0; --sq) {
+                  drawnlist[i] += roadmap_screen_repaint_square (in_view[sq],
+		  	pen, layer_count, layers, 0);
+	       }
+
+	    }
+	}
+
+        if (roadmap_screen_repaint_leave(count, count - i)) {
+            roadmap_label_new_invalidate();
+            goto out;
+        }
+
+    }
+
+
+    /* -- labels -- */
     for (i = count-1; i >= 0; --i) {
         /* -- nothing to draw at this zoom? -- */
         if (roadmap_locator_get_decluttered(fipslist[i]))
@@ -2198,8 +2308,8 @@ void roadmap_screen_zoom_reset (void) {
 }
 
 
-void roadmap_screen_text
-     (int id, RoadMapGuiPoint *center, int where, int size, const char *text) {
+void roadmap_screen_text (int id, RoadMapGuiPoint *center, int where,
+		int size, const char *text) {
     if ((RoadMapLineFontSelect & id) != 0) {
         roadmap_linefont_text ( center, where, size, text);
     } else {
@@ -2207,9 +2317,9 @@ void roadmap_screen_text
     }
 }
 
-void roadmap_screen_text_angle 
-        (int id, RoadMapGuiPoint *center,
+void roadmap_screen_text_angle (int id, RoadMapGuiPoint *center,
                 int theta, int size, const char *text) {
+
     if ((RoadMapLineFontSelect & id) != 0) {
         roadmap_linefont_text_angle ( center, size, theta, text);
     } else {
@@ -2227,8 +2337,7 @@ void roadmap_screen_text_angle
  * @param descent
  * @param can_tilt
  */
-void roadmap_screen_text_extents 
-        (int id, const char *text, int size,
+void roadmap_screen_text_extents (int id, const char *text, int size,
          int *width, int *ascent, int *descent, int *can_tilt) {
     if ((RoadMapLineFontSelect & id) != 0) {
         roadmap_linefont_extents

@@ -47,6 +47,7 @@
 #include "roadmap_place.h"
 #include "roadmap_square.h"
 
+#include "roadmap_dictionary.h"
 
 static char *RoadMapPlaceType = "RoadMapPlaceContext";
 
@@ -58,6 +59,7 @@ typedef struct {
    char *type;
 
    int  *Place;
+   RoadMapString *NameByPlace;
    int   PlaceCount;
 
    int  *PlaceByLayer;
@@ -65,6 +67,8 @@ typedef struct {
 
    RoadMapPlaceBySquare *PlaceBySquare;
    int                   PlaceBySquareCount;
+
+   RoadMapDictionary PlaceNames;
 
 } RoadMapPlaceContext;
 
@@ -80,6 +84,7 @@ static void *roadmap_place_map (roadmap_db *root) {
    RoadMapPlaceContext *context;
 
    roadmap_db *place_table;
+   roadmap_db *name_table;
    roadmap_db *layer_table;
    roadmap_db *square_table;
 
@@ -92,14 +97,24 @@ static void *roadmap_place_map (roadmap_db *root) {
    context->type = RoadMapPlaceType;
 
    place_table   = roadmap_db_get_subsection (root, "data");
+   name_table   = roadmap_db_get_subsection (root, "name");
    layer_table   = roadmap_db_get_subsection (root, "bylayer");
    square_table  = roadmap_db_get_subsection (root, "bysquare");
 
    context->Place = (int *) roadmap_db_get_data (place_table);
    context->PlaceCount = roadmap_db_get_count (place_table);
-
    if (roadmap_db_get_size (place_table) != context->PlaceCount * sizeof(int)) {
-      roadmap_log (ROADMAP_ERROR, "invalid place/data structure (1)");
+      roadmap_log (ROADMAP_ERROR, "invalid place/size values");
+      goto roadmap_place_map_abort;
+   }
+
+   context->NameByPlace = (RoadMapString *) roadmap_db_get_data (name_table);
+   if (context->PlaceCount != roadmap_db_get_count (name_table)) {
+      roadmap_log (ROADMAP_ERROR, "invalid name/count values");
+      goto roadmap_place_map_abort;
+   }
+   if (roadmap_db_get_size (name_table) != context->PlaceCount * sizeof(RoadMapString)) {
+      roadmap_log (ROADMAP_ERROR, "invalid name/size values");
       goto roadmap_place_map_abort;
    }
 
@@ -107,7 +122,7 @@ static void *roadmap_place_map (roadmap_db *root) {
    context->PlaceByLayerCount = roadmap_db_get_count (layer_table);
 
    if (roadmap_db_get_size (layer_table) != context->PlaceByLayerCount * sizeof(int)) {
-      roadmap_log (ROADMAP_ERROR, "invalid place/bylayer structure (2)");
+      roadmap_log (ROADMAP_ERROR, "invalid layer/size values");
       goto roadmap_place_map_abort;
    }
 
@@ -117,9 +132,11 @@ static void *roadmap_place_map (roadmap_db *root) {
 
    if (roadmap_db_get_size (square_table) !=
        context->PlaceBySquareCount * sizeof(RoadMapPlaceBySquare)) {
-      roadmap_log (ROADMAP_ERROR, "invalid place/bysquare structure");
+      roadmap_log (ROADMAP_ERROR, "invalid square/size values");
       goto roadmap_place_map_abort;
    }
+
+   context->PlaceNames    = NULL;
 
    return context;
 
@@ -140,6 +157,9 @@ static void roadmap_place_activate (void *context) {
    if (place_context && place_context->type != RoadMapPlaceType) {
       roadmap_log (ROADMAP_FATAL, "invalid place context activated");
    }
+   if (place_context->PlaceNames == NULL) {
+      place_context->PlaceNames = roadmap_dictionary_open ("city");
+   }
    RoadMapPlaceActive = place_context;
 }
 
@@ -153,6 +173,9 @@ static void roadmap_place_unmap (void *context) {
 
    if (place_context->type != RoadMapPlaceType) {
       roadmap_log (ROADMAP_FATAL, "unmapping invalid place context");
+   }
+   if (RoadMapPlaceActive == place_context) {
+      RoadMapPlaceActive = NULL;
    }
    free (place_context);
 }
@@ -179,16 +202,13 @@ int roadmap_place_in_square (int square, int layer, int *first, int *last) {
 
    int *index;
 
-   if (RoadMapPlaceActive == NULL) return 0; /* No line. */
+   if (RoadMapPlaceActive == NULL) return 0; /* No place. */
 
    square = roadmap_square_index(square);
    if (square < 0) {
       return 0;   /* This square is empty. */
    }
 
-   if (layer <= 0 || layer > RoadMapPlaceActive->PlaceBySquare[square].count) {
-      return 0;
-   }
    index = RoadMapPlaceActive->PlaceByLayer
               + RoadMapPlaceActive->PlaceBySquare[square].first;
 
@@ -221,4 +241,14 @@ int  roadmap_place_count (void) {
 
    return RoadMapPlaceActive->PlaceCount;
 }
+
+const char *roadmap_place_get_name(int place_id)
+{
+    RoadMapString stringid;
+
+    stringid = RoadMapPlaceActive->NameByPlace[place_id];
+
+    return roadmap_dictionary_get(RoadMapPlaceActive->PlaceNames, stringid);
+}
+
 

@@ -332,6 +332,33 @@ done:
     return count;
 }
 
+int roadmap_layer_visible_places (int *layers, int size, unsigned int pen_index)
+{
+    int i;
+    int count = 0;
+
+    RoadMapLayer *layerp;
+
+
+    if (RoadMapLayerCurrentClass == NULL) return 0;
+
+    for (i = 0; i < RoadMapLayerCurrentClass->places_count; i++) {
+
+        layerp = RoadMapLayerCurrentClass->layers + i;
+
+        if (pen_index >= layerp->pen_count) continue;
+        if (! layerp->in_use[pen_index]) continue;
+
+        if (roadmap_layer_is_visible (layerp)) {
+           if (count >= size) goto done;
+           layers[count++] = i + 1;
+        }
+    }
+
+done:
+    return count;
+}
+
 /**
  * @brief
  */
@@ -349,9 +376,7 @@ void roadmap_layer_adjust (void) {
 
        layerp = RoadMapLayerCurrentClass->layers + i;
 
-	roadmap_log(ROADMAP_DEBUG, "r_l_a: checking layer %s", layerp->name);
        if (roadmap_layer_is_visible(layerp)) {
-	roadmap_log(ROADMAP_DEBUG, "r_l_a: layer %s is visible", layerp->name);
 
             thickness =
                roadmap_math_thickness
@@ -504,7 +529,7 @@ int roadmap_layer_names (const char *names[], int max) {
 
 
    if (total > max) {
-      roadmap_log (ROADMAP_FATAL, "unsufficient space");
+      roadmap_log (ROADMAP_FATAL, "insufficient space");
    }
 
    for (i = total - 1; i >= 0; --i) {
@@ -746,7 +771,6 @@ static void roadmap_layer_load_file (const char *class_file) {
     const char *class_config = roadmap_config_new (class_file, 0);
     const char *class_name;
 
-    roadmap_log (ROADMAP_DEBUG, "roadmap_layer_load_file(%s)", class_file);
     if (class_config == NULL) {
        roadmap_log (ROADMAP_FATAL, "cannot access class file %s", class_file);
     }
@@ -910,7 +934,8 @@ static void roadmap_layer_load_file (const char *class_file) {
 
         /* Create all necessary pens. */
 
-        if (i >= lines_count + places_count) { /* This is a polygon. */
+        if (i < places_count || i >= lines_count + places_count) {
+           /* this is a place or a polygon */
            layer->in_use[0] = 1;
         }
 
@@ -955,9 +980,11 @@ static void roadmap_layer_load_file (const char *class_file) {
              }
            }
 
-           if (i >= lines_count + places_count) { /* This is a polygon. */
-              layer->in_use[pen_index] = 1;
+           if (i < places_count || i >= lines_count + places_count) {
+              /* this is a place or a polygon */
+              layer->in_use[0] = 1;
            }
+
         }
     }
     

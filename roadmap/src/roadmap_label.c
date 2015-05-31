@@ -101,6 +101,8 @@ typedef struct {
 
    int featuresize_sq;
 
+   int is_place;
+   PluginPlace place;
    PluginLine line;
    PluginStreet street;
    char *text;
@@ -251,8 +253,8 @@ void roadmap_label_draw_text(const char *text,
   if (pen!=0)
     roadmap_canvas_select_pen (pen);
   else
-    roadmap_canvas_select_pen (RoadMapLabelPen);
 #endif
+    roadmap_canvas_select_pen (RoadMapLabelPen);
                
    if (doing_angles) {
       roadmap_screen_text_angle
@@ -301,6 +303,7 @@ int roadmap_label_add (const RoadMapGuiPoint *point, int angle,
 int roadmap_label_add (const RoadMapGuiPoint *point, int angle,
                        int featuresize_sq, const PluginLine *line) {
 #endif
+   PluginPlace noplace = {ROADMAP_PLUGIN_ID, 0, 0, 0};
 
    roadmap_label *cPtr = 0;
 
@@ -318,7 +321,7 @@ int roadmap_label_add (const RoadMapGuiPoint *point, int angle,
       if (RoadMapLabelCacheFull) return -1;
 
       if (RoadMapLabelCacheAlloced == MAX_LABELS) {
-         roadmap_log (ROADMAP_WARNING, "Too many streets to label them all.");
+         roadmap_log (ROADMAP_WARNING, "Not enough room for labels.");
          RoadMapLabelCacheFull = 1;
          return -1;
       }
@@ -333,9 +336,74 @@ int roadmap_label_add (const RoadMapGuiPoint *point, int angle,
    cPtr->bbox.minx = 1;
    cPtr->bbox.maxx = -1;
 
+   cPtr->is_place = 0;
+   cPtr->place = noplace;
    cPtr->line = *line;
    cPtr->featuresize_sq = featuresize_sq;
    cPtr->angle = normalize_angle(angle);
+
+   cPtr->center_point = *point;
+#if defined(ROADMAP_ADVANCED_STYLE)
+   cPtr->pen = pen;
+#endif
+
+   /* The stored point is not screen oriented, rotate is needed */
+   roadmap_math_rotate_coordinates (1, &cPtr->center_point);
+
+
+   /* the "generation" of a label is refreshed when it is re-added.
+    * later, labels cache entries can be aged, and discarded.
+    */
+   cPtr->gen = RoadMapLabelGeneration;
+
+   cPtr->zoom = RoadMapLabelCurrentZoom;
+
+   roadmap_list_append(&RoadMapLabelNew, &cPtr->link);
+
+   return 0;
+}
+
+#if defined(ROADMAP_ADVANCED_STYLE)
+int roadmap_label_add_place (const RoadMapGuiPoint *point,
+		       const PluginPlace *place, RoadMapPen pen) {
+#else
+int roadmap_label_add_place (const RoadMapGuiPoint *point,
+			const PluginPlace *place) {
+#endif
+   PluginLine noline = {ROADMAP_PLUGIN_ID, 0, 0, 0};
+
+   roadmap_label *cPtr = 0;
+
+   if (!ROADMAP_LIST_EMPTY(&RoadMapLabelSpares)) {
+      cPtr = (roadmap_label *)roadmap_list_remove
+                               (ROADMAP_LIST_FIRST(&RoadMapLabelSpares));
+      if (cPtr->text && *cPtr->text) {
+         free(cPtr->text);
+      }
+   } else {
+      if (RoadMapLabelCacheFull) return -1;
+
+      if (RoadMapLabelCacheAlloced == MAX_LABELS) {
+         roadmap_log (ROADMAP_WARNING, "Not enough room for labels.");
+         RoadMapLabelCacheFull = 1;
+         return -1;
+      }
+      cPtr = malloc (sizeof (*cPtr));
+      roadmap_check_allocated (cPtr);
+      RoadMapLabelCacheAlloced++;
+   }
+
+   cPtr->notext = 0;
+   cPtr->text = NULL;
+
+   cPtr->bbox.minx = 1;
+   cPtr->bbox.maxx = -1;
+
+   cPtr->is_place = 1;
+   cPtr->place = *place;
+   cPtr->line = noline;
+   cPtr->featuresize_sq = 9999;
+   cPtr->angle = 0;
 
    cPtr->center_point = *point;
 #if defined(ROADMAP_ADVANCED_STYLE)
@@ -389,7 +457,6 @@ int roadmap_label_draw_cache (int angles) {
            (whichlist == OLDLIST ? &RoadMapLabelCache : &RoadMapLabelNew,
                 item, tmp) {
 
-         PluginStreetProperties properties;
 
          cPtr = (roadmap_label *)item;
 
@@ -407,8 +474,9 @@ int roadmap_label_draw_cache (int angles) {
             ROADMAP_LIST_FOR_EACH (&RoadMapLabelNew, item2, tmp2) {
                ncPtr = (roadmap_label *)item2;
 
-               if (roadmap_plugin_same_line (&cPtr->line, &ncPtr->line)) {
-                   /* Found a new version of this existing line */
+               if ((!cPtr->is_place && roadmap_plugin_same_line (&cPtr->line, &ncPtr->line)) ||
+        	    (cPtr->is_place && roadmap_plugin_same_place (&cPtr->place, &ncPtr->place))) {
+                   /* Found a new version of this existing place or line */
 
                    if (cPtr->notext) {
                      cPtr->gen = ncPtr->gen;
@@ -466,22 +534,43 @@ int roadmap_label_draw_cache (int angles) {
 
          if (!cPtr->text) {
 
-            roadmap_plugin_activate_db (&cPtr->line);
-            roadmap_plugin_get_street_properties (&cPtr->line, &properties);
-
-            if (!properties.street || !*properties.street) {
-               cPtr->text = "";
-            } else {
+	    if (cPtr->is_place) {
+		const char *name;
+		name = roadmap_plugin_get_placename (&cPtr->place);
+		if (!name) {
+		    cPtr->text = "";
+		} else {
+	            cPtr->text = strdup(name);
+		}
 #if LABEL_USING_LINEID
-               char buf[40];
-               sprintf(buf, "%d", cPtr->line.line_id);
-               cPtr->text = strdup(buf);
-               cPtr->otext = strdup(properties.street);
-#else
-               cPtr->text = strdup(properties.street);
+		{
+		    char buf[40];
+		    sprintf(buf, "x%d", cPtr->place.place_id);
+		    cPtr->otext = cPtr->text;
+		    cPtr->text = strdup(buf);
+		}
 #endif
-            }
-            cPtr->street = properties.plugin_street;
+		roadmap_log(ROADMAP_DEBUG, "place text is '%s' (%p)", cPtr->text, cPtr->text);
+	    } else {
+        	PluginStreetProperties properties;
+		roadmap_plugin_activate_db (&cPtr->line);
+		roadmap_plugin_get_street_properties (&cPtr->line, &properties);
+
+		if (!properties.street || !*properties.street) {
+		   cPtr->text = "";
+		} else {
+		   cPtr->text = strdup(properties.street);
+		}
+#if LABEL_USING_LINEID
+		{
+		   char buf[40];
+		   sprintf(buf, "%d", cPtr->line.line_id);
+		   cPtr->otext = cPtr->text;
+		   cPtr->text = strdup(buf);
+		}
+#endif
+		cPtr->street = properties.plugin_street;
+	    }
          }
 
          if (!*cPtr->text) {
