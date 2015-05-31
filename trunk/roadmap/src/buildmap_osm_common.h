@@ -59,7 +59,8 @@
 
 #include "buildmap_layer.h"
 
-#define AREA 1
+#define AREA	1
+#define PLACE	2
 
 typedef struct layer_info {
     char *name;

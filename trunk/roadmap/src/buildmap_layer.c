@@ -46,6 +46,9 @@ static int   BuildMapLineLayerCount = 0;
 static char *BuildMapPolygonLayerList[BUILDMAP_LAYER_MAX];
 static int   BuildMapPolygonLayerCount = 0;
 
+static char *BuildMapPlaceLayerList[BUILDMAP_LAYER_MAX];
+static int   BuildMapPlaceLayerCount = 0;
+
 /**
  * @brief look up the layer number, for a given layer name
  * @param name a layer name (string)
@@ -64,6 +67,12 @@ int buildmap_layer_get (const char *name) {
    for (i = 0; i < BuildMapPolygonLayerCount; ++i) {
       if (strcasecmp(BuildMapPolygonLayerList[i], name) == 0) {
          return BuildMapLineLayerCount + i + 1;
+      }
+   }
+
+   for (i = 0; i < BuildMapPlaceLayerCount; ++i) {
+      if (strcasecmp(BuildMapPlaceLayerList[i], name) == 0) {
+         return BuildMapPolygonLayerCount + i + 1;
       }
    }
 
@@ -164,8 +173,15 @@ void buildmap_layer_load (const char *class_file) {
           (config, "Polygons", BuildMapPolygonLayerList, BUILDMAP_LAYER_MAX);
 
     if (BuildMapPolygonLayerCount <= 0) {
-       buildmap_fatal
-          (0, "cannot decode polygon layers in class %s", class_file);
+       buildmap_fatal (0, "cannot decode polygon layers in class %s", class_file);
+    }
+
+    BuildMapPlaceLayerCount =
+       buildmap_layer_decode
+          (config, "Places", BuildMapPlaceLayerList, BUILDMAP_LAYER_MAX);
+
+    if (BuildMapPlaceLayerCount <= 0) {
+       buildmap_fatal (0, "cannot decode pplace layers in class %s", class_file);
     }
 }
 

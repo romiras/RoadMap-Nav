@@ -83,7 +83,12 @@ int BuildMapLayerStation = 0;
 int BuildMapLayerMall = 0;
 int BuildMapLayerNature = 0;
 int BuildMapLayerAmenity = 0;
+int BuildMapLayerCity = 0;
+int BuildMapLayerTown = 0;
+int BuildMapLayerVillage = 0;
+int BuildMapLayerHamlet = 0;
 int BuildMapLayerSuburbs = 0;
+int BuildMapLayerPeak = 0;
 
 /* Water layers. */
 
@@ -116,7 +121,12 @@ int BuildMapLayerBoundary = 0;
 #define BOUNDARY    &BuildMapLayerBoundary
 #define	NATURE      &BuildMapLayerNature
 #define AMENITY     &BuildMapLayerAmenity
+#define	CITY        &BuildMapLayerCity
+#define	TOWN        &BuildMapLayerTown
+#define	VILLAGE     &BuildMapLayerVillage
+#define	HAMLET      &BuildMapLayerHamlet
 #define	SUBURBS     &BuildMapLayerSuburbs
+#define	PEAK        &BuildMapLayerPeak
 
 BuildMapDictionary DictionaryPrefix;
 BuildMapDictionary DictionaryStreet;
@@ -150,7 +160,12 @@ void buildmap_osm_common_find_layers (void) {
 
    BuildMapLayerNature    = buildmap_layer_get ("nature");
    BuildMapLayerAmenity   = buildmap_layer_get ("amenity");
+   BuildMapLayerCity      = buildmap_layer_get ("city");
+   BuildMapLayerTown      = buildmap_layer_get ("town");
+   BuildMapLayerVillage   = buildmap_layer_get ("village");
+   BuildMapLayerHamlet    = buildmap_layer_get ("hamlet");
    BuildMapLayerSuburbs   = buildmap_layer_get ("suburbs");
+   BuildMapLayerPeak	  = buildmap_layer_get ("peak");
 
    BuildMapLayerBoundary = buildmap_layer_get ("boundaries");
 }
@@ -308,7 +323,7 @@ layer_info_t natural_to_layer[] = {
         { "coastline",          SHORELINE,      0 },            /* 1 */
         { "water",              LAKE,           AREA },         /* 2 */
         { "wood",               NATURE,         AREA },         /* 3 */
-        { "peak",               NULL,           0 },            /* 4 */
+        { "peak",               PEAK,           PLACE },        /* 4 */
         { "land",		NULL,		AREA },		/* 5 */
         { "bay",		NULL,		AREA },		/* 6 */
         { "beach",		NULL,		AREA },		/* 7 */
@@ -325,7 +340,7 @@ layer_info_t natural_to_layer[] = {
         { "sprint",		NULL,		AREA },		/* 18 */
         { "stone",		NULL,		AREA },		/* 19 */
         { "tree",		NULL,		AREA },		/* 20 */
-        { "volcano",		NULL,		AREA },		/* 21 */
+        { "volcano",		PEAK,		PLACE },	/* 21 */
         { "wetland",		NULL,		AREA },		/* 22 */
         { 0,                    NULL,           0 },
 };
@@ -428,11 +443,11 @@ layer_info_t place_to_layer[] = {
         { "state",              NULL,           0 },         /* 3 */
         { "region",             NULL,           0 },         /* 4 */
         { "county",             NULL,           0 },         /* 5 */
-        { "city",               NULL,           0 },         /* 6 */
-        { "town",               NULL,           0 },         /* 7 */
-        { "village",            NULL,           0 },         /* 8 */
-        { "hamlet",             NULL,           0 },         /* 9 */
-        { "suburb",             SUBURBS,        0 },         /* 10 */
+        { "city",               CITY,           PLACE },     /* 6 */
+        { "town",               TOWN,           PLACE },     /* 7 */
+        { "village",            VILLAGE,        PLACE },     /* 8 */
+        { "hamlet",             HAMLET,         PLACE },     /* 9 */
+        { "suburb",             SUBURBS,        PLACE },     /* 10 */
         { 0,                    NULL,           0 },
 };
 
