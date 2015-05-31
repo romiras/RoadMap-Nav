@@ -1300,8 +1300,13 @@ static int roadmap_screen_draw_square_places
 	    roadmap_place_point(place, &pos);
             roadmap_math_coordinate (&pos, &guipoint);
 	    if (layer_sprite) {
-		roadmap_sprite_draw (layer_sprite, &guipoint, 0);
-		roadmap_math_rotate_coordinates (1, &guipoint);
+		/* the label's guipoint will be rotated later.  don't
+		 * want to rotate it twice.
+		 */
+		RoadMapGuiPoint newguipoint = guipoint;
+		roadmap_math_rotate_coordinates (1, &newguipoint);
+		roadmap_sprite_draw (layer_sprite, &newguipoint,
+				-roadmap_math_get_orientation());
 	    }
 
 	    if (labels_visible &&
