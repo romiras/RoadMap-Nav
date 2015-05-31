@@ -568,6 +568,30 @@ buildmap_osm_text_node_read_lat_lon(char *data)
 
 }
 
+void
+buildmap_osm_get_layer(char *tag, char *value, int *flags, int *layer)
+{
+    int		i;
+    layer_info_t	*list;
+
+    for (i=1; list_info[i].name != 0; i++) {
+	if (strcmp(tag, list_info[i].name) == 0) {
+	    list = list_info[i].list;
+	    if (list) {
+		for (i=1; list[i].name; i++) {
+		    if (strcmp(value, list[i].name) == 0) {
+			*flags = list[i].flags;
+			if (list[i].layerp)
+				*layer = *(list[i].layerp);
+			break;
+		    }
+		}
+	    }
+	    break;
+	}
+    }
+}
+
 /**
  * @brief deal with tag lines outside of ways
  * @param data points into the line of text being processed
@@ -638,8 +662,7 @@ void
 buildmap_osm_text_way_tag(char *data)
 {
 	static char	*tag = 0, *value = 0;
-	int		i, s;
-	layer_info_t	*list;
+	int		s;
 
 	/* have we already decided this way is uninteresting? */
 	if (!wi.WayIsInteresting)
@@ -687,22 +710,8 @@ buildmap_osm_text_way_tag(char *data)
 	/*
 	 * Get layer info
 	 */
-	for (i=1; list_info[i].name != 0; i++) {
-	    if (strcmp(tag, list_info[i].name) == 0) {
-		list = list_info[i].list;
-		if (list) {
-		    for (i=1; list[i].name; i++) {
-			if (strcmp(value, list[i].name) == 0) {
-			    wi.WayFlags = list[i].flags;
-			    if (list[i].layerp)
-				    wi.WayLayer = *(list[i].layerp);
-			    break;
-			}
-		    }
-		}
-		break;
-	    }
-	}
+	buildmap_osm_get_layer(tag, value, &wi.WayFlags, &wi.WayLayer);
+
 }
 
 /**
