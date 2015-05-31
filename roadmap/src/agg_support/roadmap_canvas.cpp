@@ -55,7 +55,7 @@
 #define MAX_STR_LEN 65000
 #endif
 
-#define DEFAULT_FONT_SIZE 15
+#define DEFAULT_FONT_SIZE 20
 
 extern "C" {
 #include "roadmap.h"
@@ -114,6 +114,7 @@ struct roadmap_canvas_pen {
    char  *font_color_name;
    agg::rgba8 font_color;
    int thickness;
+   int size;
 };
 
 static struct roadmap_canvas_pen *RoadMapPenList = NULL;
@@ -153,6 +154,7 @@ void roadmap_canvas_get_text_extents
         (const char *text, int size, int *width,
             int *ascent, int *descent, int *can_tilt) {
 
+   size = CurrentPen->size;
    *ascent = 0;
    *descent = 0;
    if (can_tilt) *can_tilt = 1;
@@ -240,6 +242,7 @@ RoadMapPen roadmap_canvas_create_pen (const char *name)
       pen->font_color =
 	    pen->color = agg::rgba8(0, 0, 0);
       pen->thickness = 1;
+      pen->size = DEFAULT_FONT_SIZE;
       pen->next = RoadMapPenList;
       
       RoadMapPenList = pen;
@@ -264,6 +267,12 @@ void roadmap_canvas_set_label_font_color(const char *color) {
    if (!CurrentPen) return;
    CurrentPen->font_color_name = strdup (color);
    CurrentPen->font_color = roadmap_canvas_agg_parse_color(color);
+   roadmap_canvas_select_pen(CurrentPen);
+}
+
+void roadmap_canvas_set_label_font_size(int size) {
+   if (!CurrentPen) return;
+   CurrentPen->size = size;
    roadmap_canvas_select_pen(CurrentPen);
 }
 
@@ -307,7 +316,6 @@ void roadmap_canvas_set_brush_style(const char *style) {}
 void roadmap_canvas_set_brush_isbackground(int isbackground) {}
 
 void roadmap_canvas_set_label_font_name(const char *name) {}
-void roadmap_canvas_set_label_font_size(int size) {}
 void roadmap_canvas_set_label_font_spacing(int spacing) {}
 void roadmap_canvas_set_label_font_weight(const char *weight) {}
 void roadmap_canvas_set_label_font_style(int style) {}
@@ -665,7 +673,7 @@ static void roadmap_canvas_draw_string_worker (RoadMapGuiPoint *start,
    double x  = 0;
    double y  = 0;
    
-   if (size < 0) size = DEFAULT_FONT_SIZE;
+   size = CurrentPen->size;
 
    if ((angle > -5) && (angle < 5)) {
 
