@@ -67,39 +67,50 @@
 
 /* Road layers. */
 
-int BuildMapLayerFreeway = 0;
-int BuildMapLayerRamp = 0;
-int BuildMapLayerMain = 0;
-int BuildMapLayerStreet = 0;
-int BuildMapLayerTrail = 0;
-int BuildMapLayerRail = 0;
+int BuildMapLayerFreeway;
+int BuildMapLayerRamp;
+int BuildMapLayerMain;
+int BuildMapLayerStreet;
+int BuildMapLayerTrail;
+int BuildMapLayerRail;
 
 /* Area layers. */
 
-int BuildMapLayerPark = 0;
-int BuildMapLayerHospital = 0;
-int BuildMapLayerAirport = 0;
-int BuildMapLayerStation = 0;
-int BuildMapLayerMall = 0;
-int BuildMapLayerNature = 0;
-int BuildMapLayerAmenity = 0;
-int BuildMapLayerCity = 0;
-int BuildMapLayerTown = 0;
-int BuildMapLayerVillage = 0;
-int BuildMapLayerHamlet = 0;
-int BuildMapLayerSuburbs = 0;
-int BuildMapLayerPeak = 0;
+int BuildMapLayerPark;
+int BuildMapLayerHospital;
+int BuildMapLayerAirport;
+int BuildMapLayerStation;
+int BuildMapLayerMall;
+int BuildMapLayerSchool;
+
+int BuildMapLayerNature;
+int BuildMapLayerAmenity;
+int BuildMapLayerCity;
+int BuildMapLayerTown;
+int BuildMapLayerVillage;
+int BuildMapLayerHamlet;
+int BuildMapLayerSuburbs;
+int BuildMapLayerPeak;
 
 /* Water layers. */
 
-int BuildMapLayerShoreline = 0;
-int BuildMapLayerRiver = 0;
-int BuildMapLayerCanal = 0;
-int BuildMapLayerLake = 0;
-int BuildMapLayerSea = 0;
+int BuildMapLayerShoreline;
+int BuildMapLayerRiver;
+int BuildMapLayerCanal;
+int BuildMapLayerLake;
+int BuildMapLayerSea;
 
-int BuildMapLayerBoundary = 0;
+int BuildMapLayerBoundary;
 
+int BuildMapLayerFood;
+int BuildMapLayerCafe;
+int BuildMapLayerDrinks;
+int BuildMapLayerFuel;
+int BuildMapLayerATM;
+
+/* These defines are simply shorthand notation, to make
+ * the tables below easier to manage
+ */
 #define FREEWAY     &BuildMapLayerFreeway     
 #define RAMP        &BuildMapLayerRamp        
 #define MAIN        &BuildMapLayerMain        
@@ -112,21 +123,30 @@ int BuildMapLayerBoundary = 0;
 #define AIRPORT     &BuildMapLayerAirport
 #define STATION     &BuildMapLayerStation
 #define MALL        &BuildMapLayerMall
+#define SCHOOL      &BuildMapLayerSchool
 
 #define SHORELINE   &BuildMapLayerShoreline   
 #define RIVER       &BuildMapLayerRiver       
 #define CANAL       &BuildMapLayerCanal       
 #define LAKE        &BuildMapLayerLake        
 #define SEA         &BuildMapLayerSea         
-#define BOUNDARY    &BuildMapLayerBoundary
+
 #define	NATURE      &BuildMapLayerNature
+#define	PEAK        &BuildMapLayerPeak
 #define AMENITY     &BuildMapLayerAmenity
+#define BOUNDARY    &BuildMapLayerBoundary
+
 #define	CITY        &BuildMapLayerCity
 #define	TOWN        &BuildMapLayerTown
 #define	VILLAGE     &BuildMapLayerVillage
 #define	HAMLET      &BuildMapLayerHamlet
 #define	SUBURBS     &BuildMapLayerSuburbs
-#define	PEAK        &BuildMapLayerPeak
+
+#define	FOOD        &BuildMapLayerFood
+#define	CAFE        &BuildMapLayerCafe
+#define	DRINKS      &BuildMapLayerDrinks
+#define	FUEL        &BuildMapLayerFuel
+#define	ATM         &BuildMapLayerATM
 
 BuildMapDictionary DictionaryPrefix;
 BuildMapDictionary DictionaryStreet;
@@ -151,6 +171,7 @@ void buildmap_osm_common_find_layers (void) {
    BuildMapLayerAirport   = buildmap_layer_get ("airports");
    BuildMapLayerStation   = buildmap_layer_get ("stations");
    BuildMapLayerMall      = buildmap_layer_get ("malls");
+   BuildMapLayerSchool    = buildmap_layer_get ("schools");
 
    BuildMapLayerShoreline = buildmap_layer_get ("shore");
    BuildMapLayerRiver     = buildmap_layer_get ("rivers");
@@ -159,15 +180,21 @@ void buildmap_osm_common_find_layers (void) {
    BuildMapLayerSea       = buildmap_layer_get ("sea");
 
    BuildMapLayerNature    = buildmap_layer_get ("nature");
+   BuildMapLayerPeak	  = buildmap_layer_get ("peak");
    BuildMapLayerAmenity   = buildmap_layer_get ("amenity");
+   BuildMapLayerBoundary = buildmap_layer_get ("boundaries");
+
    BuildMapLayerCity      = buildmap_layer_get ("city");
    BuildMapLayerTown      = buildmap_layer_get ("town");
    BuildMapLayerVillage   = buildmap_layer_get ("village");
    BuildMapLayerHamlet    = buildmap_layer_get ("hamlet");
    BuildMapLayerSuburbs   = buildmap_layer_get ("suburbs");
-   BuildMapLayerPeak	  = buildmap_layer_get ("peak");
 
-   BuildMapLayerBoundary = buildmap_layer_get ("boundaries");
+   BuildMapLayerFuel      = buildmap_layer_get ("fuel");
+   BuildMapLayerFood      = buildmap_layer_get ("food");
+   BuildMapLayerCafe      = buildmap_layer_get ("cafe");
+   BuildMapLayerDrinks    = buildmap_layer_get ("drinks");
+   BuildMapLayerATM       = buildmap_layer_get ("atm");
 }
 
 char *stringtype[] = {
@@ -358,36 +385,36 @@ layer_info_t boundary_to_layer[] = {
 layer_info_t amenity_to_layer[] = {
         { 0,                    NULL,           0 },
         { "hospital",           HOSPITAL,       0 },            /* 1 */
-        { "pub",                NULL,           0 },            /* 2 */
+        { "pub",                DRINKS,         PLACE },        /* 2 */
         { "parking",            AMENITY,        AREA },         /* 3 */
         { "post_office",        AMENITY,        0 },            /* 4 */
-        { "fuel",               NULL,           0 },            /* 5 */
+        { "fuel",               FUEL,           PLACE },        /* 5 */
         { "telephone",          NULL,           0 },            /* 6 */
         { "toilets",            NULL,           0 },            /* 7 */
         { "post_box",           NULL,           0 },            /* 8 */
-        { "school",             AMENITY,        AREA },         /* 9 */
+        { "school",             SCHOOL,        AREA },         /* 9 */
         { "supermarket",        AMENITY,        0 },            /* 10 */
         { "library",            AMENITY,        0 },            /* 11 */
         { "theatre",            NULL,           0 },            /* 12 */
         { "cinema",             NULL,           0 },            /* 13 */
         { "police",             AMENITY,	0 },            /* 14 */
         { "fire_station",       AMENITY,	0 },            /* 15 */
-        { "restaurant",         NULL,           0 },            /* 16 */
-        { "fast_food",          NULL,           0 },            /* 17 */	/* Changed */
+        { "restaurant",         FOOD,           PLACE },        /* 16 */
+        { "fast_food",          FOOD,           PLACE },        /* 17 */	/* Changed */
         { "bus_station",        NULL,           0 },            /* 18 */
         { "place_of_worship",   AMENITY,	0 },            /* 19 */
-        { "cafe",               NULL,           0 },            /* 20 */
+        { "cafe",               CAFE,           PLACE },        /* 20 */
         { "bicycle_parking",    AMENITY,        AREA },         /* 21 */
         { "public_building",    AMENITY,        AREA },         /* 22 */
         { "grave_yard",         PARK,           AREA },         /* 23 */
-        { "university",         AMENITY,        AREA },         /* 24 */
-        { "college",            AMENITY,        AREA },         /* 25 */
+        { "university",         SCHOOL,        AREA },         /* 24 */
+        { "college",            SCHOOL,        AREA },         /* 25 */
         { "townhall",           AMENITY,        AREA },         /* 26 */
-        { "food_court",         NULL,           0 },            /* 27 */
+        { "food_court",         FOOD,           PLACE },        /* 27 */
         { "drinking_water",     NULL,           0 },            /* 28 */
-        { "bbq",                NULL,           0 },            /* 28 */
-        { "bar",                NULL,           0 },            /* 29 */
-        { "biergarten",         NULL,           0 },            /* 30 */
+        { "bbq",                FOOD,           PLACE },        /* 28 */
+        { "bar",                DRINKS,         PLACE },        /* 29 */
+        { "biergarten",         DRINKS,         PLACE },        /* 30 */
         { "ice_cream",          NULL,           0 },            /* 31 */
         { "kindergarten",       NULL,           0 },            /* 32 */
         { "ice_cream",          NULL,           0 },            /* 33 */
@@ -398,7 +425,7 @@ layer_info_t amenity_to_layer[] = {
         { "car_wash",           NULL,           0 },            /* 38 */
         { "grit_bin",           NULL,           0 },            /* 39 */
         { "taxi",               AMENITY,        AREA },         /* 40 */
-        { "atm",                NULL,           0 },            /* 41 */
+        { "atm",                ATM,            PLACE },        /* 41 */
         { "bank",               NULL,           0 },            /* 42 */
         { "bureau_de_change",   NULL,           0 },            /* 43 */
         { "pharmacy",           NULL,           0 },            /* 44 */

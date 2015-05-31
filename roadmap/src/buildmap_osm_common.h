@@ -90,6 +90,7 @@ extern int BuildMapLayerHospital;
 extern int BuildMapLayerAirport;
 extern int BuildMapLayerStation;
 extern int BuildMapLayerMall;
+extern int BuildMapLayerSchool;
 
 /* Water layers. */
 
@@ -99,8 +100,15 @@ extern int BuildMapLayerCanal;
 extern int BuildMapLayerLake;
 extern int BuildMapLayerSea;
 
+extern int BuildMapLayerFood;
+extern int BuildMapLayerCafe;
+extern int BuildMapLayerDrinks;
+extern int BuildMapLayerFuel;
+extern int BuildMapLayerATM;
+
 extern int BuildMapLayerBoundary;
 
+#if 0
 #define FREEWAY     &BuildMapLayerFreeway     
 #define RAMP        &BuildMapLayerRamp        
 #define MAIN        &BuildMapLayerMain        
@@ -120,6 +128,7 @@ extern int BuildMapLayerBoundary;
 #define LAKE        &BuildMapLayerLake        
 #define SEA         &BuildMapLayerSea         
 #define BOUNDARY    &BuildMapLayerBoundary
+#endif
 
 extern BuildMapDictionary DictionaryPrefix;
 extern BuildMapDictionary DictionaryStreet;

@@ -1,7 +1,7 @@
 Class.Name: All
 Class.Lines: Freeways Ramps Highways Streets Trails Rivers Shore Railroads Boundaries
-Class.Polygons: Lakes Sea Parks Hospitals Airports Stations Malls Nature Amenity
-Class.Places: City Town Village Hamlet Suburbs
+Class.Polygons: Lakes Sea Parks Hospitals Airports Stations Schools Malls Nature Amenity
+Class.Places: City Town Village Hamlet Suburbs Food Cafe Drinks Fuel ATM
 Class.NavigationModes: Car Bike Foot Boat
 Navigation.Car: Freeways Ramps Highways Streets
 Navigation.Bike: Streets Trails Shore Parks
@@ -43,6 +43,7 @@ Railroads.Style: dashed
 Railroads.Thickness: 1
 Railroads.Speeds: 1
 Rivers.Color: LightBlue
+Rivers.LabelFontColor: DarkBlue
 Rivers.Declutter: 300
 Rivers.Thickness: 3
 Rivers.Speed: 1
@@ -58,6 +59,10 @@ Malls.Color: yellow
 Malls.Declutter: 300
 Malls.Thickness: 1
 Malls.Speed: 1
+Schools.Color: beige
+Schools.Declutter: 300
+Schools.Thickness: 1
+Schools.Speed: 1
 Airports.Color: grey
 Airports.Declutter: 300
 Airports.Thickness: 1
@@ -91,14 +96,35 @@ Amenity.Declutter: 160
 Amenity.Thickness: 1
 Amenity.Speed: 1
 City.Color: red
-City.Declutter 2000
+City.Declutter: 10001
+City.LabelFontColor: Brown
 Town.Color: red
-Town.Declutter 1300
+Town.Declutter: 10002
+Town.LabelFontColor: Brown
 Village.Color: red
-Village.Declutter 800
+Village.Declutter: 1300
+Village.LabelFontColor: Brown
 Hamlet.Color: red
-Hamlet.Declutter 160
+Hamlet.Declutter: 10
+Hamlet.LabelFontColor: Brown
 Suburbs.Color: grey
-Suburbs.Declutter: 300
+Suburbs.Declutter: 1300
+Suburbs.LabelFontColor: Brown
 Peak.Color: brown
 Peak.Declutter: 1000
+
+Food.Color: pink
+Food.Declutter: 1300
+Food.LabelFontColor: pink
+Cafe.Color: aqua
+Cafe.Declutter: 1300
+Cafe.LabelFontColor: aqua
+Fuel.Color: grey
+Fuel.Declutter: 1300
+Fuel.LabelFontColor: grey
+Drinks.Color: blue
+Drinks.Declutter: 1300
+Drinks.LabelFontColor: blue
+ATM.Color: green
+ATM.Declutter: 1300
+ATM.LabelFontColor: green
