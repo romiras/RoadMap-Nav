@@ -83,7 +83,7 @@ echo "Fetching from $url"
 if [ "$want_compressed" ]
 then
     wget_opt="--header=Accept-Encoding: gzip"
-    if wget "$wget_opt" -O - "$url" >$xmlfile.tmp
+    if wget "$wget_opt" -O - "$url" >$xmlfile.tmp || exit 1
     then
 	case $(file $xmlfile.tmp) in
 	*gzip*)
@@ -92,12 +92,12 @@ then
 	*)
 	    echo "Note: download didn't use gzip encoding."
 	    echo "Compressing now..."
-	    gzip -c -d $xmlfile.tmp > $xmlfile
+	    gzip -c -d $xmlfile.tmp > $xmlfile || exit 1
 	    ;;
 	esac
     fi
 else
-    if wget $wget_opt -O - "$url" >$xmlfile.tmp
+    if wget $wget_opt -O - "$url" >$xmlfile.tmp || exit 1
     then
 	mv $xmlfile.tmp $xmlfile
     fi
