@@ -48,8 +48,8 @@ RMLIBSRC = roadmap_log.c \
 	roadmap_gpx.c \
 	roadmap_linefont.c \
 	roadmap_lang.c \
-	roadmap_iso.c \
-	roadmap_turns.c
+	roadmap_iso.c
+#	roadmap_turns.c
 
 RMLIBOBJS = $(RMLIBSRC:.c=.o)
 
