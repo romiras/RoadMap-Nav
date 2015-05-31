@@ -1275,7 +1275,9 @@ static int roadmap_screen_draw_square_places
    int place;
    int first_place;
    int last_place;
-   RoadMapPen layer_pen;
+   RoadMapPen layer_pen = 0;
+   const char *layer_sprite;
+   int labels_visible;
    int fips;
    int drawn = 0;
 
@@ -1283,6 +1285,8 @@ static int roadmap_screen_draw_square_places
 
    layer_pen = roadmap_layer_get_pen (layer, pen_index);
    if (layer_pen == NULL) return 0;
+   layer_sprite = roadmap_layer_sprite(layer);
+   labels_visible = roadmap_layer_labels_visible(layer);
    
    fips = roadmap_locator_active ();
 
@@ -1295,12 +1299,13 @@ static int roadmap_screen_draw_square_places
 
 	    roadmap_place_point(place, &pos);
             roadmap_math_coordinate (&pos, &guipoint);
-#if PLACE_MARK
-	    roadmap_sprite_draw ("PurpleCross" , &guipoint, 0);
-		    roadmap_math_rotate_coordinates (1, &guipoint);
-#endif
+	    if (layer_sprite) {
+		roadmap_sprite_draw (layer_sprite, &guipoint, 0);
+		roadmap_math_rotate_coordinates (1, &guipoint);
+	    }
 
-	    if ((pen_index == 0) &&   /* we do labels only for the first pen */
+	    if (labels_visible &&
+	        pen_index == 0 &&   /* we do labels only for the first pen */
 		    !RoadMapScreenDragging &&
 		    RoadMapScreenLabels) {
 		PluginPlace p = {ROADMAP_PLUGIN_ID, place, layer, fips};
@@ -1671,6 +1676,7 @@ void roadmap_screen_repaint (void) {
         
     }
 
+
     /* -- places -- */
     for (i = count-1; i >= 0; --i) {
         /* -- nothing to draw at this zoom? -- */
@@ -1684,30 +1690,29 @@ void roadmap_screen_repaint (void) {
         /* -- Look for the squares that are currently visible. */
         sqcount = roadmap_square_view (&in_view);
 
-        for (pen = 0; pen < max_pen; ++pen) {
+	pen = 0;
 
-            if (sqcount > 0) {
-               static int *layers = NULL;
-               static int  layers_size = 0;
-               int layer_count;
+	if (sqcount > 0) {
+	   static int *layers = NULL;
+	   static int  layers_size = 0;
+	   int layer_count;
 
-               roadmap_screen_reset_square_mask();
+	   roadmap_screen_reset_square_mask();
 
-               if (layers == NULL) {
-                  layers_size = roadmap_layer_max_defined();
-                  layers = (int *)calloc (layers_size, sizeof(int));
-                  roadmap_check_allocated(layers);
-               }
-               layer_count = roadmap_layer_visible_places
-                                (layers, layers_size, pen);
-               if (!layer_count) continue;
+	   if (layers == NULL) {
+	      layers_size = roadmap_layer_max_defined();
+	      layers = (int *)calloc (layers_size, sizeof(int));
+	      roadmap_check_allocated(layers);
+	   }
+	   layer_count = roadmap_layer_visible_places
+			    (layers, layers_size, pen);
+	   if (!layer_count) continue;
 
-               for (sq = sqcount - 1; sq >= 0; --sq) {
-                  drawnlist[i] += roadmap_screen_repaint_square (in_view[sq],
-		  	pen, layer_count, layers, PLACES);
-	       }
+	   for (sq = sqcount - 1; sq >= 0; --sq) {
+	      drawnlist[i] += roadmap_screen_repaint_square (in_view[sq],
+		    pen, layer_count, layers, PLACES);
+	   }
 
-	    }
 	}
 
         if (roadmap_screen_repaint_leave(count, count - i)) {
@@ -1716,6 +1721,7 @@ void roadmap_screen_repaint (void) {
         }
 
     }
+
 
 
     /* -- labels -- */

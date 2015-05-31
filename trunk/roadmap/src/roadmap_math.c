@@ -1152,9 +1152,10 @@ int roadmap_math_zoom_reset (void) {
 }
 
 
-int roadmap_math_declutter (int level) {
+/* returns true if the current zoom is _less_ than the declutter level */
+int roadmap_math_declutter (int declutter_level) {
 
-   return (RoadMapContext->zoom < level);
+   return (RoadMapContext->zoom < declutter_level);
 }
 
 

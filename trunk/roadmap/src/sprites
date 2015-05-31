@@ -109,6 +109,24 @@ A CirclePlus
 S ZoomOut
 A CircleMinus
 
+S Amenity
+A DottedCircle
+
+S Food
+A Plate
+
+S Cafe
+A Cup
+
+S Drinks
+A Mug
+
+S Fuel
+A FuelPump
+
+S ATM
+A Money
+
 # The actual drawing sprites:
 
 S BlueDart
@@ -235,6 +253,11 @@ D 0,0 10
 S Circle
 F black 1
 C 0,0 7
+
+S DottedCircle
+F black 1
+C 0,0 7
+C 0,0 1
 
 S Circle-Pointer
 F green 1
@@ -500,4 +523,51 @@ F black 1
 TB
 F darkgreen 2
 T 0,0 20
+
+S Mug
+F black 2
+C 0,0 3  
+F gold 1
+P 0,-3 0,6 6,6 6,-3
+F black 2
+L 0,-4 0,6 6,6 6,-4
+F white 2
+L 1,-4 5,-4
+
+S Cup
+F black 2
+C -4,2 3
+F white 1
+P -5,-2 -3,7 3,7 5,-2
+F black 2
+L -5,-2 -3,7 3,7 5,-2 -5,-2
+L -6,7 6,7
+
+S Money
+F lightgreen 1
+P -7,-4 7,-4 7,4 -7,4 -7,-4
+F black 1
+L -7,-4 7,-4 7,4 -7,4 -7,-4
+D 0,0 1
+D 0,1 2
+C 0,0 3
+D -5,-2 1
+D 5,2 1
+
+S Plate
+F white 1
+D 0,0 4
+F green 2
+C 1,4 6
+L -8,2 -8,9
+L -9,-2 -9,1 -8,2 -7,1 -7,-2
+L 10,-2 10,9
+
+S FuelPump
+F red 1
+P -4,-3 -4,12 4,12 4,-3
+F black 1
+L 4,10 5,10 5,0 6,-1
+F white 1
+P -2,-1 -2,4 2,4 2,-1
 

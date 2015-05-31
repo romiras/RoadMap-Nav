@@ -133,7 +133,12 @@ static void roadmap_sprite_syntax(char *msg)
  */
 static RoadMapSprite roadmap_sprite_search (const char *name)
 {
-   RoadMapSprite cursor;
+   static RoadMapSprite cursor;
+
+   /* optimize for repeated lookups */
+   if (cursor && strcasecmp(name, cursor->name) == 0) {
+	return cursor;
+   }
 
    for (cursor = RoadMapSpriteList; cursor != NULL; cursor = cursor->next) {
 

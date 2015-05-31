@@ -113,18 +113,22 @@ Suburbs.LabelFontColor: Brown
 Peak.Color: brown
 Peak.Declutter: 1000
 
-Food.Color: pink
+Food.Sprite: Food
 Food.Declutter: 1300
-Food.LabelFontColor: pink
-Cafe.Color: aqua
+Food.LabelDeclutter: 10
+
+Cafe.Sprite: Cafe
 Cafe.Declutter: 1300
-Cafe.LabelFontColor: aqua
-Fuel.Color: grey
+Cafe.LabelDeclutter: 10
+
+Fuel.Sprite: Fuel
 Fuel.Declutter: 1300
-Fuel.LabelFontColor: grey
-Drinks.Color: blue
+Fuel.LabelDeclutter: 10
+
+Drinks.Sprite: Drinks
 Drinks.Declutter: 1300
-Drinks.LabelFontColor: blue
-ATM.Color: green
+Drinks.LabelDeclutter: 10
+
+ATM.Sprite: ATM
 ATM.Declutter: 1300
-ATM.LabelFontColor: green
+ATM.LabelDeclutter: 10

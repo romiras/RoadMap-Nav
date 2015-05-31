@@ -114,6 +114,8 @@ int roadmap_layer_road_street(void);
 int roadmap_layer_road_last(void);
 
 int roadmap_layer_speed(int layer);
+const char *roadmap_layer_sprite (int layer);
+int roadmap_layer_labels_visible(int layer);
 
 
 #endif // INCLUDED__ROADMAP_LAYER__H

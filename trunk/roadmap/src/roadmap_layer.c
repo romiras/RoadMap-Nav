@@ -55,6 +55,7 @@
 #include "roadmap_canvas.h"
 #include "roadmap_input.h"
 #include "roadmap_plugin.h"
+#include "roadmap_sprite.h"
 
 #include "roadmap_layer.h"
 
@@ -154,6 +155,7 @@ typedef struct roadmap_layer_record {
 
     RoadMapConfigDescriptor declutter;
     RoadMapConfigDescriptor thickness;
+    RoadMapConfigDescriptor label_declutter;
 
     unsigned int pen_count;
     RoadMapPen pen[ROADMAP_MAX_LAYER_PENS];
@@ -161,6 +163,7 @@ typedef struct roadmap_layer_record {
 
     int navigation_modes;			/**< bitwise OR of the navigation modes supported */
     RoadMapConfigDescriptor speed;		/**< max speed */
+    RoadMapConfigDescriptor sprite;
 
 } RoadMapLayer;
 
@@ -253,7 +256,6 @@ static int roadmap_layer_is_visible (RoadMapLayer *layer)
    return r;
 }
 
-
 unsigned int roadmap_layer_max_defined(void) {
 
    return RoadMapMaxDefinedLayers + 1; /* To be safe, allocate a bit more. */
@@ -343,9 +345,6 @@ int roadmap_layer_visible_places (int *layers, int size, unsigned int pen_index)
     for (i = 0; i < RoadMapLayerCurrentClass->places_count; i++) {
 
         layerp = RoadMapLayerCurrentClass->layers + i;
-
-        if (pen_index >= layerp->pen_count) continue;
-        if (! layerp->in_use[pen_index]) continue;
 
         if (roadmap_layer_is_visible (layerp)) {
            if (count >= size) goto done;
@@ -886,6 +885,14 @@ static void roadmap_layer_load_file (const char *class_file) {
         layer->declutter.name     = "Declutter";
         roadmap_config_declare (class_config, &layer->declutter, "20248000000");
 
+        layer->label_declutter.category = layernames[i];
+        layer->label_declutter.name     = "LabelDeclutter";
+        roadmap_config_declare (class_config, &layer->label_declutter, "1000");
+
+        layer->sprite.category = layernames[i];
+        layer->sprite.name     = "Sprite";
+        roadmap_config_declare (class_config, &layer->sprite, "Amenity");
+
 	layer->speed.category = layernames[i];
 	layer->speed.name = "Speed";
 	roadmap_config_declare (class_config, &layer->speed, "120");
@@ -1120,23 +1127,65 @@ int roadmap_layer_is_street(int layer)
 }
 
 /**
+ * @brief returns the value of the text declutter parameter of this
+ *	layer, from default/All.
+ * @param layer
+ * @return -- whether or not labels should be printed at this zoom
+ */
+int roadmap_layer_labels_visible(int layer)
+{
+    RoadMapLayer		*layerp;
+    int d;
+
+    layer--;
+
+    if (RoadMapLayerCurrentClass == NULL) {
+	roadmap_log (ROADMAP_FATAL, "roadmap_layer_labels_visible : no current class");
+	return 0;
+    }
+
+    layerp = RoadMapLayerCurrentClass->layers + layer;
+    d = roadmap_config_get_integer (&layerp->label_declutter);
+	roadmap_log (ROADMAP_DEBUG, "roadmap_layer_road_last: declutter %d", d);
+    return roadmap_math_declutter (d);
+}
+
+
+/**
  * @brief returns the value of the Speed parameter of this layer, from default/All.
  * @param layer
  * @return speed, assumed by calling code to be in km/h (FIX ME)
  */
 int roadmap_layer_speed(int layer)
 {
-	RoadMapLayer		*layerp;
+    RoadMapLayer		*layerp;
 
-	layer--;
+    layer--;
 
-	if (RoadMapLayerCurrentClass == NULL) {
-	    roadmap_log (ROADMAP_FATAL, "roadmap_layer_road_last : no current class");
-	    return 0;
-	}
+    if (RoadMapLayerCurrentClass == NULL) {
+	roadmap_log (ROADMAP_FATAL, "roadmap_layer_speed: no current class");
+	return 0;
+    }
 
-	layerp = RoadMapLayerCurrentClass->layers + layer;
-	return roadmap_config_get_integer (&layerp->speed);
+    layerp = RoadMapLayerCurrentClass->layers + layer;
+    return roadmap_config_get_integer (&layerp->speed);
+}
+
+/**
+ * @brief returns the Sprite for the layer, used for places/POIs
+ * @param layer
+ * @return pointer to sprite, if any.
+ */
+const char *roadmap_layer_sprite (int layer) {
+
+   RoadMapLayer		*layerp;
+
+   layer--;
+
+   if (RoadMapLayerCurrentClass == NULL) return NULL;
+
+   layerp = RoadMapLayerCurrentClass->layers + layer;
+   return roadmap_config_get (&layerp->sprite);
 }
 
 void roadmap_layer_shutdown (void)
