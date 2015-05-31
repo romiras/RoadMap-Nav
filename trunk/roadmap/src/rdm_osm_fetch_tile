@@ -49,6 +49,11 @@ then
     echo Already have $xmlfile
     exit
 fi
+if [ -e ${xmlfile%.gz} ]
+then
+    echo Already have uncompressed $xmlfile
+    exit
+fi
 
 # normally the .osm.gz files are stored alongside the .rdm files.
 # but for development, it can be convenient to be able to get the .osm from
