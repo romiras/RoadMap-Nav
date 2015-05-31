@@ -253,4 +253,67 @@ const char *roadmap_place_get_name(int place_id)
     return roadmap_dictionary_get(RoadMapPlaceActive->PlaceNames, stringid);
 }
 
+#if NEAREST_PLACE
+static int roadmap_place_get_distance (const RoadMapPosition *position,
+		int line, int layer, RoadMapNeighbour *neighbour)
+   if (roadmap_math_line_is_visible (&neighbour->from, &neighbour->to)) {
+	calculate distance
+   }
+}
 
+static int roadmap_place_get_closest_in_square
+              (const RoadMapPosition *position, int square, int layer,
+               RoadMapNeighbour *neighbours, int count, int max) {
+   if (roadmap_place_in_square (square, layer, &first, &last) > 0) {
+         for (line = first_line; line <= last_line; line++) {
+            if (roadmap_place_get_distance (position, line, layer, &this)) {
+               count = roadmap_street_replace (neighbours, count, max, &this);
+            }
+         }
+   }
+}
+int roadmap_place_closest (const RoadMapArea *focus,
+                                    const RoadMapPosition *position,
+                                    PluginLine *place,
+                                    int *distance) {
+
+   static int *fipslist = NULL;
+
+   int i;
+   int county;
+   int county_count;
+   int square;
+
+   int count = 0;
+
+
+   if (RoadMapRangeActive == NULL) return 0;
+
+   roadmap_math_set_focus (focus);
+
+   county_count = roadmap_locator_by_position (position, &fipslist);
+
+   /* - For each candidate county: */
+
+   for (county = county_count - 1; county >= 0; --county) {
+
+      /* -- Access the county's database. */
+      if (roadmap_locator_activate (fipslist[county]) != ROADMAP_US_OK) continue;
+
+      /* -- Look for the square the current location fits in. */
+      square = roadmap_square_search (position);
+
+      if (square >= 0) {
+         /* The current location fits in one of the county's squares.  */
+         for (i = 0; i < categories_count; ++i) {
+            count = roadmap_place_get_closest_in_square
+                  (position, square, categories[i], neighbours, count, max);
+         }
+      }
+   }
+
+   roadmap_math_release_focus ();
+
+   return count;
+}
+#endif
