@@ -164,7 +164,7 @@ static int dsg2cfcc (const char *dsg) {
 
     e.key = (char *) dsg;
     ep = hsearch(e, FIND);
-    return ep ? BuildPlaceDSGcfcc[(int)ep->data] : 0;
+    return ep ? *(int *)ep->data : 0;
 }
 #endif
 
@@ -178,7 +178,7 @@ static void buildplace_dsg_add (const char *dsg, int cfcc) {
         if (BuildPlaceDSGCount + 1 > BUILDPLACE_MAX_DSG)
             buildmap_fatal(0, "maximum designations has been exceeded");
         e.key = BuildPlaceDSGStrings[BuildPlaceDSGCount] = strdup(dsg);
-        e.data = (char *) BuildPlaceDSGCount;
+        e.data = (void *) &BuildPlaceDSGcfcc[BuildPlaceDSGCount];
         ep = hsearch(e, ENTER);
         if (!ep)
             buildmap_fatal(0, "failed to add designation to hash");
@@ -204,7 +204,6 @@ static void buildplace_shapefile_process (const char *source, int verbose) {
     char name[160];
     int irec;
     int record_count;
-    int place;
     int pname;
     int cfcc;
     int point;
@@ -255,7 +254,7 @@ static void buildplace_shapefile_process (const char *source, int verbose) {
 
         point = buildmap_point_add (lon, lat);
 
-        place = buildmap_place_add (pname, cfcc, point);
+        buildmap_place_add (pname, cfcc, point);
         
         if (verbose) {
             if ((irec & 0xff) == 0) {
@@ -281,6 +280,57 @@ static void buildplace_shapefile_process (const char *source, int verbose) {
 
 static void buildplace_txt_process (const char *source, int verbose) {
 
+    static BuildMapDictionary DictionaryName;
+
+    char *bufp = NULL;
+    size_t buflen;
+    ssize_t gotlen;
+    char place[512];
+    char *name;
+    double lat, lon;
+    int ilat, ilon;
+    int lineno;
+    int nameindex;
+    int pname;
+    int cfcc;
+    int point;
+
+    buildmap_set_source((char *) source);
+
+    DictionaryName = buildmap_dictionary_open ("placename");
+
+    if (strcmp(source, "-") != 0)
+	    buildmap_fatal(0, "TXT format must come from stdin: use '-'");
+
+    lineno = 0;
+    while ((gotlen = getline(&bufp, &buflen, stdin)) != -1) {
+	int n;
+	lineno++;
+	n = sscanf(bufp, "%lf\t%lf\t%s\t%n", &lat, &lon, place, &nameindex);
+	if (n != 3)
+	    buildmap_fatal(0, "bad text line format, line %d: %s", lineno, bufp);
+
+	name = &bufp[nameindex];
+	printf("got %f %f %s %s\n", lat, lon, place, name);
+
+        pname = str2dict (DictionaryName, name);
+
+        cfcc  = dsg2cfcc(place);
+        if (cfcc == 0)
+            continue;
+
+        ilat = lat * 1000000.0;
+        ilon = lon * 1000000.0;
+
+        point = buildmap_point_add (ilon, ilat);
+
+        buildmap_place_add (pname, cfcc, point);
+
+	if ((lineno & 0xff) == 0) {
+	    buildmap_progress (lineno, 0);
+	}
+    }
+
 }
 
 
@@ -304,6 +354,7 @@ static void buildplace_read_dsg (const char *dsgfile) {
         if (fgets(buff, 2048, file)) {
             c = strspn(buff, " \t\r\n");
             if (buff[c] == '#' || strlen(buff+c) == 0) continue;
+				// buff[c] == '\0'
             
             cfcc = strtol(buff+c, &p, 10);
             if (cfcc < 0 || cfcc > BUILDMAP_MAX_PLACE_CFCC)
