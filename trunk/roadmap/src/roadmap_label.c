@@ -385,7 +385,7 @@ int roadmap_label_draw_cache (int angles) {
    int width, ascent, descent;
    RoadMapGuiRect r;
    RoadMapGuiPoint midpt;
-   short aang;
+   short aang, bang;
    roadmap_label *cPtr, *ocPtr, *ncPtr;
    int whichlist;
 #define OLDLIST 0
@@ -653,19 +653,15 @@ int roadmap_label_draw_cache (int angles) {
                   break;
                }
 
-               /* if labels are "almost" horizontal, the bbox check is
+               /* if both labels are "almost" horizontal, the bbox check is
                 * close enough.  (in addition, the line intersector
                 * has trouble with flat or steep lines.)
                 */
                aang = abs(cPtr->angle);
-               if (aang < 4 || aang > 86) {
+               bang = abs(ocPtr->angle);
+               if ((aang < 4 || aang > 86) &&
+                   (bang < 4 || bang > 86)) {
                   cannot_label = 3;
-                  break;
-               }
-
-               aang = abs(ocPtr->angle);
-               if (aang < 4 || aang > 86) {
-                  cannot_label = 4;
                   break;
                }
 
