@@ -336,7 +336,10 @@ mkshort(short_handle h, const char *istring)
         char *tstring;
         char *cp;
         char *np;
-        int i, l, nlen, replaced;
+        int i, l, replaced;
+#if NEEDED
+	int nlen;
+#endif
         mkshort_handle *hdl = (mkshort_handle *) h;
 
         /* 
@@ -438,9 +441,11 @@ mkshort(short_handle h, const char *istring)
         while ((np != ostring) && *(np-1) && isdigit(*(np-1) )) {
                 np--;
         }
+#if NEEDED
         if (np) {
                 nlen = strlen(np);
         }
+#endif
 
         /*
          * Now brutally truncate the resulting string, preserve trailing 

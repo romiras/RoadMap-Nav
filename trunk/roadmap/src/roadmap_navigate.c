@@ -648,10 +648,9 @@ void roadmap_navigate_locate (const RoadMapGpsPosition *gps_position)
  */
 void roadmap_navigate_initialize (void)
 {
-    int RoadMapNavigationClasses;
 
     roadmap_log (ROADMAP_WARNING, "roadmap_navigate_initialize");
-    RoadMapNavigationClasses = roadmap_layer_declare_navigation_mode ("Classes");
+    roadmap_layer_declare_navigation_mode ("Classes");
     roadmap_config_declare_enumeration ("session", &RoadMapNavigateFlag, "yes", "no", NULL);
 }
 
@@ -671,7 +670,7 @@ RoadMapTracking *roadmap_navigate_get_confirmed_street(void)
 PluginLine *roadmap_navigate_position2line(RoadMapPosition pos)
 {
 	RoadMapNeighbour	nb[ROADMAP_NEIGHBOURHOOD];
-	RoadMapTracking		nominated, candidate;
+	RoadMapTracking		candidate;
 	RoadMapArea		focus;
 	int			found, result, best, i, num;
 	static PluginLine	res;
@@ -687,7 +686,6 @@ PluginLine *roadmap_navigate_position2line(RoadMapPosition pos)
 		if (result > best) {
 			found = i;
 			best = result;
-			nominated = candidate;
 		}
 	}
 	if (roadmap_fuzzy_is_acceptable (best)) {

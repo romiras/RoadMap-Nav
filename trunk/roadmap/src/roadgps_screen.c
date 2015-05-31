@@ -217,7 +217,6 @@ static void roadgps_screen_draw_satellite_position
    double   scale = 0.0;
    double   azimuth;
 
-   int count;
    int strength;
    RoadMapGuiPoint centers[1];
    int radius[1];
@@ -250,8 +249,6 @@ static void roadgps_screen_draw_satellite_position
    }
    centers[0].x = satellite->position.x;
    centers[0].y = satellite->position.y;
-
-   count = 4;
 
    if (strength > 0) {
      radius[0]=radius[0]-1;
@@ -336,7 +333,7 @@ static void roadgps_screen_draw_position (void) {
   char data[100];
 
   RoadMapGuiPoint point;
-  int satcount, i, s, fix;
+  int satcount, i, fix;
 
   satcount = 0;
 
@@ -399,7 +396,7 @@ static void roadgps_screen_draw_position (void) {
   fix = RoadGpsPrecision.dimension;
   if (fix < 1) fix = 1;
   else if (fix > 3) fix = 3;
-  s = sprintf(data,"%d active satellites, %s fix", satcount, fixes[fix-1]);
+  sprintf(data,"%d active satellites, %s fix", satcount, fixes[fix-1]);
   roadmap_canvas_draw_string
       (&point, ROADMAP_CANVAS_LEFT, RoadMapGPSFontSize, data);
 
