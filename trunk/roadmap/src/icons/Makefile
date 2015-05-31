@@ -50,12 +50,15 @@ ROADMAP_ICONS_ALL = $(RM_ICONS_PNG) $(ROADMAP_ICONS_PNG)
 
 # the only pieces we try to build are the roadmap*.xpm files, and
 # these are optional if the "convert" program is missing.
-all:
-	@echo
-	@echo "If the $(CONVERT) program is missing, this next step(s)"
-	@echo "  may fail.  These errors can be ignored."
-	@echo
-	-$(MAKE) $(ROADMAP_ICONS_XPM)
+all: msg $(ROADMAP_ICONS_XPM)
+
+msg:
+	@if ! which convert >/dev/null ; then \
+	    echo ;\
+	    echo "If the $(CONVERT) program is missing, this next step(s)" ;\
+	    echo "  may fail.  These errors can be ignored." ;\
+	    echo ;\
+	fi
 
 clean:
 	$(RM) $(ROADMAP_ICONS_XPM) .depends.mk
@@ -91,7 +94,7 @@ rm_%.png : rm_%.xpm
 road%.xpm : road%.png
 	$(CONVERT) $< $@
 
-.PHONY: all install uninstall icons clean rm_icons
+.PHONY: all msg install uninstall icons clean rm_icons
 
 
 depends:
