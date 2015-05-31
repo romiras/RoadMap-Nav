@@ -106,7 +106,7 @@ static void *roadmap_place_map (roadmap_db *root) {
    context->PlaceByLayer = (int *) roadmap_db_get_data (layer_table);
    context->PlaceByLayerCount = roadmap_db_get_count (layer_table);
 
-   if (roadmap_db_get_size (layer_table) != context->PlaceCount * sizeof(int)) {
+   if (roadmap_db_get_size (layer_table) != context->PlaceByLayerCount * sizeof(int)) {
       roadmap_log (ROADMAP_ERROR, "invalid place/bylayer structure (2)");
       goto roadmap_place_map_abort;
    }
@@ -137,7 +137,7 @@ static void roadmap_place_activate (void *context) {
 
    RoadMapPlaceContext *place_context = (RoadMapPlaceContext *) context;
 
-   if (place_context->type != RoadMapPlaceType) {
+   if (place_context && place_context->type != RoadMapPlaceType) {
       roadmap_log (ROADMAP_FATAL, "invalid place context activated");
    }
    RoadMapPlaceActive = place_context;
@@ -179,13 +179,15 @@ int roadmap_place_in_square (int square, int layer, int *first, int *last) {
 
    int *index;
 
+   if (RoadMapPlaceActive == NULL) return 0; /* No line. */
+
    square = roadmap_square_index(square);
    if (square < 0) {
       return 0;   /* This square is empty. */
    }
 
    if (layer <= 0 || layer > RoadMapPlaceActive->PlaceBySquare[square].count) {
-      roadmap_log (ROADMAP_FATAL, "illegal layer %d", layer);
+      return 0;
    }
    index = RoadMapPlaceActive->PlaceByLayer
               + RoadMapPlaceActive->PlaceBySquare[square].first;
