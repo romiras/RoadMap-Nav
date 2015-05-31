@@ -389,8 +389,8 @@ void buildmap_turn_restrictions_save (void) {
 void buildmap_turn_restrictions_summary (void) {
 
    fprintf (stderr,
-            "-- turn restrictions table: %d items, %d add, %d bytes used\n"
-            "                            %d lines (range %d), max %lu points per line\n",
+            "-- turn restrictions table: %d items, %d add, %lu bytes used\n"
+            "                            %d lines (range %d), max %d points per line\n",
             TurnsCount, 0,
             TurnsCount * sizeof(RoadMapTurns)
                + (TurnsMaxNode + 1) * sizeof(RoadMapTurnsByNode),
