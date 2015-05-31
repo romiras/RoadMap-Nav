@@ -279,7 +279,7 @@ static void roadmap_line_unmap (void *context) {
 }
 
 roadmap_db_handler RoadMapLineHandler = {
-   "dictionary",
+   "line",
    roadmap_line_map,
    roadmap_line_activate,
    roadmap_line_unmap
