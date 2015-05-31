@@ -303,7 +303,7 @@ static void roadmap_display_sign (RoadMapSign *sign) {
     roadmap_log_push ("roadmap_display_sign");
 
     roadmap_screen_text_extents
-        (ROADMAP_TEXT_SIGNS, sign->content, RoadMapDisplayFontSize,
+        (ROADMAP_TEXT_SIGNS, sign->content, RoadMapDisplayFontSize, NULL,
             &width, &ascent, &descent, NULL);
 
     width += 8; /* Keep some room around the text. */
@@ -630,7 +630,7 @@ static void roadmap_display_console_box
     }
 
     roadmap_screen_text_extents
-        (ROADMAP_TEXT_SIGNS, text, RoadMapDisplayFontSize,
+        (ROADMAP_TEXT_SIGNS, text, RoadMapDisplayFontSize, NULL,
             &width, &ascent, &descent, NULL);
 
     canvas_width = roadmap_canvas_width();

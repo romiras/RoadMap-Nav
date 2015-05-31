@@ -82,7 +82,7 @@ void roadmap_screen_text_angle
         (int id, RoadMapGuiPoint *center,
                 int theta, int size, const char *text);
 void roadmap_screen_text_extents 
-        (int id, const char *text, int size,
+        (int id, const char *text, int size, RoadMapPen pen,
          int *width, int *ascent, int *descent, int *can_tilt);
 void roadmap_screen_shutdown (void);
 

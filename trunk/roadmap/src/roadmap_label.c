@@ -537,7 +537,7 @@ int roadmap_label_draw_cache (int angles) {
          if (cPtr->bbox.minx > cPtr->bbox.maxx) {
             roadmap_screen_text_extents
                     (ROADMAP_TEXT_LABELS, cPtr->text,
-                       RoadMapLabelFontSize ,
+                       RoadMapLabelFontSize , cPtr->pen,
                        &width, &ascent, &descent, &can_tilt);
             angles = angles && can_tilt;
 
@@ -547,7 +547,7 @@ int roadmap_label_draw_cache (int angles) {
 
             /* text is too long for this feature */
             /* (4 times longer than feature) */
-            if ((width * width / 16) > cPtr->featuresize_sq) {
+            if (!cPtr->is_place && (width * width / 16) > cPtr->featuresize_sq) {
                /* Keep this one in the cache as the feature size may change
                 * in the next run.  Keeping it is cheaper than looking it
                 * up again.

@@ -2340,11 +2340,12 @@ void roadmap_screen_text_angle (int id, RoadMapGuiPoint *center,
  * @param can_tilt
  */
 void roadmap_screen_text_extents (int id, const char *text, int size,
-         int *width, int *ascent, int *descent, int *can_tilt) {
+	RoadMapPen pen, int *width, int *ascent, int *descent, int *can_tilt) {
     if ((RoadMapLineFontSelect & id) != 0) {
         roadmap_linefont_extents
                 (text, size, width, ascent, descent, can_tilt);
     } else {
+	if (pen) roadmap_canvas_select_pen(pen);
         roadmap_canvas_get_text_extents
                 (text, size, width, ascent, descent, can_tilt);
     }

@@ -368,7 +368,7 @@ static void roadmap_sprite_decode_text
        for (i = 0; i < count; i++) {
           roadmap_screen_text_extents 
             (ROADMAP_TEXT_LABELS, textseq->obj.strings[i],
-             sprite->textsize, &width, &ascent, &descent, NULL);
+             sprite->textsize, NULL, &width, &ascent, &descent, NULL);
           if (width > max_width) max_width = width;
           tot_height += ascent + descent + 2;
        }
