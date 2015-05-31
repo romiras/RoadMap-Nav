@@ -509,7 +509,7 @@ static void buildus_county_sort (void) {
 /**
  * @brief
  */
-static void buildus_county_save (void) {
+static int buildus_county_save (void) {
 
    int i;
    int j;
@@ -658,6 +658,7 @@ static void buildus_county_save (void) {
           db_state[i].edges = State[state].edges;
       }
    }
+   return 0;
 }
 
 /**
