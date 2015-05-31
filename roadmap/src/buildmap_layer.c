@@ -58,21 +58,21 @@ int buildmap_layer_get (const char *name) {
 
    int i;
 
+   for (i = 0; i < BuildMapPlaceLayerCount; ++i) {
+      if (strcasecmp(BuildMapPlaceLayerList[i], name) == 0) {
+         return i + 1;
+      }
+   }
+
    for (i = 0; i < BuildMapLineLayerCount; ++i) {
       if (strcasecmp(BuildMapLineLayerList[i], name) == 0) {
-         return i+1;
+         return BuildMapPlaceLayerCount + i + 1;
       }
    }
 
    for (i = 0; i < BuildMapPolygonLayerCount; ++i) {
       if (strcasecmp(BuildMapPolygonLayerList[i], name) == 0) {
-         return BuildMapLineLayerCount + i + 1;
-      }
-   }
-
-   for (i = 0; i < BuildMapPlaceLayerCount; ++i) {
-      if (strcasecmp(BuildMapPlaceLayerList[i], name) == 0) {
-         return BuildMapPolygonLayerCount + i + 1;
+         return BuildMapPlaceLayerCount + BuildMapLineLayerCount + i + 1;
       }
    }
 
