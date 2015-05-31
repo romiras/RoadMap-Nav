@@ -52,6 +52,7 @@
 #include "roadmap_osm.h"
 #include "roadmap_iso.h"
 
+char *progname;
 int BuildMapNoLongLines;
 
 static int   BuildMapReplaceAll = 0;
@@ -786,22 +787,19 @@ int buildmap_osm_encode(char *latlon, int bits) {
  * @param progpath
  * @param msg
  */
-void usage(char *progpath, const char *msg) {
+void usage(const char *msg) {
 
-    char *prog = strrchr(progpath, '/');
-
-    if (prog)
-        prog++;
-    else
-        prog = progpath;
-
-    if (msg)
-        fprintf(stderr, "%s: %s\n", prog, msg);
     fprintf(stderr,
         "usage: %s [options] lat,lon[:lat,lon] -or- lat,lon:NN{mi|km}\n"
 	"  Use '--' after the options if the 'lat' value is negative.\n",
-	prog);
+	progname);
     opt_desc(options, 1);
+    exit(1);
+}
+
+void usage_err(const char *msg) {
+    if (msg)
+        fprintf(stderr, "%s: %s\n", progname, msg);
     exit(1);
 }
 
@@ -843,12 +841,18 @@ main(int argc, char **argv)
     int listonly;
     int tileid;
     char *class, *latlonarg, *fetcher, *inputfile;
+    
+    progname = strrchr(argv[0], '/');
+
+    if (progname) progname++;
+    else progname = argv[0];
+
 
     BuildMapResult = strdup(roadmap_path_preferred("maps")); /* default. */
 
     /* parse the options */
     error = opt_parse(options, &argc, argv, 0);
-    if (error) usage(argv[0], opt_strerror(error));
+    if (error) usage(opt_strerror(error));
 
     /* then, fetch the option values */
     error = opt_val("verbose", &verbose) ||
@@ -866,7 +870,7 @@ main(int argc, char **argv)
             opt_val("outputfile", &BuildMapFileName) ||
             opt_val("inputfile", &inputfile);
     if (error)
-        usage(argv[0], opt_strerror(error));
+        usage(opt_strerror(error));
 
     if (osm_bits < TILE_MINBITS || TILE_MAXBITS < osm_bits) {
         fprintf (stderr, "bits value %d out of range (%d to %d)",
@@ -883,7 +887,7 @@ main(int argc, char **argv)
     }
 
     if (!*fetcher) {
-        usage (argv[0], "missing fetcher command option");
+        usage_err ("missing fetcher command option");
     }
 
 
@@ -906,21 +910,24 @@ main(int argc, char **argv)
         count = 1;
 
     } else if (*inputfile && *BuildMapFileName) {
-            int r = buildmap_osm_text_process_file(inputfile, BuildMapFileName);
+            int r;
+
+	    if (argc > 0) usage_err("too many arguments");
+
+	    r = buildmap_osm_text_process_file(inputfile, BuildMapFileName);
             exit(r);
-    } else if (*inputfile) {
-            usage(argv[0], "cannot specify -i without -o");
-    } else if (*BuildMapFileName) {
-            usage(argv[0], "cannot specify -o without -i");
+
+    } else if (*inputfile || *BuildMapFileName) {
+
+            usage_err("must specify -i and -o together");
+
     } else {
 
         if (argc < 2)
-            usage(argv[0], "missing required arguments");
-
-        if (argc > 2)
-            usage(argv[0], "too many arguments");
+            usage_err("missing required lat/lon argument");
 
         latlonarg = argv[1];
+	argv++; argc--;
 
 	buildmap_info("processing with bits '%d'", osm_bits);
 
@@ -935,6 +942,8 @@ main(int argc, char **argv)
 
     }
 
+    if (argc != 1) usage_err("too many arguments");
+
     if (listonly) {
 	buildmap_osm_list_tiles(tileslist, count);
 	exit(0);
@@ -945,7 +954,5 @@ main(int argc, char **argv)
 
     free (tileslist);
 
-    if (error) exit(1);
-
-    exit(0);
+    exit(!!error);
 }
