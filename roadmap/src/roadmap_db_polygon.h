@@ -55,8 +55,8 @@ typedef struct {  /* table polygon/head */
 
 typedef struct {  /* table polygon/head */
 
-   unsigned long first;  /* 32 bits */
-   unsigned long count;  /* 32 bits */
+   unsigned int first;  /* 32 bits */
+   unsigned int count;  /* 32 bits */
 
    RoadMapString name;
    unsigned char cfcc;
