@@ -108,6 +108,7 @@ static RoadMapConfigDescriptor RoadMapConfigFont =
 struct roadmap_canvas_pen {   
    struct roadmap_canvas_pen *next;
    char  *name;
+   char  *color_name;
    agg::rgba8 color;
    int thickness;
 };
@@ -200,6 +201,9 @@ RoadMapPen roadmap_canvas_select_pen (RoadMapPen pen)
 {
    RoadMapPen old_pen = CurrentPen;
    dbg_time_start(DBG_TIME_SELECT_PEN);
+   if (pen) {
+      roadmap_log(ROADMAP_DEBUG, "selecting pen %s color %s", pen->name, pen->color_name);
+   }
    if (!CurrentPen || (pen->thickness != CurrentPen->thickness)) {
       profile.width(pen->thickness);
    }
@@ -228,6 +232,7 @@ RoadMapPen roadmap_canvas_create_pen (const char *name)
       roadmap_check_allocated(pen);
       
       pen->name = strdup (name);
+      pen->color_name = 0;
       pen->color = agg::rgba8(0, 0, 0);
       pen->thickness = 1;
       pen->next = RoadMapPenList;
@@ -244,7 +249,7 @@ RoadMapPen roadmap_canvas_create_pen (const char *name)
 void roadmap_canvas_set_foreground (const char *color) {
 
    if (!CurrentPen) return;
-
+   CurrentPen->color_name = strdup (color);
    CurrentPen->color = roadmap_canvas_agg_parse_color(color);
    roadmap_canvas_select_pen(CurrentPen);
 }
