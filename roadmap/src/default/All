@@ -8,127 +8,136 @@ Navigation.Bike: Streets Trails Shore Parks
 Navigation.Foot: Streets Trails Shore Parks Stations Malls Hospitals Airports
 Navigation.Boat: Rivers Shore Lakes Sea
 Freeways.Color: black
-Freeways.Color1: IndianRed
-Freeways.Delta1: -2
-Freeways.Color2: black
-Freeways.Delta2: 1
-Freeways.Declutter: 10000
-Freeways.Thickness: 6
-Freeways.Speed: 120
+ .Color1: IndianRed
+ .Delta1: -2
+ .Color2: black
+ .Delta2: 1
+ .Declutter: 10000
+ .Thickness: 6
+ .Speed: 120
 Ramps.Color: black
-Ramps.Color1: red
-Ramps.Delta1: -2
-Ramps.Declutter: 160
-Ramps.Thickness: 3
-Ramps.Speed: 120
+ .Color1: red
+ .Delta1: -2
+ .Declutter: 160
+ .Thickness: 3
+ .Speed: 120
 Highways.Color: black
-Highways.Color1: yellow
-Highways.Delta1: -2
-Highways.Declutter: 1300
-Highways.Thickness: 3
-Highways.Speed: 120
+ .Color1: yellow
+ .Delta1: -2
+ .Declutter: 1300
+ .Thickness: 3
+ .Speed: 120
 Streets.Color: black
-Streets.Color1: white
-Streets.Delta1: -2
-Streets.Declutter: 160
-Streets.Thickness: 2
-Streets.Speed: 90
+ .Color1: white
+ .Delta1: -2
+ .Declutter: 160
+ .Thickness: 2
+ .Speed: 90
 Trails.Color: DarkGrey
-Trails.Declutter: 160
-Trails.Thickness: 1
-Trails.Speed: 50
+ .LabelFontColor: Black
+ .LabelFontSize: 10
+ .Declutter: 160
+ .Thickness: 1
+ .Speed: 50
 Railroads.Color: black
-Railroads.Declutter: 250
-Railroads.Style: dashed
-Railroads.Thickness: 1
-Railroads.Speeds: 1
+ .Declutter: 250
+ .Style: dashed
+ .Thickness: 1
+ .Speeds: 1
+ .LabelFontSize: 10
 Rivers.Color: LightBlue
-Rivers.LabelFontColor: DarkBlue
-Rivers.Declutter: 300
-Rivers.Thickness: 3
-Rivers.Speed: 1
+ .LabelFontColor: DarkBlue
+ .LabelFontSize: 10
+ .Declutter: 300
+ .Thickness: 3
+ .Speed: 1
 Shore.Color: LightSlateBlue
-Shore.Declutter: 2000
-Shore.Thickness: 2
-Shore.Speed: 30
+ .Declutter: 2000
+ .Thickness: 2
+ .Speed: 30
 Hospitals.Color: red
-Hospitals.Declutter: 300
-Hospitals.Thickness: 1
-Hospitals.Speed: 1
+ .Declutter: 300
+ .Thickness: 1
+ .Speed: 1
 Malls.Color: yellow
-Malls.Declutter: 300
-Malls.Thickness: 1
-Malls.Speed: 1
+ .Declutter: 300
+ .Thickness: 1
+ .Speed: 1
 Schools.Color: beige
-Schools.Declutter: 300
-Schools.Thickness: 1
-Schools.Speed: 1
+ .Declutter: 300
+ .Thickness: 1
+ .Speed: 1
 Airports.Color: grey
-Airports.Declutter: 300
-Airports.Thickness: 1
-Airports.Speed: 1
+ .Declutter: 300
+ .Thickness: 1
+ .Speed: 1
 Stations.Color: grey
-Stations.Declutter: 300
-Stations.Thickness: 1
-Stations.Speed: 1
+ .Declutter: 300
+ .Thickness: 1
+ .Speed: 1
 Lakes.Color: LightBlue
-Lakes.Declutter: 1300
-Lakes.Thickness: 1
-Lakes.Speed: 1
+ .Declutter: 1300
+ .Thickness: 1
+ .Speed: 1
 Parks.Color: green
-Parks.Declutter: 600
-Parks.Thickness: 1
-Parks.Speed: 30
+ .Declutter: 600
+ .Thickness: 1
+ .Speed: 30
 Sea.Color: SlateBlue
-Sea.Declutter: 2147483647
-Sea.Thickness: 1
-Sea.Speed: 1
+ .Declutter: 2147483647
+ .Thickness: 1
+ .Speed: 1
 Boundaries.Color: darkgreen
-Boundaries.Thickness: 2
-Boundaries.Declutter: 2147483647
-Boundaries.Speed: 1
+ .Thickness: 2
+ .Declutter: 2147483647
+ .Speed: 1
 Nature.Color: green
-Nature.Declutter: 600
-Nature.Thickness: 1
-Nature.Speed: 1
+ .Declutter: 600
+ .Thickness: 1
+ .Speed: 1
 Amenity.Color: orange
-Amenity.Declutter: 160
-Amenity.Thickness: 1
-Amenity.Speed: 1
+ .Declutter: 160
+ .Thickness: 1
+ .Speed: 1
 City.Color: red
-City.Declutter: 10001
-City.LabelFontColor: Brown
+ .Declutter: 10001
+ .LabelFontColor: Brown
 Town.Color: red
-Town.Declutter: 10002
-Town.LabelFontColor: Brown
+ .Declutter: 10002
+ .LabelFontColor: Brown
 Village.Color: red
-Village.Declutter: 1300
-Village.LabelFontColor: Brown
+ .Declutter: 1300
+ .LabelFontColor: Brown
 Hamlet.Color: red
-Hamlet.Declutter: 10
-Hamlet.LabelFontColor: Brown
+ .Declutter: 10
+ .LabelFontColor: Brown
 Suburbs.Color: grey
-Suburbs.Declutter: 1300
-Suburbs.LabelFontColor: Brown
+ .Declutter: 1300
+ .LabelFontColor: Brown
 Peak.Color: brown
-Peak.Declutter: 1000
+ .Declutter: 1000
 
 Food.Sprite: Food
-Food.Declutter: 1300
-Food.LabelDeclutter: 10
+ .Declutter: 1300
+ .LabelDeclutter: 10
+ .LabelFontSize: 10
 
 Cafe.Sprite: Cafe
-Cafe.Declutter: 1300
-Cafe.LabelDeclutter: 10
+ .Declutter: 1300
+ .LabelDeclutter: 10
+ .LabelFontSize: 10
 
 Fuel.Sprite: Fuel
-Fuel.Declutter: 1300
-Fuel.LabelDeclutter: 10
+ .Declutter: 1300
+ .LabelDeclutter: 10
+ .LabelFontSize: 10
 
 Drinks.Sprite: Drinks
-Drinks.Declutter: 1300
-Drinks.LabelDeclutter: 10
+ .Declutter: 1300
+ .LabelDeclutter: 10
+ .LabelFontSize: 10
 
 ATM.Sprite: ATM
-ATM.Declutter: 1300
-ATM.LabelDeclutter: 10
+ .Declutter: 1300
+ .LabelDeclutter: 10
+ .LabelFontSize: 10
