@@ -25,6 +25,7 @@
  *   See roadmap_canvas.h.
  */
 
+#define PEN_DEBUG 0
 
 
 #ifdef WIN32_PROFILE
@@ -201,7 +202,7 @@ RoadMapPen roadmap_canvas_select_pen (RoadMapPen pen)
 {
    RoadMapPen old_pen = CurrentPen;
    dbg_time_start(DBG_TIME_SELECT_PEN);
-   if (pen) {
+   if (pen && PEN_DEBUG) {
       roadmap_log(ROADMAP_DEBUG, "selecting pen %s color %s", pen->name, pen->color_name);
    }
    if (!CurrentPen || (pen->thickness != CurrentPen->thickness)) {
@@ -785,7 +786,8 @@ void roadmap_canvas_agg_configure (unsigned char *buf, int width, int height, in
           }
       }
 
-      roadmap_log(ROADMAP_DEBUG, "loading AGG font from %s", font_file);
+      if (PEN_DEBUG)
+	  roadmap_log(ROADMAP_DEBUG, "loading AGG font from %s", font_file);
 
 
       if(m_feng.load_font(font_file, 0, gren) &&
