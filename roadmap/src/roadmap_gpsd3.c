@@ -192,6 +192,8 @@ int roadmap_gpsd3_decode (void *user_context,
 	    used[i] = true;
    }
 
+#warning 'used' not used.  seems fishy.
+
    for (i=0, s=1; i<MAX_POSSIBLE_SATS; i++) {
       if (gpsdp->used[i]) {
          (*RoadmapGpsd2SatelliteListener)

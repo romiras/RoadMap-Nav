@@ -408,7 +408,7 @@ static void buildmap_shapefile_read_rte (const char *source, int verbose) {
    int diff_to;
 
    int iCARTO, iFRADDL, iTOADDL, iFRADDR, iTOADDR, iZIPL, iZIPR;
-   int iFEDIRP, iFETYPEP, iFENAME, iFETYPES, iFEDIRS;
+   int iFEDIRP, iFENAME, iFETYPES, iFEDIRS;
    int iLEFT_MUN, iRIGHT_MUN, iLEFT_MAF, iRIGHT_MAF, iUID;
 
    DBFHandle hDBF;
@@ -442,7 +442,7 @@ static void buildmap_shapefile_read_rte (const char *source, int verbose) {
    iZIPL      = DBFGetFieldIndex(hDBF, F_FSAL);
    iZIPR      = DBFGetFieldIndex(hDBF, F_FSAR);
    iFEDIRP    = DBFGetFieldIndex(hDBF, F_FEDIRP);
-   iFETYPEP   = DBFGetFieldIndex(hDBF, F_FETYPEP);
+   // iFETYPEP   = DBFGetFieldIndex(hDBF, F_FETYPEP);
    iFENAME    = DBFGetFieldIndex(hDBF, F_FENAME);
    iFETYPES   = DBFGetFieldIndex(hDBF, F_FETYPES);
    iFEDIRS    = DBFGetFieldIndex(hDBF, F_FEDIRS);
@@ -907,7 +907,7 @@ static void buildmap_shapefile_read_dcw_roads (const char *source, int verbose) 
    int j, lat, lon;
    char *full_name;
 
-   int iEXS, iMED, iACC, iRTT, iUID;
+   int iEXS, iRTT, iUID;
 
    DBFHandle hDBF;
    SHPHandle hSHP;
@@ -950,8 +950,8 @@ static void buildmap_shapefile_read_dcw_roads (const char *source, int verbose) 
     ****************************************/
 
    iEXS       = DBFGetFieldIndex(hDBF, F_EXS);
-   iMED       = DBFGetFieldIndex(hDBF, F_MED);
-   iACC       = DBFGetFieldIndex(hDBF, F_ACC);
+   // iMED       = DBFGetFieldIndex(hDBF, F_MED);
+   // iACC       = DBFGetFieldIndex(hDBF, F_ACC);
    iRTT       = DBFGetFieldIndex(hDBF, F_RTT);
    iUID       = DBFGetFieldIndex(hDBF, F_ID);
 
@@ -1091,7 +1091,6 @@ static void buildmap_shapefile_read_state (const char *source, int verbose) {
    int    irec;
    int    record_count;
 
-   int line;
    int line_index;
    int tlid, cfcc;
 
@@ -1153,7 +1152,7 @@ static void buildmap_shapefile_read_state (const char *source, int verbose) {
              from_point = buildmap_point_add (frlong, frlat);
              to_point   = buildmap_point_add (tolong, tolat);
 
-             line = buildmap_line_add (tlid, cfcc, from_point, to_point,
+             buildmap_line_add (tlid, cfcc, from_point, to_point,
 			     ROADMAP_LINE_DIRECTION_BOTH);
          }
 
@@ -1254,7 +1253,6 @@ static void buildmap_shapefile_read_province (const char *source, int verbose) {
    int    irec;
    int    record_count;
 
-   int line;
    int line_index;
    int tlid, cfcc;
 
@@ -1316,7 +1314,7 @@ static void buildmap_shapefile_read_province (const char *source, int verbose) {
              from_point = buildmap_point_add (frlong, frlat);
              to_point   = buildmap_point_add (tolong, tolat);
 
-             line = buildmap_line_add (tlid, cfcc, from_point, to_point,
+             buildmap_line_add (tlid, cfcc, from_point, to_point,
 			     ROADMAP_LINE_DIRECTION_BOTH);
          }
 

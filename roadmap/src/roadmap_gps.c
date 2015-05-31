@@ -399,18 +399,16 @@ static void roadmap_gps_pgrme (void *context, const RoadMapNmeaFields *fields) {
  */
 static void roadmap_gps_gga (void *context, const RoadMapNmeaFields *fields) {
 
-   char status;
-
    RoadMapGpsQuality.dilution_horizontal = fields->gga.dilution/100.0;
    RoadMapGpsActiveSatelliteCount = fields->gga.count;
 
    if (fields->gga.quality == ROADMAP_NMEA_QUALITY_INVALID) {
 
-      status = roadmap_gps_update_status ('V');
+      roadmap_gps_update_status ('V');
 
    } else {
 
-      status = roadmap_gps_update_status ('A');
+      roadmap_gps_update_status ('A');
 
       RoadMapGpsReceivedTime = fields->gga.fixtime;
 

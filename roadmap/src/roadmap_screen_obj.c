@@ -779,7 +779,9 @@ void roadmap_screen_obj_draw (void) {
    for (cursor = RoadMapObjectList; cursor != NULL; cursor = cursor->next) {
       int state = 0;
       int angle = 0;
+#if LATER_ICON_SUPPORT
       int image_mode = IMAGE_NORMAL;
+#endif
       RoadMapGuiPoint pos;
 
       if (cursor->state_fn) {
@@ -790,13 +792,13 @@ void roadmap_screen_obj_draw (void) {
          if (state < 0 || state >= MAX_STATES) continue;
       }
 
+      roadmap_screen_obj_pos (cursor, &pos);
+
+#if LATER_ICON_SUPPORT
       if (cursor == RoadMapScreenObjSelected) {
          image_mode = IMAGE_SELECTED;
       }
 
-      roadmap_screen_obj_pos (cursor, &pos);
-
-#if LATER_ICON_SUPPORT
       if (cursor->images[state]) {
 
          roadmap_canvas_draw_image (cursor->images[state], &pos,

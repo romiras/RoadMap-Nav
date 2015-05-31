@@ -626,7 +626,6 @@ RoadMapString buildmap_dictionary_add (BuildMapDictionary dictionary,
    int  result;
 
    struct dictionary_tree *tree;
-   struct dictionary_tree *start_tree;
 
 
    if (length == 0) {
@@ -634,7 +633,6 @@ RoadMapString buildmap_dictionary_add (BuildMapDictionary dictionary,
    }
 
    result = buildmap_dictionary_search (dictionary, string, length, &tree);
-   start_tree = tree;
 
    if (result < 0) {
 

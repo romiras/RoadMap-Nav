@@ -309,13 +309,12 @@ void roadmap_iso_create_all_countries(void)
 {
     int i;
     static BuildMapDictionary state_dictionary;
-    static BuildMapDictionary county_dictionary;
-    RoadMapString state_symbol, state_name, dw;
+    RoadMapString state_symbol, state_name;
     char symbol[8];
 
     state_dictionary = buildmap_dictionary_open ("state");
-    county_dictionary = buildmap_dictionary_open ("county");
-    dw = buildmap_dictionary_add(state_dictionary, "DW", 2);
+    buildmap_dictionary_open ("county");
+    buildmap_dictionary_add(state_dictionary, "DW", 2);
     for (i=0; IsoCountryCodeTable[i].name; i++) {
         sprintf(symbol, "%s", IsoCountryCodeTable[i].alpha2);
 	state_symbol = buildmap_dictionary_add (state_dictionary,

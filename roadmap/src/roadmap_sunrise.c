@@ -209,7 +209,11 @@ void roadmap_moonposition(
     double xhor,yhor,zhor;
     double E0,E1,xeclip,yeclip,zeclip,Ls;
     double Moon_RA,Moon_Decl;
-    double xh,yh,zh,Iterations,E_error,Ebeforeit,Eafterit,E_ErrorBefore;
+    double xh,yh,zh,Iterations,E_error;
+    
+#if NEEDED
+    double Ebeforeit, Eafterit, E_ErrorBefore;
+#endif
 
     double lat  = LU_TO_DEG(position->latitude);
     double lon  = LU_TO_DEG(position->longitude);
@@ -256,7 +260,9 @@ void roadmap_moonposition(
     E=M+ DEGREES*e*sin(RADIANS * M)*(1+e * cos(RADIANS*M));
     E=Rev(E); 
 
+#if NEEDED
     Ebeforeit=E;
+#endif
 
     // now iterate until difference between E0 and E1 is less than 0.005_deg
     // use E0, calculate E1
@@ -271,14 +277,18 @@ void roadmap_moonposition(
         E1= E0-(E0-DEGREES*e*sin(RADIANS*E0)-M) / (1-e * cos(RADIANS*E0)) ;
         E=Rev(E1);
 
+#if NEEDED
         Eafterit=E;
+#endif
 
         if (E<E0) E_error=E0-E;
         else E_error=E-E0;
 
 
+#if NEEDED
         if (E<Ebeforeit) E_ErrorBefore=Ebeforeit-E;
         else E_ErrorBefore=E-Ebeforeit;
+#endif
 
     }
 
