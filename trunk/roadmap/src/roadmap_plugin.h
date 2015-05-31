@@ -61,6 +61,14 @@ typedef struct {
    int fips;
 
 } PluginLine;
+typedef struct {
+
+   int plugin_id;
+   int place_id;
+   int layer;
+   int fips;
+
+} PluginPlace;
 
 typedef struct {
 
@@ -109,6 +117,9 @@ void roadmap_plugin_initialize_all_plugins (void);
 
 int  roadmap_plugin_same_line (const PluginLine *line1,
                                const PluginLine *line2);
+
+int  roadmap_plugin_same_place (const PluginPlace *place1,
+                               const PluginPlace *place2);
 
 int  roadmap_plugin_same_street (const PluginStreet *street1,
                                  const PluginStreet *street2);
@@ -313,4 +324,5 @@ void roadmap_plugin_route_add(int, int, int);
 void roadmap_plugin_update_position (const RoadMapPosition *,
 		const PluginLine *, const PluginStreet *, const int);
 
+const char *roadmap_plugin_get_placename (const PluginPlace *place);
 #endif /* INCLUDED__ROADMAP_PLUGIN__H */

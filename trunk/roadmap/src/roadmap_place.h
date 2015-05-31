@@ -32,6 +32,8 @@ void roadmap_place_point   (int place, RoadMapPosition *position);
 
 int  roadmap_place_count (void);
 
+const char *roadmap_place_get_name(int place_id);
+
 extern roadmap_db_handler RoadMapPlaceHandler;
 
 #endif // _ROADMAP_PLACE__H_

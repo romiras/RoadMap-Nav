@@ -383,11 +383,13 @@ static int buildmap_place_save (void) {
 
    int *db_places;
    int *db_layer;
+   RoadMapString *db_name;
    RoadMapPlaceBySquare *db_square;
 
    buildmap_db *root;
    buildmap_db *data_table;
    buildmap_db *square_table;
+   buildmap_db *name_table;
    buildmap_db *layer_table;
 
 
@@ -422,6 +424,8 @@ static int buildmap_place_save (void) {
          }
          square_current = square;
 
+
+
          layer_current = 0; /* Restart from first layer. */
       }
 
@@ -454,13 +458,19 @@ static int buildmap_place_save (void) {
    }
    buildmap_db_add_data (data_table, PlaceCount, sizeof(int));
 
+   name_table = buildmap_db_add_section (root, "name");
+   if (name_table == NULL) {
+      buildmap_error (0, "Can't add a new section");
+      return 1;
+   }
+   buildmap_db_add_data (name_table, PlaceCount, sizeof(RoadMapString));
+
    square_table = buildmap_db_add_section (root, "bysquare");
    if (square_table == NULL) {
       buildmap_error (0, "Can't add a new section");
       return 1;
    }
-   buildmap_db_add_data (square_table,
-                         square_count, sizeof(RoadMapPlaceBySquare));
+   buildmap_db_add_data (square_table, square_count, sizeof(RoadMapPlaceBySquare));
 
    layer_table = buildmap_db_add_section (root, "bylayer");
    if (layer_table == NULL) {
@@ -470,6 +480,7 @@ static int buildmap_place_save (void) {
    buildmap_db_add_data (layer_table, layer_count, sizeof(int));
 
    db_places  = (int *) buildmap_db_get_data (data_table);
+   db_name  = (RoadMapString *) buildmap_db_get_data (name_table);
    db_layer   = (int *) buildmap_db_get_data (layer_table);
    db_square  = (RoadMapPlaceBySquare *) buildmap_db_get_data (square_table);
 
@@ -485,8 +496,9 @@ static int buildmap_place_save (void) {
       one_place = Place[j/BUILDMAP_BLOCK] + (j % BUILDMAP_BLOCK);
 
       db_places[i] = one_place->point;
-      square = one_place->square;
+      db_name[i] = one_place->name;
 
+      square = one_place->square;
       if (square != square_current) {
 
          if (square_current >= 0) {

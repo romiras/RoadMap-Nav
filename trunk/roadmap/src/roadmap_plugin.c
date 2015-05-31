@@ -33,6 +33,7 @@
 #include "roadmap_locator.h"
 #include "roadmap_street.h"
 #include "roadmap_shape.h"
+#include "roadmap_place.h"
 #include "roadmap_file.h"
 #include "roadmap_library.h"
 #include "roadmap_gps.h"
@@ -165,6 +166,20 @@ int roadmap_plugin_same_line (const PluginLine *line1,
    return ( (line1->plugin_id == line2->plugin_id) &&
             (line1->line_id == line2->line_id) &&
             (line1->fips == line2->fips) );
+}
+
+/**
+ * @brief are the two places the same ?
+ * @param line1
+ * @param line2
+ * @return
+ */
+int roadmap_plugin_same_place (const PluginPlace *place1,
+                              const PluginPlace *place2) {
+
+   return ( (place1->plugin_id == place2->plugin_id) &&
+            (place1->place_id == place2->place_id) &&
+            (place1->fips == place2->fips) );
 }
 
 /**
@@ -512,6 +527,11 @@ const char *roadmap_plugin_street_full_name (PluginLine *line) {
 
       return "";
    }
+}
+
+const char *roadmap_plugin_get_placename (const PluginPlace *place)
+{
+    return roadmap_place_get_name (place->place_id);
 }
 
 #if 0
