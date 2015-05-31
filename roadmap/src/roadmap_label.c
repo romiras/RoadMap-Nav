@@ -114,9 +114,7 @@ typedef struct {
    RoadMapGuiRect bbox; /* label bounding box */
    RoadMapGuiPoint poly[4];
 
-#if defined(ROADMAP_ADVANCED_STYLE)
    RoadMapPen pen;
-#endif
 
    unsigned short zoom;
    short angle;  /* degrees */
@@ -295,19 +293,14 @@ void roadmap_label_start (void) {
 
 }
 
-#if defined(ROADMAP_ADVANCED_STYLE)
-int roadmap_label_add (const RoadMapGuiPoint *point, int angle,
-                       int featuresize_sq, const PluginLine *line,
-                       RoadMapPen pen) {
-#else
-int roadmap_label_add (const RoadMapGuiPoint *point, int angle,
-                       int featuresize_sq, const PluginLine *line) {
-#endif
-   PluginPlace noplace = {ROADMAP_PLUGIN_ID, 0, 0, 0};
+int roadmap_label_add_worker (int is_line, const RoadMapGuiPoint *point,
+	const void *pluginptr, RoadMapPen pen, int angle, int featuresize_sq) {
+
+   PluginPlace nowhere = {ROADMAP_PLUGIN_ID, 0, 0, 0};
 
    roadmap_label *cPtr = 0;
 
-   if (featuresize_sq < RoadMapLabelMinFeatSizeSq) {
+   if (is_line && featuresize_sq < RoadMapLabelMinFeatSizeSq) {
       return -1;
    }
 
@@ -330,85 +323,29 @@ int roadmap_label_add (const RoadMapGuiPoint *point, int angle,
       RoadMapLabelCacheAlloced++;
    }
 
-   cPtr->notext = 0;
-   cPtr->text = NULL;
-
-   cPtr->bbox.minx = 1;
-   cPtr->bbox.maxx = -1;
-
-   cPtr->is_place = 0;
-   cPtr->place = noplace;
-   cPtr->line = *line;
-   cPtr->featuresize_sq = featuresize_sq;
-   cPtr->angle = normalize_angle(angle);
-
-   cPtr->center_point = *point;
-#if defined(ROADMAP_ADVANCED_STYLE)
-   cPtr->pen = pen;
-#endif
-
-   /* The stored point is not screen oriented, rotate is needed */
-   roadmap_math_rotate_coordinates (1, &cPtr->center_point);
-
-
-   /* the "generation" of a label is refreshed when it is re-added.
-    * later, labels cache entries can be aged, and discarded.
-    */
-   cPtr->gen = RoadMapLabelGeneration;
-
-   cPtr->zoom = RoadMapLabelCurrentZoom;
-
-   roadmap_list_append(&RoadMapLabelNew, &cPtr->link);
-
-   return 0;
-}
-
-#if defined(ROADMAP_ADVANCED_STYLE)
-int roadmap_label_add_place (const RoadMapGuiPoint *point,
-		       const PluginPlace *place, RoadMapPen pen) {
-#else
-int roadmap_label_add_place (const RoadMapGuiPoint *point,
-			const PluginPlace *place) {
-#endif
-   PluginLine noline = {ROADMAP_PLUGIN_ID, 0, 0, 0};
-
-   roadmap_label *cPtr = 0;
-
-   if (!ROADMAP_LIST_EMPTY(&RoadMapLabelSpares)) {
-      cPtr = (roadmap_label *)roadmap_list_remove
-                               (ROADMAP_LIST_FIRST(&RoadMapLabelSpares));
-      if (cPtr->text && *cPtr->text) {
-         free(cPtr->text);
-      }
+   if (is_line) {
+       cPtr->is_place = 0;
+       cPtr->line = *(PluginLine *)pluginptr;
+       cPtr->place = *(PluginPlace *)&nowhere;
+       cPtr->featuresize_sq = featuresize_sq;
+       cPtr->angle = normalize_angle(angle);
    } else {
-      if (RoadMapLabelCacheFull) return -1;
-
-      if (RoadMapLabelCacheAlloced == MAX_LABELS) {
-         roadmap_log (ROADMAP_WARNING, "Not enough room for labels.");
-         RoadMapLabelCacheFull = 1;
-         return -1;
-      }
-      cPtr = malloc (sizeof (*cPtr));
-      roadmap_check_allocated (cPtr);
-      RoadMapLabelCacheAlloced++;
+       cPtr->is_place = 1;
+       cPtr->place = *(PluginPlace *)pluginptr;
+       cPtr->line = *(PluginLine *)&nowhere;
+       cPtr->featuresize_sq = 999999;
+       cPtr->angle = 0;
    }
 
+
    cPtr->notext = 0;
    cPtr->text = NULL;
 
    cPtr->bbox.minx = 1;
    cPtr->bbox.maxx = -1;
 
-   cPtr->is_place = 1;
-   cPtr->place = *place;
-   cPtr->line = noline;
-   cPtr->featuresize_sq = 9999;
-   cPtr->angle = 0;
-
    cPtr->center_point = *point;
-#if defined(ROADMAP_ADVANCED_STYLE)
    cPtr->pen = pen;
-#endif
 
    /* The stored point is not screen oriented, rotate is needed */
    roadmap_math_rotate_coordinates (1, &cPtr->center_point);
@@ -425,6 +362,18 @@ int roadmap_label_add_place (const RoadMapGuiPoint *point,
 
    return 0;
 }
+
+int roadmap_label_add_place (const RoadMapGuiPoint *point,
+		       const PluginPlace *place, RoadMapPen pen) {
+    return roadmap_label_add_worker(0, point, place, pen, 0, 0);
+}
+
+int roadmap_label_add_line (const RoadMapGuiPoint *point, int angle,
+                       int featuresize_sq, const PluginLine *line,
+                       RoadMapPen pen) {
+    return roadmap_label_add_worker(1, point, line, pen, angle, featuresize_sq);
+}
+
 
 int roadmap_label_draw_cache (int angles) {
 
@@ -544,8 +493,12 @@ int roadmap_label_draw_cache (int angles) {
 		}
 #if LABEL_USING_LINEID
 		{
-		    char buf[40];
-		    sprintf(buf, "x%d", cPtr->place.place_id);
+		    char buf[1000];
+		    if (cPtr->place.place_id == 105 || 
+			cPtr->place.place_id == 65) {
+			roadmap_log(ROADMAP_DEBUG, "arl or lex");
+		    }
+		    sprintf(buf, "P%d %s", cPtr->place.place_id, cPtr->text);
 		    cPtr->otext = cPtr->text;
 		    cPtr->text = strdup(buf);
 		}
@@ -563,8 +516,9 @@ int roadmap_label_draw_cache (int angles) {
 		}
 #if LABEL_USING_LINEID
 		{
-		   char buf[40];
+		   char buf[1000];
 		   sprintf(buf, "%d", cPtr->line.line_id);
+		    sprintf(buf, "L%d %s", cPtr->line.line_id, cPtr->text);
 		   cPtr->otext = cPtr->text;
 		   cPtr->text = strdup(buf);
 		}
@@ -688,7 +642,8 @@ int roadmap_label_draw_cache (int angles) {
             }
 
             /* street already labelled */
-            if(roadmap_plugin_same_street(&cPtr->street, &ocPtr->street)) {
+            if(!cPtr->is_place && !ocPtr->is_place &&
+		    roadmap_plugin_same_street(&cPtr->street, &ocPtr->street)) {
                cannot_label = 1;  /* label is a duplicate */
                break;
             }

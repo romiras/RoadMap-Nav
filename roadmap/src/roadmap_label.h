@@ -31,18 +31,11 @@
 #include "roadmap_plugin.h"
 
 
-#if defined(ROADMAP_ADVANCED_STYLE)
-int roadmap_label_add (const RoadMapGuiPoint *point, int angle,
+int roadmap_label_add_line (const RoadMapGuiPoint *point, int angle,
                        int featuresize, const PluginLine *line, 
                        RoadMapPen pen);
 int roadmap_label_add_place (const RoadMapGuiPoint *point,
 		       const PluginPlace *place, RoadMapPen pen);
-#else
-int roadmap_label_add (const RoadMapGuiPoint *point, int angle,
-                       int featuresize, const PluginLine *line);
-int roadmap_label_add_place (const RoadMapGuiPoint *point,
-			const PluginPlace *place);
-#endif
 
 int roadmap_label_activate (void);
 int roadmap_label_initialize (void);
