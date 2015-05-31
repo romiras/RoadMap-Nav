@@ -178,6 +178,7 @@ MODE =		# blank for "normal" build
 # You can add any other special local CFLAGS values here
 # e.g., CFLAGS += -DWGET_GOOGLE_ROUTE
 # CFLAGS +=
+CFLAGS += -DWGET_GOOGLE_ROUTE
 
 # If you know you need other libraries for your build, you can
 # add those here as well.  For example:
