@@ -501,7 +501,7 @@ static int buildmap_place_save (void) {
 
             layer_sublist += layer_current;
             if (layer_sublist >= layer_count) {
-               buildmap_error (0, "invalid place/bylayer count");
+               buildmap_error (0, "invalid place/bylayer count (1)");
                return 1;
             }
          }
@@ -520,15 +520,27 @@ static int buildmap_place_save (void) {
       }
    }
 
+
    if (square_current >= 0) {
+#ifdef BEFORE
       db_layer[layer_sublist+square_current] = i;
       db_square[square_current].first = layer_sublist;
       db_square[square_current].count = layer_current;
 
       if (layer_sublist+square_current+1 != layer_count) {
-         buildmap_error (0, "invalid place/bylayer count");
+         buildmap_error (0, "invalid place/bylayer count (2)");
          return 1;
       }
+#else // pgf changed -- the conditions here now match those in the loop above
+      db_layer[layer_sublist+square_current] = i + 1;
+      db_square[square_current].first = layer_sublist;
+      db_square[square_current].count = layer_current;
+
+      if (layer_sublist+layer_current >= layer_count) {
+         buildmap_error (0, "invalid place/bylayer count (2)");
+         return 1;
+      }
+#endif
    }
 
    return 0;
