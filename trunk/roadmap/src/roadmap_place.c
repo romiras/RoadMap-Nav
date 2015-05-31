@@ -99,7 +99,7 @@ static void *roadmap_place_map (roadmap_db *root) {
    context->PlaceCount = roadmap_db_get_count (place_table);
 
    if (roadmap_db_get_size (place_table) != context->PlaceCount * sizeof(int)) {
-      roadmap_log (ROADMAP_ERROR, "invalid place/data structure");
+      roadmap_log (ROADMAP_ERROR, "invalid place/data structure (1)");
       goto roadmap_place_map_abort;
    }
 
@@ -107,7 +107,7 @@ static void *roadmap_place_map (roadmap_db *root) {
    context->PlaceByLayerCount = roadmap_db_get_count (layer_table);
 
    if (roadmap_db_get_size (layer_table) != context->PlaceCount * sizeof(int)) {
-      roadmap_log (ROADMAP_ERROR, "invalid place/bylayer structure");
+      roadmap_log (ROADMAP_ERROR, "invalid place/bylayer structure (2)");
       goto roadmap_place_map_abort;
    }
 
