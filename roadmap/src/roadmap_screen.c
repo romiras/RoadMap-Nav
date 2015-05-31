@@ -183,6 +183,8 @@ struct roadmap_screen_point_buffer {
 static struct roadmap_screen_point_buffer LinePoints;
 static struct roadmap_screen_point_buffer Points;
 
+#define PLACES 0
+#define LINES 1
 
 static RoadMapPen RoadMapBackground = NULL;
 static RoadMapPen RoadMapPenEdges = NULL;
@@ -1296,7 +1298,6 @@ static int roadmap_screen_draw_square_places
 #if PLACE_MARK
 	    roadmap_sprite_draw ("PurpleCross" , &guipoint, 0);
 		    roadmap_math_rotate_coordinates (1, &guipoint);
-	    roadmap_canvas_set_foreground("black");
 #endif
 
 	    if ((pen_index == 0) &&   /* we do labels only for the first pen */
@@ -1429,7 +1430,7 @@ static void roadmap_screen_reset_square_mask (void) {
 
 
 static int roadmap_screen_repaint_square (int square, int pen_type, 
-		      int layer_count, int *layers, int lines) {
+		      int layer_count, int *layers, int which) {
 
    int i;
 
@@ -1474,7 +1475,7 @@ static int roadmap_screen_repaint_square (int square, int pen_type,
 
         category = layers[i];
 
-	if (lines) {
+	if (which == LINES) {
             drawn += roadmap_screen_draw_square_lines
                     (square, category, fully_visible, pen_type);
 	} else { // places
@@ -1484,7 +1485,7 @@ static int roadmap_screen_repaint_square (int square, int pen_type,
 
    }
 
-   if (lines) {
+   if (which == LINES) {
        roadmap_screen_flush_lines();
        roadmap_screen_flush_points();
    }
@@ -1649,7 +1650,7 @@ void roadmap_screen_repaint (void) {
 
                for (sq = sqcount - 1; sq >= 0; --sq) {
                   drawnlist[i] += roadmap_screen_repaint_square (in_view[sq],
-		  	pen, layer_count, layers, 1);
+		  	pen, layer_count, layers, LINES);
 
                }
             }
@@ -1703,7 +1704,7 @@ void roadmap_screen_repaint (void) {
 
                for (sq = sqcount - 1; sq >= 0; --sq) {
                   drawnlist[i] += roadmap_screen_repaint_square (in_view[sq],
-		  	pen, layer_count, layers, 0);
+		  	pen, layer_count, layers, PLACES);
 	       }
 
 	    }
