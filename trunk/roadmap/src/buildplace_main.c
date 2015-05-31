@@ -50,152 +50,153 @@
 #define F_CC    "CC"
 #define F_TYPE  "TYPE"
 
-#endif /* ROADMAP_USE_SHAPEFILES */
+#endif				/* ROADMAP_USE_SHAPEFILES */
 
 
 #define BUILDPLACE_FORMAT_SHAPE     1
 #define BUILDPLACE_FORMAT_TXT       2
 
 #define BUILDPLACE_MAX_DSG       1024
-static char *BuildPlaceDSGStrings[BUILDPLACE_MAX_DSG] = {NULL};
-static int   BuildPlaceDSGcfcc[BUILDPLACE_MAX_DSG];
-static int   BuildPlaceDSGCount = 0;
+char *progname;
+static char *BuildPlaceDSGStrings[BUILDPLACE_MAX_DSG] = { NULL };
 
-static int   BuildPlaceFormatFamily = 0;
+static int BuildPlaceDSGlayer[BUILDPLACE_MAX_DSG];
+static int BuildPlaceDSGCount = 0;
 
-static int   BuildPlaceVerbose = 0;
-static char *BuildPlaceFormat  = "SHAPE";
+static char *BuildPlaceFormat = "TXT";
 
 static char *BuildPlaceResult;
-static char *BuildPlaceDSGFile  = "./designations.txt";
+static char *BuildPlaceDSGFile = "./designations.txt";
 
 struct opt_defs options[] = {
-   {"format", "f", opt_string, "TXT",
-      "Input files format (Text or ShapeFile)"},
-   {"dsg", "d", opt_string, "./designations.txt",
-        "The designations.txt file"},
-   {"maps", "m", opt_string, "",
-        "Location for the generated map files"},
-   {"verbose", "v", opt_flag, "0",
-        "Show progress information"},
-   OPT_DEFS_END
+    {"format", "f", opt_string, "TXT",
+     "Input files format (Text or ShapeFile)"},
+    {"dsg", "d", opt_string, "./designations.txt",
+     "The designations.txt file"},
+    {"maps", "m", opt_string, "",
+     "Location for the generated map files"},
+    {"verbose", "v", opt_flag, "0",
+     "Show more progress information"},
+    {"debug", "d", opt_flag, "0",
+     "Show debug information"},
+    OPT_DEFS_END
 };
 
 
 #if ROADMAP_USE_SHAPEFILES
 static RoadMapString
-str2dict (BuildMapDictionary d, const char *string) {
+str2dict(BuildMapDictionary d, const char *string)
+{
 
     if (!strlen(string)) {
-        return buildmap_dictionary_add (d, "", 0);
+	return buildmap_dictionary_add(d, "", 0);
     }
 
-    return buildmap_dictionary_add (d, (char *) string, strlen(string));
+    return buildmap_dictionary_add(d, (char *) string, strlen(string));
 }
-#endif /* ROADMAP_USE_SHAPEFILES */
+#endif				/* ROADMAP_USE_SHAPEFILES */
 
 
-static int  buildplace_select_format (void) {
+static void
+buildplace_save(const char *name)
+{
 
-   if (strcmp (BuildPlaceFormat, "TXT") == 0) {
-
-      BuildPlaceFormatFamily = BUILDPLACE_FORMAT_TXT;
-
-   } else if (strcmp (BuildPlaceFormat, "SHAPE") == 0) {
-
-      BuildPlaceFormatFamily = BUILDPLACE_FORMAT_SHAPE;
-
-   } else {
-      fprintf (stderr, "%s: unsupported input format, must be TXT or SHAPE\n",
-         BuildPlaceFormat);
-      return 0;
-   }
-   return 1;
-}
+    char db_name[128];
 
 
-static void buildplace_save (const char *name) {
+#ifdef WHY
+    char *cursor;
+    snprintf(db_name, 127, "usc%s", name);
 
-   char *cursor;
-   char db_name[128];
+    /* Remove the suffix if any was provided. */
+    cursor = strrchr(db_name, '.');
+    if (cursor != NULL) {
+	*cursor = 0;
+    }
+#endif
+    snprintf(db_name, 127, "usc%s.rdm", name);
 
-   snprintf (db_name, 127, "usc%s", name);
+    if (buildmap_db_open(BuildPlaceResult, db_name) < 0) {
+	buildmap_fatal(0, "cannot create database %s", db_name);
+    }
 
-   /* Remove the suffix if any was provided. */
+    buildmap_db_save();
 
-   cursor = strrchr (db_name, '.');
-   if (cursor != NULL) {
-      *cursor = 0;
-   }
-
-   if (buildmap_db_open (BuildPlaceResult, db_name) < 0) {
-      buildmap_fatal (0, "cannot create database %s", db_name);
-   }
-
-   buildmap_db_save ();
-
-   buildmap_db_close ();
+    buildmap_db_close();
 }
 
-static void buildplace_dsg_reset(void) {
+static void
+buildplace_dsg_reset(void)
+{
     int i;
 
     hdestroy();
-    for (i=0; i<BUILDPLACE_MAX_DSG; i++) {
-        if (BuildPlaceDSGStrings[i]) free(BuildPlaceDSGStrings[i]);
-        BuildPlaceDSGStrings[i] = NULL;
+    for (i = 0; i < BUILDPLACE_MAX_DSG; i++) {
+	if (BuildPlaceDSGStrings[i])
+	    free(BuildPlaceDSGStrings[i]);
+	BuildPlaceDSGStrings[i] = NULL;
     }
     BuildPlaceDSGCount = 0;
 }
 
 
-static void buildplace_dsg_initialize (void) {
+static void
+buildplace_dsg_initialize(void)
+{
     int i;
 
     hcreate(BUILDPLACE_MAX_DSG);
-    for (i=0; i<BUILDPLACE_MAX_DSG; i++) BuildPlaceDSGcfcc[i] = 0;
+    for (i = 0; i < BUILDPLACE_MAX_DSG; i++)
+	BuildPlaceDSGlayer[i] = 0;
     BuildPlaceDSGCount = 0;
 }
 
 
 #if ROADMAP_USE_SHAPEFILES
-static int dsg2cfcc (const char *dsg) {
+static int
+dsg2layer(const char *dsg)
+{
     ENTRY e, *ep;
 
     e.key = (char *) dsg;
     ep = hsearch(e, FIND);
-    return ep ? *(int *)ep->data : 0;
+    return ep ? *(int *) ep->data : 0;
 }
 #endif
 
 
-static void buildplace_dsg_add (const char *dsg, int cfcc) {
+static void
+buildplace_dsg_add(const char *dsg, int layer)
+{
     ENTRY e, *ep;
 
     e.key = (char *) dsg;
     ep = hsearch(e, FIND);
     if (!ep) {
-        if (BuildPlaceDSGCount + 1 > BUILDPLACE_MAX_DSG)
-            buildmap_fatal(0, "maximum designations has been exceeded");
-        e.key = BuildPlaceDSGStrings[BuildPlaceDSGCount] = strdup(dsg);
-        e.data = (void *) &BuildPlaceDSGcfcc[BuildPlaceDSGCount];
-        ep = hsearch(e, ENTER);
-        if (!ep)
-            buildmap_fatal(0, "failed to add designation to hash");
-        BuildPlaceDSGcfcc[BuildPlaceDSGCount++] = cfcc;
+	if (BuildPlaceDSGCount + 1 > BUILDPLACE_MAX_DSG)
+	    buildmap_fatal(0, "maximum designations has been exceeded");
+	e.key = BuildPlaceDSGStrings[BuildPlaceDSGCount] = strdup(dsg);
+	e.data = (void *) &BuildPlaceDSGlayer[BuildPlaceDSGCount];
+	ep = hsearch(e, ENTER);
+	if (!ep)
+	    buildmap_fatal(0, "failed to add designation to hash");
+	BuildPlaceDSGlayer[BuildPlaceDSGCount++] = layer;
     }
 }
 
 
-static void buildplace_dsg_summary (void) {
+static void
+buildplace_dsg_summary(void)
+{
 
-    fprintf (stderr,
-        "-- DSG hash statistics: %d DSG codes\n",
-        BuildPlaceDSGCount);
+    fprintf(stderr,
+	    "-- DSG hash statistics: %d DSG codes\n", BuildPlaceDSGCount);
 }
 
 
-static void buildplace_shapefile_process (const char *source, int verbose) {
+static void
+buildplace_shapefile_process(const char *source)
+{
 
 #if ROADMAP_USE_SHAPEFILES
 
@@ -205,7 +206,7 @@ static void buildplace_shapefile_process (const char *source, int verbose) {
     int irec;
     int record_count;
     int pname;
-    int cfcc;
+    int layer;
     int point;
     int lat, lon;
 
@@ -215,53 +216,51 @@ static void buildplace_shapefile_process (const char *source, int verbose) {
     SHPHandle hSHP;
     SHPObject *shp;
 
-    DictionaryName = buildmap_dictionary_open ("placename");
-    
+    DictionaryName = buildmap_dictionary_open("placename");
+
     buildmap_set_source((char *) source);
-    
+
     hDBF = DBFOpen(source, "rb");
     hSHP = SHPOpen(source, "rb");
 
-    iNAME  = DBFGetFieldIndex(hDBF, F_NAME);
+    iNAME = DBFGetFieldIndex(hDBF, F_NAME);
     iSTATE = DBFGetFieldIndex(hDBF, F_STATE);
-    iCC    = DBFGetFieldIndex(hDBF, F_CC  );
-    iTYPE  = DBFGetFieldIndex(hDBF, F_TYPE);
+    iCC = DBFGetFieldIndex(hDBF, F_CC);
+    iTYPE = DBFGetFieldIndex(hDBF, F_TYPE);
 
     record_count = DBFGetRecordCount(hDBF);
 
-    for (irec=0; irec<record_count; irec++) {
-    
-        strcpy(name, DBFReadStringAttribute(hDBF, irec, iCC));
-        strcat(name, "/");
-        strcat(name, DBFReadStringAttribute(hDBF, irec, iSTATE));
-        strcat(name, "/");
-        strcat(name, DBFReadStringAttribute(hDBF, irec, iNAME));
+    for (irec = 0; irec < record_count; irec++) {
 
-        pname = str2dict (DictionaryName, name);
+	strcpy(name, DBFReadStringAttribute(hDBF, irec, iCC));
+	strcat(name, "/");
+	strcat(name, DBFReadStringAttribute(hDBF, irec, iSTATE));
+	strcat(name, "/");
+	strcat(name, DBFReadStringAttribute(hDBF, irec, iNAME));
 
-        cfcc  = dsg2cfcc(DBFReadStringAttribute(hDBF, irec, iTYPE));
-        if (cfcc == 0)
-            continue;
+	pname = str2dict(DictionaryName, name);
 
-        /* add the place */
+	layer = dsg2layer(DBFReadStringAttribute(hDBF, irec, iTYPE));
+	if (layer == 0)
+	    continue;
 
-        shp = SHPReadObject(hSHP, irec);
+	/* add the place */
 
-        lon = shp->padfX[0] * 1000000.0;
-        lat = shp->padfY[0] * 1000000.0;
+	shp = SHPReadObject(hSHP, irec);
 
-        SHPDestroyObject(shp);
+	lon = shp->padfX[0] * 1000000.0;
+	lat = shp->padfY[0] * 1000000.0;
 
-        point = buildmap_point_add (lon, lat);
+	SHPDestroyObject(shp);
 
-        buildmap_place_add (pname, cfcc, point);
-        
-        if (verbose) {
-            if ((irec & 0xff) == 0) {
-                buildmap_progress (irec, record_count);
-            }
-        }     
-              
+	point = buildmap_point_add(lon, lat);
+
+	buildmap_place_add(pname, layer, point);
+
+	if ((irec & 0xff) == 0) {
+	    buildmap_progress(irec, record_count);
+	}
+
     }
 
     DBFClose(hDBF);
@@ -269,16 +268,17 @@ static void buildplace_shapefile_process (const char *source, int verbose) {
 
 #else
 
-   fprintf (stderr,
-            "cannot process %s: built with no shapefile support.\n",
-            source);
-   exit(1);
+    fprintf(stderr,
+	    "cannot process %s: built with no shapefile support.\n", source);
+    exit(1);
 
-#endif /* ROADMAP_USE_SHAPEFILES */
+#endif				/* ROADMAP_USE_SHAPEFILES */
 }
 
 
-static void buildplace_txt_process (const char *source, int verbose) {
+static void
+buildplace_txt_process(const char *source)
+{
 
     static BuildMapDictionary DictionaryName;
 
@@ -292,15 +292,15 @@ static void buildplace_txt_process (const char *source, int verbose) {
     int lineno;
     int nameindex;
     int pname;
-    int cfcc;
+    int layer;
     int point;
 
     buildmap_set_source((char *) source);
 
-    DictionaryName = buildmap_dictionary_open ("placename");
+    DictionaryName = buildmap_dictionary_open("placename");
 
     if (strcmp(source, "-") != 0)
-	    buildmap_fatal(0, "TXT format must come from stdin: use '-'");
+	buildmap_fatal(0, "TXT format must come from stdin: use '-'");
 
     lineno = 0;
     while ((gotlen = getline(&bufp, &buflen, stdin)) != -1) {
@@ -308,144 +308,164 @@ static void buildplace_txt_process (const char *source, int verbose) {
 	lineno++;
 	n = sscanf(bufp, "%lf\t%lf\t%s\t%n", &lat, &lon, place, &nameindex);
 	if (n != 3)
-	    buildmap_fatal(0, "bad text line format, line %d: %s", lineno, bufp);
+	    buildmap_fatal(0, "bad text line format, line %d: %s", lineno,
+			   bufp);
 
 	name = &bufp[nameindex];
-	printf("got %f %f %s %s\n", lat, lon, place, name);
+	buildmap_debug("got %f %f %s %s", lat, lon, place, name);
 
-        pname = str2dict (DictionaryName, name);
+	pname = str2dict(DictionaryName, name);
 
-        cfcc  = dsg2cfcc(place);
-        if (cfcc == 0)
-            continue;
+	layer = dsg2layer(place);
+	if (layer == 0)
+	    continue;
 
-        ilat = lat * 1000000.0;
-        ilon = lon * 1000000.0;
+	ilat = lat * 1000000.0;
+	ilon = lon * 1000000.0;
 
-        point = buildmap_point_add (ilon, ilat);
+	point = buildmap_point_add(ilon, ilat);
 
-        buildmap_place_add (pname, cfcc, point);
+	buildmap_place_add(pname, layer, point);
 
-	if ((lineno & 0xff) == 0) {
-	    buildmap_progress (lineno, 0);
+	if ((lineno % 100) == 0) {
+	    buildmap_progress(lineno, 0);
 	}
     }
 
 }
 
 
-static void buildplace_read_dsg (const char *dsgfile) {
+static void
+buildplace_read_dsg(const char *dsgfile)
+{
 
     FILE *file;
     char buff[2048];
     char *p;
-    int  c;
-    int  cfcc;
-   
+    int c;
+    int layer;
+
     buildplace_dsg_initialize();
-   
-    file = fopen (dsgfile, "rb");
+
+    file = fopen(dsgfile, "rb");
     if (file == NULL) {
-        buildmap_fatal (0, "cannot open file %s", dsgfile);
+	buildmap_fatal(0, "cannot open file %s", dsgfile);
     }
 
     while (!feof(file)) {
 
-        if (fgets(buff, 2048, file)) {
-            c = strspn(buff, " \t\r\n");
-            if (buff[c] == '#' || strlen(buff+c) == 0) continue;
-				// buff[c] == '\0'
-            
-            cfcc = strtol(buff+c, &p, 10);
-            if (cfcc < 0 || cfcc > BUILDMAP_MAX_PLACE_CFCC)
-                buildmap_fatal (0, "place cfcc is out of range");
-            
-            while (isspace(*p)) p++; /* skip leading blanks */
-            c = strcspn(p, " \t\r\n");
-            p[c] = '\0';
-            
-            buildplace_dsg_add(p, cfcc);
-        }
+	if (fgets(buff, 2048, file)) {
+	    c = strspn(buff, " \t\r\n");
+	    if (buff[c] == '#' || strlen(buff + c) == 0)
+		continue;
+	    // buff[c] == '\0'
+
+	    layer = strtol(buff + c, &p, 10);
+	    if (layer < 0 || layer > BUILDMAP_MAX_PLACE_LAYER)
+		buildmap_fatal(0, "place layer is out of range");
+
+	    while (isspace(*p))
+		p++;		/* skip leading blanks */
+	    c = strcspn(p, " \t\r\n");
+	    p[c] = '\0';
+
+	    buildplace_dsg_add(p, layer);
+	}
     }
 
-    fclose (file);
+    fclose(file);
 }
 
 
-static void buildplace_process (const char *source, const char *fips,
-                                int verbose) {
 
-   switch (BuildPlaceFormatFamily) {
+void
+usage(char *progpath, const char *msg)
+{
 
-      case BUILDPLACE_FORMAT_SHAPE:
-         buildplace_shapefile_process (source, verbose);
-         break;
+    char *prog = strrchr(progpath, '/');
 
-      case BUILDPLACE_FORMAT_TXT:
-         buildplace_txt_process (source, verbose);
-         break;
-   }
+    if (prog)
+	prog++;
+    else
+	prog = progpath;
 
-   buildmap_db_sort();
-
-   if (verbose) {
-
-      roadmap_hash_summary ();
-      buildmap_db_summary ();
-      buildplace_dsg_summary ();
-   }
-
-   buildplace_save (fips);
-
-   buildmap_db_reset ();
-   buildplace_dsg_reset ();
-   roadmap_hash_reset ();
+    if (msg)
+	fprintf(stderr, "%s: %s\n", prog, msg);
+    fprintf(stderr, "usage: %s [options] <FIPS code> <source>\n", prog);
+    opt_desc(options, 1);
+    exit(1);
 }
 
+int
+main(int argc, char **argv)
+{
 
-void usage(char *progpath, const char *msg) {
+    int verbose = 0, debug = 0;
+    int error;
+    char *source, *fips;
 
-   char *prog = strrchr(progpath, '/');
+    progname = strrchr(argv[0], '/');
 
-   if (prog)
-       prog++;
-   else
-       prog = progpath;
+    if (progname)
+	progname++;
+    else
+	progname = argv[0];
 
-   if (msg)
-       fprintf(stderr, "%s: %s\n", prog, msg);
-   fprintf(stderr,
-       "usage: %s [options] <FIPS code> <source>\n", prog);
-   opt_desc(options, 1);
-   exit(1);
+    // BuildPlaceResult = strdup(roadmap_path_preferred("maps")); /* default. */
+
+    /* parse the options */
+    error = opt_parse(options, &argc, argv, 0);
+    if (error)
+	usage(progname, opt_strerror(error));
+
+    /* then, fetch the option values */
+    error = opt_val("maps", &BuildPlaceResult) ||
+	opt_val("format", &BuildPlaceFormat) ||
+	opt_val("dsg", &BuildPlaceDSGFile) ||
+	opt_val("verbose", &verbose) || opt_val("debug", &debug);
+    if (error)
+	usage(progname, opt_strerror(error));
+
+    if (debug)
+	buildmap_message_adjust_level(BUILDMAP_MESSAGE_DEBUG);
+    else if (verbose)
+	buildmap_message_adjust_level(BUILDMAP_MESSAGE_VERBOSE);
+
+    if (argc != 3)
+	usage(progname, "missing required arguments");
+
+    fips = argv[1];
+    source = argv[2];
+
+    buildplace_read_dsg(BuildPlaceDSGFile);
+
+    if (strcasecmp(BuildPlaceFormat, "TXT") == 0) {
+
+	buildplace_txt_process(source);
+
+    } else if (strcasecmp(BuildPlaceFormat, "SHAPE") == 0) {
+
+	buildplace_shapefile_process(source);
+
+    } else {
+	fprintf(stderr, "%s: unsupported input format, must be TXT or SHAPE\n",
+		BuildPlaceFormat);
+	exit(1);
+    }
+
+    buildmap_db_sort();
+
+    if (verbose) {
+	roadmap_hash_summary();
+	buildmap_db_summary();
+	buildplace_dsg_summary();
+    }
+
+    buildplace_save(fips);
+
+    buildmap_db_reset();
+    buildplace_dsg_reset();
+    roadmap_hash_reset();
+
+    return 0;
 }
-
-int main (int argc, char **argv) {
-
-   int error;
-   BuildPlaceResult = strdup(roadmap_path_preferred("maps")); /* default. */
-
-   /* parse the options */
-   error = opt_parse(options, &argc, argv, 0);
-   if (error) usage(argv[0], opt_strerror(error));
-
-   /* then, fetch the option values */
-   error = opt_val("verbose", &BuildPlaceVerbose) ||
-           opt_val("format", &BuildPlaceFormat) ||
-           opt_val("dsg", &BuildPlaceDSGFile) ||
-           opt_val("maps", &BuildPlaceResult);
-   if (error)
-      usage(argv[0], opt_strerror(error));
-
-   if (!buildplace_select_format())
-      exit(1);
-
-   if (argc != 3) usage(argv[0], "missing required arguments");
-
-   buildplace_read_dsg (BuildPlaceDSGFile);
-
-   buildplace_process (argv[2], argv[1], BuildPlaceVerbose);
-
-   return 0;
-}
-

@@ -24,7 +24,7 @@
 #ifndef INCLUDED__BUILDMAP_PLACE__H
 #define INCLUDED__BUILDMAP_PLACE__H
 
-#define BUILDMAP_MAX_PLACE_CFCC  10
+#define BUILDMAP_MAX_PLACE_LAYER  10
 
 int  buildmap_place_add (int name, int cfcc, int point);
 
