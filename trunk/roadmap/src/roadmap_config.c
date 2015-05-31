@@ -539,7 +539,7 @@ static int roadmap_config_load_file
    FILE *file;
    char  line[1024];
 
-   char *category;
+   char *category, *prevcategory = NULL;
    char *name;
    char *value;
 
@@ -561,12 +561,14 @@ static int roadmap_config_load_file
 
         if (fgets (line, sizeof(line), file) == NULL) break;
 
-        category = roadmap_config_extract_data (line, sizeof(line));
-        if (category == NULL) continue;
+        p = roadmap_config_extract_data (line, sizeof(line));
+        if (p == NULL) continue;
 
         /* Decode the line (category.name: value). */
         
-        p = roadmap_config_skip_until (category, '.');
+	category = p;
+
+        p = roadmap_config_skip_until (p, '.');
         if (*p != '.') continue;
         *(p++) = 0;
 
@@ -587,7 +589,18 @@ static int roadmap_config_load_file
 
         value = strdup (value);
         descriptor.name = strdup (name);
-        descriptor.category = strdup (category);
+	if (!*category) {
+	    if (prevcategory) {
+        	descriptor.category = strdup(prevcategory);
+	    } else {
+		roadmap_log (ROADMAP_FATAL, "Empty category name used"
+			"without prior category in %s", config->file_name);
+	    }
+	} else {
+            descriptor.category = strdup (category);
+	    free(prevcategory);
+	    prevcategory = strdup(category);
+	}
         descriptor.reference = NULL;
 
 
