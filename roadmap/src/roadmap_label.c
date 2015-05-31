@@ -407,7 +407,6 @@ int roadmap_label_draw_cache (int angles) {
            (whichlist == OLDLIST ? &RoadMapLabelCache : &RoadMapLabelNew,
                 item, tmp) {
 
-
          cPtr = (roadmap_label *)item;
 
          if ((unsigned short)(RoadMapLabelGeneration - cPtr->gen) >
@@ -495,12 +494,6 @@ int roadmap_label_draw_cache (int angles) {
 #if LABEL_USING_LINEID
 		{
 		    char buf[1000];
-#if 0
-		    if (cPtr->place.place_id == 105 || 
-			cPtr->place.place_id == 65) {
-			roadmap_log(ROADMAP_DEBUG, "arl or lex");
-		    }
-#endif
 		    sprintf(buf, "P%d %s", cPtr->place.place_id, cPtr->text);
 		    cPtr->otext = cPtr->text;
 		    cPtr->text = strdup(buf);
@@ -520,8 +513,7 @@ int roadmap_label_draw_cache (int angles) {
 #if LABEL_USING_LINEID
 		{
 		   char buf[1000];
-		   sprintf(buf, "%d", cPtr->line.line_id);
-		    sprintf(buf, "L%d %s", cPtr->line.line_id, cPtr->text);
+		   sprintf(buf, "L%d %s", cPtr->line.line_id, cPtr->text);
 		   cPtr->otext = cPtr->text;
 		   cPtr->text = strdup(buf);
 		}
