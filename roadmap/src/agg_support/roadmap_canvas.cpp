@@ -111,6 +111,8 @@ struct roadmap_canvas_pen {
    char  *name;
    char  *color_name;
    agg::rgba8 color;
+   char  *font_color_name;
+   agg::rgba8 font_color;
    int thickness;
 };
 
@@ -233,8 +235,10 @@ RoadMapPen roadmap_canvas_create_pen (const char *name)
       roadmap_check_allocated(pen);
       
       pen->name = strdup (name);
-      pen->color_name = 0;
-      pen->color = agg::rgba8(0, 0, 0);
+      pen->font_color_name =
+	    pen->color_name = 0;
+      pen->font_color =
+	    pen->color = agg::rgba8(0, 0, 0);
       pen->thickness = 1;
       pen->next = RoadMapPenList;
       
@@ -252,6 +256,14 @@ void roadmap_canvas_set_foreground (const char *color) {
    if (!CurrentPen) return;
    CurrentPen->color_name = strdup (color);
    CurrentPen->color = roadmap_canvas_agg_parse_color(color);
+   roadmap_canvas_select_pen(CurrentPen);
+}
+
+void roadmap_canvas_set_label_font_color(const char *color) {
+
+   if (!CurrentPen) return;
+   CurrentPen->font_color_name = strdup (color);
+   CurrentPen->font_color = roadmap_canvas_agg_parse_color(color);
    roadmap_canvas_select_pen(CurrentPen);
 }
 
@@ -296,7 +308,6 @@ void roadmap_canvas_set_brush_style(const char *style) {}
 void roadmap_canvas_set_brush_isbackground(int isbackground) {}
 
 void roadmap_canvas_set_label_font_name(const char *name) {}
-void roadmap_canvas_set_label_font_color(const char *color) {}
 void roadmap_canvas_set_label_font_size(int size) {}
 void roadmap_canvas_set_label_font_spacing(int spacing) {}
 void roadmap_canvas_set_label_font_weight(const char *weight) {}
@@ -648,7 +659,7 @@ static void roadmap_canvas_draw_string_worker (RoadMapGuiPoint *start,
    const wchar_t* p = wstr;
 #endif
    
-   ren_solid.color(CurrentPen->color);
+   ren_solid.color(CurrentPen->font_color);
    dbg_time_end(DBG_TIME_TEXT_CNV);
    
    dbg_time_start(DBG_TIME_TEXT_LOAD);
@@ -906,7 +917,7 @@ void roadmap_canvas_draw_image_text (RoadMapImage image,
    const wchar_t* p = wstr;
 #endif
    
-   ren_solid.color(CurrentPen->color);
+   ren_solid.color(CurrentPen->font_color);
    
    double x  = position->x;
    double y  = position->y + size - 7;

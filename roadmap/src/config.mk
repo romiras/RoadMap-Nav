@@ -171,7 +171,7 @@ BIDI = NO
 
 # Advanced style (only qt4 supports this for now)
 # # Adds support to more control on the map drawings
-# ADVANCED_STYLE = YES
+ADVANCED_STYLE = YES
 
 # Basic building mode
 MODE =		# blank for "normal" build
