@@ -80,7 +80,6 @@ RoadMapPen RMapCanvas::createPen(const char* name) {
       QPen* pen = new QPen(Qt::SolidLine/*Qt::DotLine*/);
       p->pen = pen;
       p->font = new QFont("Arial",12);
-#if defined(ROADMAP_ADVANCED_STYLE)
       p->brush = new QBrush();
       p->fontcolor = new QColor("#000000");
       p->capitalize = 0;
@@ -89,7 +88,6 @@ RoadMapPen RMapCanvas::createPen(const char* name) {
       p->buffercolor = new QColor("#ffffff");
       p->pen->setJoinStyle(Qt::RoundJoin);
       p->pen->setCapStyle(Qt::RoundCap);
-#endif
       pens.insert(name, p);
    }
 
@@ -141,7 +139,6 @@ void RMapCanvas::setFontSize(int size) {
   }
 }
 
-#if defined(ROADMAP_ADVANCED_STYLE)
 int RMapCanvas::getPenThickness(RoadMapPen p) {
    if (p != 0) {
       return (int) p->pen->width();
@@ -289,7 +286,6 @@ void RMapCanvas::setFontBufferSize(int size) {
 int RMapCanvas::getFontBufferSize(RoadMapPen pen) {
   return pen->buffersize;
 }
-#endif /* ROADMAP_ADVANCED_STYLE */
 
 void RMapCanvas::erase() {
    if (pixmap) {
@@ -301,7 +297,10 @@ void RMapCanvas::setupPainterPen(QPainter &p) {
 
   p.setPen(*currentPen->pen);
   p.setFont(*currentPen->font);
-#if defined(ROADMAP_ADVENCED_STYLE)
+// when i removed all of the ROADMAP_ADVANCED_STYLE ifdefs, i found
+// this.  i'm going to enable the code, but since the ifdef was
+// misspelled, the code may never have been tested.
+#if 1 // defined(ROADMAP_ADVENCED_STYLE)
   if (currentPen->background) {
     p.setBackground(*currentPen->brush);
     p.setBackgroundMode(Qt::OpaqueMode);
@@ -315,11 +314,7 @@ void RMapCanvas::setupPainterPen(QPainter &p) {
 void RMapCanvas::getTextExtents(const char* text, int* w, int* ascent,
    int* descent, int *can_tilt) {
 
-#if defined(ROADMAP_ADVANCED_STYLE)
    QFontMetrics fm(*currentPen->font);
-#else
-   QFontMetrics fm(*currentPen->font);
-#endif
 
    
    QRect r = fm.boundingRect(QString::fromUtf8(text));
@@ -366,7 +361,6 @@ void RMapCanvas::drawString(RoadMapGuiPoint* position,
    else /* TOP */
       y += text_ascent;
 
-#if defined(ROADMAP_ADVANCED_STYLE)
    if (currentPen != 0) {
      /* draw the buffer */
      if (currentPen->buffersize!=0) {
@@ -383,7 +377,6 @@ void RMapCanvas::drawString(RoadMapGuiPoint* position,
      pen.setColor(*currentPen->fontcolor);
      p.setPen(pen);
    }
-#endif
 
    p.drawText(x, y, QString::fromUtf8(text));
 }
@@ -408,7 +401,6 @@ void RMapCanvas::drawStringAngle(RoadMapGuiPoint* position,
    p.translate(position->x,position->y);
    p.rotate((double)angle);
 
-#if defined(ROADMAP_ADVANCED_STYLE)
   if (currentPen != 0) {
      if (currentPen->buffersize!=0) {
        QPen pen(p.pen());
@@ -424,7 +416,6 @@ void RMapCanvas::drawStringAngle(RoadMapGuiPoint* position,
      pen.setColor(*currentPen->fontcolor);
      p.setPen(pen);
    }
-#endif /* ROADMAP_ADVANCED_STYLE */
 
    p.drawText(-text_width/2, -text_descent, QString::fromUtf8(text));
 #endif
@@ -477,7 +468,6 @@ void RMapCanvas::drawMultiplePolygons(int count, int* polygons,
    if (currentPen != 0) {
       if (filled && !fast_draw) {
         p.setPen(*currentPen->pen);
-#if defined(ROADMAP_ADVANCED_STYLE)
         if (currentPen->background) {
           p.setBackground(*currentPen->brush);
           p.setBackgroundMode(Qt::OpaqueMode);
@@ -488,9 +478,6 @@ void RMapCanvas::drawMultiplePolygons(int count, int* polygons,
             p.setBrush(*currentPen->brush);
           }
         }
-#else
-        p.setBrush(QColor(currentPen->pen->color()));
-#endif
       } else {
         p.setPen(*currentPen->pen);
       }
@@ -518,7 +505,6 @@ void RMapCanvas::drawMultipleCircles(int count, RoadMapGuiPoint* centers,
    if (currentPen != 0) {
       if (filled) {
          p.setPen(*currentPen->pen);
-#if defined(ROADMAP_ADVANCED_STYLE)
         if (currentPen->background) {
           p.setBackground(*currentPen->brush);
           p.setBackgroundMode(Qt::OpaqueMode);
@@ -529,9 +515,6 @@ void RMapCanvas::drawMultipleCircles(int count, RoadMapGuiPoint* centers,
             p.setBrush(*currentPen->brush);
           }
         }
-#else
-         p.setBrush(QBrush(currentPen->pen->color()));
-#endif
       } else {
          p.setPen(*currentPen->pen);
       }

@@ -201,7 +201,6 @@ static RoadMapLayerPenAttribute RoadMapLayerPenSetupTable[] = {
   /* {"Delta", ROADMAP_STYLE_TYPE_INT, "",  roadmap_canvas_set_thickness},     */
   {"Color", ROADMAP_STYLE_TYPE_STRING, "#000000", roadmap_canvas_set_foreground},
   {"Style", ROADMAP_STYLE_TYPE_STRING, "", roadmap_canvas_set_linestyle},
-#if defined(ROADMAP_ADVANCED_STYLE)
   {"LineCap", ROADMAP_STYLE_TYPE_STRING, "", roadmap_canvas_set_linecap },
   {"LineJoin", ROADMAP_STYLE_TYPE_STRING, "", roadmap_canvas_set_linejoin },
   {"Opacity", ROADMAP_STYLE_TYPE_INT, "", roadmap_canvas_set_opacity },
@@ -216,7 +215,6 @@ static RoadMapLayerPenAttribute RoadMapLayerPenSetupTable[] = {
   {"LabelFontSpacing", ROADMAP_STYLE_TYPE_INT, "", roadmap_canvas_set_label_font_spacing },
   {"LabelBufferColor", ROADMAP_STYLE_TYPE_STRING, "", roadmap_canvas_set_label_buffer_color },
   {"LabelBufferSize", ROADMAP_STYLE_TYPE_INT, "", roadmap_canvas_set_label_buffer_size },
-#endif /* ADVANCED STYLE */
 };
 
 

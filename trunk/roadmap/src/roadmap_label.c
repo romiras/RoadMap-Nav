@@ -234,24 +234,15 @@ static int normalize_angle(int angle) {
    return angle;
 }
 
-#if defined(ROADMAP_ADVANCED_STYLE)
 void roadmap_label_draw_text(const char *text,
         RoadMapGuiPoint *pos,
         int doing_angles, int angle, RoadMapPen pen)
 {
   int size = RoadMapLabelFontSize;
-#else
-void roadmap_label_draw_text(const char *text,
-        RoadMapGuiPoint *pos,
-        int doing_angles, int angle, int size)
-{
-#endif
 
-#if defined(ROADMAP_ADVANCED_STYLE)
   if (pen!=0)
     roadmap_canvas_select_pen (pen);
   else
-#endif
     roadmap_canvas_select_pen (RoadMapLabelPen);
                
    if (doing_angles) {
@@ -700,17 +691,10 @@ int roadmap_label_draw_cache (int angles) {
             "KK: %p: t: %s, w: %d, fsq: %d, ang: %d",
             cPtr, cPtr->text, width, cPtr->featuresize_sq, cPtr->angle);
 
-#if defined(ROADMAP_ADVANCED_STYLE)
          roadmap_label_draw_text
             (cPtr->text, &cPtr->center_point,
                angles, angles ? cPtr->angle : 0,
                cPtr->pen );
-#else
-         roadmap_label_draw_text
-            (cPtr->text, &cPtr->center_point,
-               angles, angles ? cPtr->angle : 0,
-               RoadMapLabelFontSize );
-#endif
 
          if (whichlist == NEWLIST) {
             /* move the rendered label to the cache */

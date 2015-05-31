@@ -645,7 +645,6 @@ void roadmap_canvas_save_screenshot (const char* filename)
 	/* FIX ME what to do with return value */
 }
 
-#if defined(ROADMAP_ADVANCED_STYLE)
 /* these are stubs */
 void roadmap_canvas_set_opacity (int opacity) {}
 
@@ -665,7 +664,6 @@ void roadmap_canvas_set_label_font_style(int style) {}
 
 void roadmap_canvas_set_label_buffer_color(const char *color) {}
 void roadmap_canvas_set_label_buffer_size(int size) {}
-#endif /* ROADMAP_ADVANCED_STYLE */
 
 /**
  * @brief initialize the roadmap_canvas private variables

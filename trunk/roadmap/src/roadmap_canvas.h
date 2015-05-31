@@ -96,12 +96,6 @@ int  roadmap_canvas_get_thickness  (RoadMapPen pen);
 void roadmap_canvas_set_opacity (int opacity);
 void roadmap_canvas_set_linestyle (const char *style);
 
-#if defined(ROADMAP_ADVANCED_STYLE)
-
-/* This is a set of functions which enable advanced display of the map
- * and improves the overall map experience
- */
-
 void roadmap_canvas_set_linejoin(const char *join);
 void roadmap_canvas_set_linecap(const char *cap);
 
@@ -118,8 +112,6 @@ void roadmap_canvas_set_label_font_weight(const char *weight);
 
 void roadmap_canvas_set_label_buffer_color(const char *color);
 void roadmap_canvas_set_label_buffer_size(int size);
-
-#endif
 
 /* The functions below draw in the selected buffer using the selected pen: */
 

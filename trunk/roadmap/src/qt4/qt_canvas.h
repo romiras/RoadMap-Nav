@@ -42,14 +42,12 @@ extern "C" {
    struct roadmap_canvas_pen {
       QPen* pen;
       QFont* font;
-#if defined(ROADMAP_ADVANCED_STYLE)
       QBrush* brush;
       int capitalize;
       int background;
       QColor* fontcolor;
       QColor* buffercolor;
       int buffersize;
-#endif
    };
 };
 
@@ -68,7 +66,6 @@ public:
    void setPenThickness(int thickness);
    void setFontSize(int size);
 
-#if defined(ROADMAP_ADVANCED_STYLE)
    int getPenThickness(RoadMapPen p);
    void setPenOpacity(int opacity);
    void setPenLighter(int factor);
@@ -91,7 +88,6 @@ public:
    void setFontBufferColor(const char *color);
    void setFontBufferSize(int size);
    int getFontBufferSize(RoadMapPen pen);
-#endif /* ROADMAP_ADVANCED_STYLE */
 
    void erase(void);
    void setupPainterPen(QPainter &p);
