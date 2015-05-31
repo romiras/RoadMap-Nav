@@ -815,6 +815,7 @@ void roadmap_sprite_draw_with_text
    RoadmapSpriteDrawingSequence *textseq;
    RoadmapSpriteDrawingSequence textsequence[1];
    int scale;
+   RoadMapPen oldpen, prevpen = NULL;
 
    if (sprite == NULL || sprite->alias_name != NULL) {
            roadmap_log (ROADMAP_WARNING, "roadmap_sprite_draw_with_text(%s): NULL", name);
@@ -843,7 +844,8 @@ void roadmap_sprite_draw_with_text
         plane != NULL;
         plane = plane->next) {
 
-      roadmap_canvas_select_pen (plane->pen);
+      oldpen = roadmap_canvas_select_pen (plane->pen);
+      if (!prevpen) prevpen = oldpen;
 
       if (plane->polygons.object_count > 0) {
 
@@ -941,6 +943,8 @@ void roadmap_sprite_draw_with_text
    }
    if (text_bbox && text_bbox != &sprite->text_bbox)
       roadmap_sprite_scale_bbox(text_bbox, text_bbox, scale);
+
+   roadmap_canvas_select_pen (prevpen);
 }
 
 /**
