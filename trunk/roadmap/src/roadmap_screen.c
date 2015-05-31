@@ -1032,14 +1032,9 @@ static int roadmap_screen_draw_one_line(int line,
             cutoff_dist > roadmap_math_screen_distance
                     (&seg_middle, &loweredge, MATH_DIST_SQUARED)) ) {
        PluginLine l = {ROADMAP_PLUGIN_ID, line, layer, fips};
-#if defined(ROADMAP_ADVANCED_STYLE)
-       roadmap_label_add
+       roadmap_label_add_line
             (&seg_middle, angle_ptr ? *angle_ptr : 90, 
              *total_length_ptr, &l, pen);
-#else
-       roadmap_label_add
-            (&seg_middle, angle_ptr ? *angle_ptr : 90, *total_length_ptr, &l);
-#endif
     }
 
     return 1;
@@ -1308,11 +1303,7 @@ static int roadmap_screen_draw_square_places
 		    !RoadMapScreenDragging &&
 		    RoadMapScreenLabels) {
 		PluginPlace p = {ROADMAP_PLUGIN_ID, place, layer, fips};
-#if defined(ROADMAP_ADVANCED_STYLE)
 		roadmap_label_add_place (&guipoint, &p, layer_pen);
-#else
-		roadmap_label_add_place (&guipoint, &p);
-#endif
 		drawn += 1;
 	    }
       }

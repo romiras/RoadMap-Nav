@@ -154,11 +154,13 @@ static void roadmap_place_activate (void *context) {
 
    RoadMapPlaceContext *place_context = (RoadMapPlaceContext *) context;
 
-   if (place_context && place_context->type != RoadMapPlaceType) {
-      roadmap_log (ROADMAP_FATAL, "invalid place context activated");
-   }
-   if (place_context->PlaceNames == NULL) {
-      place_context->PlaceNames = roadmap_dictionary_open ("city");
+   if (place_context) {
+
+      if (place_context->type != RoadMapPlaceType) {
+        roadmap_log (ROADMAP_FATAL, "invalid place context activated");
+      } else if (place_context->PlaceNames == NULL) {
+        place_context->PlaceNames = roadmap_dictionary_open ("city");
+      }
    }
    RoadMapPlaceActive = place_context;
 }
