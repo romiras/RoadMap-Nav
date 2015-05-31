@@ -149,6 +149,7 @@ void roadmap_plugin_set_street (PluginStreet *street,
                                 int street_id);
 
 int  roadmap_plugin_activate_db (const PluginLine *line);
+int  roadmap_plugin_activate_db_place (const PluginPlace *place);
 
 int  roadmap_plugin_get_distance (RoadMapPosition *point,
                                   PluginLine *line,
@@ -167,6 +168,7 @@ typedef int (*plugin_override_pen_hook) (int line,
 
 typedef void (*plugin_screen_repaint_hook) (int max_pen);
 typedef int  (*plugin_activate_db_func) (const PluginLine *line);
+typedef int  (*plugin_activate_db_func_place) (const PluginPlace *place);
 typedef void (*plugin_line_pos_func) (const PluginLine *line,
                                       RoadMapPosition *pos);
 
@@ -228,6 +230,7 @@ typedef struct {
    plugin_line_pos_func			line_from;
    plugin_line_pos_func			line_to;
    plugin_activate_db_func		activate_db;
+   plugin_activate_db_func_place	activate_db_place;
    plugin_get_distance_func		get_distance;
    plugin_override_line_hook		override_line;
    plugin_override_pen_hook		override_pen;
