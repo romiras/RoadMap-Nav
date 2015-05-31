@@ -300,6 +300,39 @@ int roadmap_plugin_activate_db (const PluginLine *line) {
    }
 }
 
+/**
+ * @brief
+ * @param line
+ * @return
+ */
+int roadmap_plugin_activate_db_place (const PluginPlace *place) {
+
+   if (place->plugin_id == ROADMAP_PLUGIN_ID) {
+
+      if (roadmap_locator_activate (place->fips) != ROADMAP_US_OK) {
+         return -1;
+      }
+
+      return 0;
+
+   } else {
+      RoadMapPluginHooks *hp = get_hooks (place->plugin_id);
+
+      if (hp == NULL) {
+         roadmap_log (ROADMAP_ERROR, "plugin id:%d is missing.",
+               place->plugin_id);
+
+         return -1;
+      }
+
+      if (hp->activate_db != NULL) {
+         return (*hp->activate_db_place) (place);
+      }
+
+      return 0;
+   }
+}
+
 
 /**
  * @brief calculate the distance between a point and a line

@@ -202,6 +202,7 @@ static RoadMapPluginHooks navigate_plugin_hooks = {
   /* line_from */		NULL,
   /* line_to */			NULL,
   /* activate_db */		NULL,
+  /* activate_db_place */		NULL,
   /* get_distance */		NULL,
   /* override_line */		NULL,
   /* override_pen */		&navigate_visual_override_pen,

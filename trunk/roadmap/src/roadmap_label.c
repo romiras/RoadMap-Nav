@@ -365,6 +365,16 @@ int roadmap_label_add_line (const RoadMapGuiPoint *point, int angle,
     return roadmap_label_add_worker(1, point, line, pen, angle, featuresize_sq);
 }
 
+int roadmap_label_same_thing(roadmap_label *cPtr, roadmap_label *ncPtr) {
+
+    if (cPtr->is_place != ncPtr->is_place)
+	return 0;
+
+    if (cPtr->is_place)
+	return roadmap_plugin_same_place (&cPtr->place, &ncPtr->place);
+    else
+	return roadmap_plugin_same_line (&cPtr->line, &ncPtr->line);
+}
 
 int roadmap_label_draw_cache (int angles) {
 
@@ -414,8 +424,7 @@ int roadmap_label_draw_cache (int angles) {
             ROADMAP_LIST_FOR_EACH (&RoadMapLabelNew, item2, tmp2) {
                ncPtr = (roadmap_label *)item2;
 
-               if ((!cPtr->is_place && roadmap_plugin_same_line (&cPtr->line, &ncPtr->line)) ||
-        	    (cPtr->is_place && roadmap_plugin_same_place (&cPtr->place, &ncPtr->place))) {
+	       if (roadmap_label_same_thing(cPtr, ncPtr)) {
                    /* Found a new version of this existing place or line */
 
                    if (cPtr->notext) {
@@ -476,6 +485,7 @@ int roadmap_label_draw_cache (int angles) {
 
 	    if (cPtr->is_place) {
 		const char *name;
+		roadmap_plugin_activate_db_place (&cPtr->place);
 		name = roadmap_plugin_get_placename (&cPtr->place);
 		if (!name) {
 		    cPtr->text = "";
@@ -485,16 +495,18 @@ int roadmap_label_draw_cache (int angles) {
 #if LABEL_USING_LINEID
 		{
 		    char buf[1000];
+#if 0
 		    if (cPtr->place.place_id == 105 || 
 			cPtr->place.place_id == 65) {
 			roadmap_log(ROADMAP_DEBUG, "arl or lex");
 		    }
+#endif
 		    sprintf(buf, "P%d %s", cPtr->place.place_id, cPtr->text);
 		    cPtr->otext = cPtr->text;
 		    cPtr->text = strdup(buf);
 		}
 #endif
-		roadmap_log(ROADMAP_DEBUG, "place text is '%s' (%p)", cPtr->text, cPtr->text);
+		// roadmap_log(ROADMAP_DEBUG, "place text is '%s' (%p)", cPtr->text, cPtr);
 	    } else {
         	PluginStreetProperties properties;
 		roadmap_plugin_activate_db (&cPtr->line);
