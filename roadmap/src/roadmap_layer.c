@@ -883,15 +883,15 @@ static void roadmap_layer_load_file (const char *class_file) {
         
         layer->declutter.category = layernames[i];
         layer->declutter.name     = "Declutter";
-        roadmap_config_declare (class_config, &layer->declutter, "20248000000");
+        roadmap_config_declare (class_config, &layer->declutter, "99999");
 
         layer->label_declutter.category = layernames[i];
         layer->label_declutter.name     = "LabelDeclutter";
-        roadmap_config_declare (class_config, &layer->label_declutter, "1000");
+        roadmap_config_declare (class_config, &layer->label_declutter, "99999");
 
         layer->sprite.category = layernames[i];
         layer->sprite.name     = "Sprite";
-        roadmap_config_declare (class_config, &layer->sprite, "Amenity");
+	/* no default Sprite */
 
 	layer->speed.category = layernames[i];
 	layer->speed.name = "Speed";
