@@ -89,7 +89,7 @@ S InactiveTrack
 A SmallPurpleChevron
 
 S BreadCrumb
-A PurpleDot
+A PurpleCross
 
 S Departure
 A DottedSquare
@@ -184,8 +184,24 @@ F black 1
 C 0,0 5
 C 0,0 7
 
+S SmallPurpleDot
+F purple 1
+D 0,0 3
+
 S SmallRedDot
 F red 1
+D 0,0 3
+
+S SmallOrangeDot
+F orange 1
+D 0,0 3
+
+S SmallBrownDot
+F brown 1
+D 0,0 3
+
+S SmallBlackDot
+F black 1
 D 0,0 3
 
 S GreenTrianglePointer
@@ -224,13 +240,9 @@ F purple 2
 L -4,4 0,-4 4,4
 
 S PurpleCross
-F purple 2
-L -4,0 4,0
-L 0,-4 0,4
-
-S PurpleDot
 F purple 1
-D 0,0 3
+L -3,0 3,0
+L 0,-3 0,3
 
 S 5PointStar
 F darkred 1

@@ -95,35 +95,42 @@ Nature.Color: green
  .Declutter: 600
  .Thickness: 1
  .Speed: 1
+Peak.Color: brown
+ .Declutter: 1000
 Amenity.Color: orange
  .Declutter: 160
  .Thickness: 1
  .Speed: 1
-City.Color: red
- .Declutter: 10001
+
+City.Sprite: SmallBrownDot
+ .LabelDeclutter: 4000
  .LabelFontColor: Brown
-Town.Color: red
- .Declutter: 10002
- .LabelFontColor: Brown
-Village.Color: red
- .Declutter: 1300
- .LabelFontColor: Brown
-Hamlet.Color: red
- .Declutter: 10
- .LabelFontColor: Brown
-Suburbs.Color: grey
- .Declutter: 1300
- .LabelFontColor: Brown
-Peak.Color: brown
- .Declutter: 1000
+
+Town.Declutter: 4000
+ .Sprite: SmallRedDot
+ .LabelDeclutter: 2000
+ .LabelFontColor: Red
+
+Village.Declutter: 2000
+ .Sprite: SmallPurpleDot
+ .LabelDeclutter: 1000
+ .LabelFontColor: Purple
+
+Hamlet.Declutter: 1000
+ .Sprite: SmallOrangeDot
+ .LabelDeclutter: 450
+ .LabelFontColor: Orange
+
+Suburbs.LabelDeclutter: 300
+ .LabelFontColor: Black
 
 Food.Sprite: Food
- .Declutter: 1300
+ .Declutter: 450
  .LabelDeclutter: 10
  .LabelFontSize: 10
 
 Cafe.Sprite: Cafe
- .Declutter: 1300
+ .Declutter: 450
  .LabelDeclutter: 10
  .LabelFontSize: 10
 
@@ -133,11 +140,11 @@ Fuel.Sprite: Fuel
  .LabelFontSize: 10
 
 Drinks.Sprite: Drinks
- .Declutter: 1300
+ .Declutter: 450
  .LabelDeclutter: 10
  .LabelFontSize: 10
 
 ATM.Sprite: ATM
- .Declutter: 1300
+ .Declutter: 450
  .LabelDeclutter: 10
  .LabelFontSize: 10
