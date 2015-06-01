@@ -912,7 +912,7 @@ main(int argc, char **argv)
     } else if (*inputfile && *BuildMapFileName) {
             int r;
 
-	    if (argc > 0) usage_err("too many arguments");
+	    if (argc > 1) usage_err("too many arguments");
 
 	    r = buildmap_osm_text_process_file(inputfile, BuildMapFileName);
             exit(r);
