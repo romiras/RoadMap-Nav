@@ -1299,7 +1299,7 @@ static int roadmap_screen_draw_square_places
 
 	    roadmap_place_point(place, &pos);
             roadmap_math_coordinate (&pos, &guipoint);
-	    if (layer_sprite) {
+	    if (layer_sprite && layer_sprite[0]) {
 		/* the label's guipoint will be rotated later.  don't
 		 * want to rotate it twice.
 		 */
