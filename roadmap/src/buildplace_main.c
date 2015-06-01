@@ -83,7 +83,6 @@ struct opt_defs options[] = {
 };
 
 
-#if ROADMAP_USE_SHAPEFILES
 static RoadMapString
 str2dict(BuildMapDictionary d, const char *string)
 {
@@ -94,7 +93,6 @@ str2dict(BuildMapDictionary d, const char *string)
 
     return buildmap_dictionary_add(d, (char *) string, strlen(string));
 }
-#endif				/* ROADMAP_USE_SHAPEFILES */
 
 
 static void
@@ -152,7 +150,6 @@ buildplace_dsg_initialize(void)
 }
 
 
-#if ROADMAP_USE_SHAPEFILES
 static int
 dsg2layer(const char *dsg)
 {
@@ -162,7 +159,6 @@ dsg2layer(const char *dsg)
     ep = hsearch(e, FIND);
     return ep ? *(int *) ep->data : 0;
 }
-#endif
 
 
 static void
