@@ -1283,15 +1283,15 @@ static int roadmap_screen_draw_square_places
 
    roadmap_log_push ("roadmap_screen_draw_square_places");
 
-   layer_pen = roadmap_layer_get_pen (layer, pen_index);
-   if (layer_pen == NULL) return 0;
-   layer_sprite = roadmap_layer_sprite(layer);
-   labels_visible = roadmap_layer_labels_visible(layer);
-   
    fips = roadmap_locator_active ();
 
    /* Draw each place that belongs to this square. */
    if (roadmap_place_in_square (square, layer, &first_place, &last_place) > 0) {
+
+      layer_pen = roadmap_layer_get_pen (layer, pen_index);
+      if (layer_pen == NULL) return 0;
+      layer_sprite = roadmap_layer_sprite(layer);
+      labels_visible = roadmap_layer_labels_visible(layer);
 
       for (place = first_place; place <= last_place; ++place) {
 	    RoadMapPosition pos;

@@ -211,6 +211,10 @@ int roadmap_place_in_square (int square, int layer, int *first, int *last) {
       return 0;   /* This square is empty. */
    }
 
+   if (layer <= 0 || layer > RoadMapPlaceActive->PlaceBySquare[square].count) {
+       return 0;
+   }
+
    index = RoadMapPlaceActive->PlaceByLayer
               + RoadMapPlaceActive->PlaceBySquare[square].first;
 
