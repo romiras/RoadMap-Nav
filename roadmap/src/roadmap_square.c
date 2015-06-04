@@ -470,12 +470,14 @@ int roadmap_square_index (int square) {
 
 int roadmap_square_from_index (int index) {
 
+#ifdef ROADMAP_INDEX_DEBUG
    if (RoadMapSquareActive == NULL) return -1;
 
    if (index < 0 ||
        index >= RoadMapSquareActive->SquareGlobal->count_squares) {
       return -1;
    }
+#endif
 
    return RoadMapSquareActive->Square[index].position;
 }
