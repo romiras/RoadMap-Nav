@@ -50,8 +50,7 @@ typedef struct {
    RoadMapPointBySquare *BySquare;	/**< */
    int                   BySquareCount;	/**< */
 
-   unsigned short *PointToSquare2;	/**< */
-   int            *PointToSquare4;	/**< */
+   int            *PointToSquare;	/**< */
 
 } RoadMapPointContext;
 
@@ -94,8 +93,7 @@ static void *roadmap_point_map (roadmap_db *root) {
       roadmap_log (ROADMAP_FATAL, "invalid point/data structure");
    }
 
-   context->PointToSquare2 = NULL;
-   context->PointToSquare4 = NULL;
+   context->PointToSquare = NULL;
 
    return context;
 }
@@ -130,11 +128,8 @@ static void roadmap_point_unmap (void *context) {
       RoadMapPointActive = NULL;
    }
 
-   if (point_context->PointToSquare2 != NULL) {
-      free (point_context->PointToSquare2);
-   }
-   if (point_context->PointToSquare4 != NULL) {
-      free (point_context->PointToSquare4);
+   if (point_context->PointToSquare != NULL) {
+      free (point_context->PointToSquare);
    }
    free (point_context);
 }
@@ -156,17 +151,15 @@ static void roadmap_point_retrieve_square (void) {
 
    int i;
    int j;
-   unsigned short *point2square2 = RoadMapPointActive->PointToSquare2;
-   int            *point2square4;
+   int            *point2square;
 
+   point2square = RoadMapPointActive->PointToSquare;
+   if (point2square == NULL) {
 
-   if (point2square2 == NULL) {
+       point2square = calloc (RoadMapPointActive->PointCount, sizeof(int));
+       roadmap_check_allocated(point2square);
 
-      point2square2 =
-         calloc (RoadMapPointActive->PointCount, sizeof(unsigned short));
-      roadmap_check_allocated(point2square2);
-
-      RoadMapPointActive->PointToSquare2 = point2square2;
+       RoadMapPointActive->PointToSquare = point2square;
    }
 
    for (i = 0; i < RoadMapPointActive->BySquareCount; i++) {
@@ -177,35 +170,8 @@ static void roadmap_point_retrieve_square (void) {
 
       square = roadmap_square_from_index (i);
 
-      if ((square & 0xffff) > 0) goto lot_of_squares;
-
       for (j = RoadMapPointActive->BySquare[i].first; j < end; j++) {
-         point2square2[j] = square;
-      }
-   }
-
-   return;
-
-lot_of_squares:
-
-   free (RoadMapPointActive->PointToSquare2);
-   RoadMapPointActive->PointToSquare2 = NULL;
-
-   point2square4 = calloc (RoadMapPointActive->PointCount, sizeof(int));
-   roadmap_check_allocated(point2square4);
-
-   RoadMapPointActive->PointToSquare4 = point2square4;
-
-   for (i = 0; i < RoadMapPointActive->BySquareCount; i++) {
-
-      int square;
-      int end = RoadMapPointActive->BySquare[i].first
-                   + RoadMapPointActive->BySquare[i].count;
-
-      square = roadmap_square_from_index (i);
-
-      for (j = RoadMapPointActive->BySquare[i].first; j < end; j++) {
-         point2square4[j] = square;
+         point2square[j] = square;
       }
    }
 }
@@ -249,10 +215,8 @@ void roadmap_point_position  (int point, RoadMapPosition *position) {
    }
 #endif
 
-   if (RoadMapPointActive->PointToSquare2 != NULL) {
-      point_square = RoadMapPointActive->PointToSquare2[point];
-   } else if (RoadMapPointActive->PointToSquare4 != NULL) {
-      point_square = RoadMapPointActive->PointToSquare4[point];
+   if (RoadMapPointActive->PointToSquare != NULL) {
+      point_square = RoadMapPointActive->PointToSquare[point];
    } else {
       point_square = -1;
    }
@@ -263,10 +227,8 @@ void roadmap_point_position  (int point, RoadMapPosition *position) {
 
          roadmap_point_retrieve_square ();
 
-         if (RoadMapPointActive->PointToSquare2 != NULL) {
-            point_square = RoadMapPointActive->PointToSquare2[point];
-         } else if (RoadMapPointActive->PointToSquare4 != NULL) {
-            point_square = RoadMapPointActive->PointToSquare4[point];
+         if (RoadMapPointActive->PointToSquare != NULL) {
+            point_square = RoadMapPointActive->PointToSquare[point];
          } else {
             roadmap_log (ROADMAP_FATAL, "bad PointToSquare pointers");
          }
