@@ -215,7 +215,7 @@ static void *roadmap_line_map (roadmap_db *root) {
        goto roadmap_line_map_abort;
      }
 
-#if 1
+#if 0
      /* Get sizes */
      {
 	     int i, j, counters[20], lost;
