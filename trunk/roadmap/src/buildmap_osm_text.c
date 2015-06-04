@@ -709,7 +709,7 @@ buildmap_osm_text_way_tag(char *data)
 	if (strcasecmp(tag, "admin_level") == 0) {
 		wi.WayAdminLevel = atoi(value);
 	} else if (strcasecmp(tag, "border_type") == 0) {
-		wi.WayTerritorial = !strncasecmp(value, "territorial", 11);
+		wi.WayTerritorial = !strcasecmp(value, "territorial");
 	} else if (strcasecmp(tag, "natural") == 0 &&
 			strcasecmp(value, "coastline") == 0) {
 		wi.WayCoast = 1;
