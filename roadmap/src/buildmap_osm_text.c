@@ -596,8 +596,18 @@ buildmap_osm_text_node_tag(char *data, int catalog)
         if (! tagv)
                 tagv = malloc(512);
 
+// it turns out that the OSM xml output contains raw apostrophe
+// characters, e.g. "Cortina d'Ampezzo".  but i assume that if
+// a placename actually contained a '"', then the XML escape
+// mechanisms would be used, and not single quotes.
+// summary:  stop parsing for 'string'.
+#ifdef BEFORE
         s = sscanf(data, "tag k=%*['\"]%[^\"']%*['\"] v=%*['\"]%[^\"']%*['\"]",
                         tagk, tagv);
+#else
+        s = sscanf(data, "tag k=%*[\"]%[^\"]%*[\"] v=%*[\"]%[^\"]%*[\"]/>",
+                        tagk, tagv);
+#endif
 	if (s != 2)
 		buildmap_fatal(0, "fail to scanf tag k and v (%s)", data);
 
@@ -1360,11 +1370,6 @@ buildmap_osm_text_read(char *fn, int tileid, int country_num, int division_num)
                 continue;
 
         } else if (strncasecmp(p, "tag", 3) == 0) {
-
-#if 0
-		if (!wi.WayId)
-			buildmap_osm_text_node_tag(p, 1);
-#endif
                 continue;
         }
     }
