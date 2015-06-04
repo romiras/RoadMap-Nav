@@ -708,8 +708,7 @@ buildmap_osm_text_way_tag(char *data)
 	
 	if (strcasecmp(tag, "admin_level") == 0) {
 		wi.WayAdminLevel = atoi(value);
-	} else if (strcasecmp(tag, "border_type") == 0 ||
-		    strcasecmp(tag, "boundary_type") == 0) {
+	} else if (strcasecmp(tag, "border_type") == 0) {
 		wi.WayTerritorial = !strncasecmp(value, "territorial", 11);
 	} else if (strcasecmp(tag, "natural") == 0 &&
 			strcasecmp(value, "coastline") == 0) {
@@ -734,6 +733,7 @@ buildmap_osm_text_way_finish(char *data)
 {
         int             from_point, to_point, line, street;
         int             fromlon, tolon, fromlat, tolat;
+        RoadMapString   rms_dirp, rms_dirs, rms_type, rms_name;
         int             j;
 	char compound_name[1024];
 	char *n;
@@ -748,6 +748,19 @@ buildmap_osm_text_way_finish(char *data)
         if (wi.WayId == 0)
                 buildmap_fatal(0, "Wasn't in a way (%s)", data);
 
+	if (wi.nWayNodes < 1) {
+                buildmap_osm_text_reset_way();
+                return;
+	}
+
+        from_point = buildmap_osm_text_point_get(WayNodes[0]);
+        to_point = buildmap_osm_text_point_get(WayNodes[wi.nWayNodes-1]);
+
+        fromlon = buildmap_point_get_longitude(from_point);
+        fromlat = buildmap_point_get_latitude(from_point);
+        tolon = buildmap_point_get_longitude(to_point);
+        tolat = buildmap_point_get_latitude(to_point);
+
 	if (wi.WayLayer == 0) {
 		/* if a way is both a coast and a boundary, treat it only as coast */
 		if (wi.WayCoast) {
@@ -756,6 +769,14 @@ buildmap_osm_text_way_finish(char *data)
 			/* national == 2, state == 4, ignore lesser boundaries */
 			/* also ignore territorial (marine) borders */
 			if  (wi.WayAdminLevel > 4 || wi.WayTerritorial) {
+				wi.WayIsInteresting = 0;
+			}
+
+			/* if we're not (roughly) in north america,
+			 * discard state boundaries as well.  */
+			if  ((wi.WayAdminLevel > 2) &&
+			    (fromlon > -32 || fromlat < 17)) {
+				/* east of the azores or south of mexico */
 				wi.WayIsInteresting = 0;
 			}
 
@@ -775,23 +796,11 @@ buildmap_osm_text_way_finish(char *data)
                 return;
         }
 
-	if (wi.nWayNodes < 1) {
-                buildmap_osm_text_reset_way();
-                return;
-	}
+        rms_dirp = str2dict(DictionaryPrefix, "");
+        rms_dirs = str2dict(DictionarySuffix, "");
+        rms_type = str2dict(DictionaryType, "");
+        rms_name = 0;
 
-        RoadMapString rms_dirp = str2dict(DictionaryPrefix, "");
-        RoadMapString rms_dirs = str2dict(DictionarySuffix, "");
-        RoadMapString rms_type = str2dict(DictionaryType, "");
-        RoadMapString rms_name = 0;
-
-        from_point = buildmap_osm_text_point_get(WayNodes[0]);
-        to_point = buildmap_osm_text_point_get(WayNodes[wi.nWayNodes-1]);
-
-        fromlon = buildmap_point_get_longitude(from_point);
-        fromlat = buildmap_point_get_latitude(from_point);
-        tolon = buildmap_point_get_longitude(to_point);
-        tolat = buildmap_point_get_latitude(to_point);
 
         if ((wi.WayFlags & AREA)  && (fromlon == tolon) && (fromlat == tolat)) {
                 static int polyid = 0;
