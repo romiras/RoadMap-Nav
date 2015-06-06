@@ -36,6 +36,7 @@
 
 #include "roadmap_canvas.h"
 #include "roadmap_gtkcanvas.h"
+#include "gtk/gtk.h"
 
 
 #define ROADMAP_CURSOR_SIZE           10
@@ -61,6 +62,7 @@ static GdkGC      *RoadMapGc;
 static RoadMapPen CurrentPen;
 
 static PangoLayout  *RoadMapLayout = NULL;
+static PangoContext  *RoadMapContext = NULL;
 
 
 /* The canvas callbacks: all callbacks are initialized to do-nothing
@@ -109,16 +111,18 @@ void roadmap_canvas_get_text_extents
    if (RoadMapLayout == NULL) {
        RoadMapLayout = gtk_widget_create_pango_layout
                            (GTK_WIDGET(RoadMapDrawingArea), text);
+       RoadMapContext =  gtk_widget_get_pango_context(GTK_WIDGET(RoadMapDrawingArea));
        pango_layout_set_width (RoadMapLayout, -1);
    }
    pango_layout_set_text (RoadMapLayout, text, -1);
 
    pango_layout_get_extents (RoadMapLayout, NULL, &rectangle);
 
-   *width   = rectangle.width / PANGO_SCALE;
-   *ascent  = PANGO_ASCENT(rectangle) / PANGO_SCALE;
-   *descent = PANGO_DESCENT(rectangle) / PANGO_SCALE;
-   if (can_tilt) *can_tilt = 0;
+   *width   = 3 * rectangle.width / 2 / PANGO_SCALE;
+   *ascent  = 3 * PANGO_ASCENT(rectangle) / 2 / PANGO_SCALE;
+   *descent = 3 * PANGO_DESCENT(rectangle) / 2 / PANGO_SCALE;
+   // if (can_tilt) *can_tilt = 0;
+   if (can_tilt) *can_tilt = 1;
 }
 
 
@@ -181,6 +185,11 @@ void roadmap_canvas_set_foreground (const char *color) {
    gdk_gc_set_foreground (RoadMapGc, native_color);
 }
 
+void roadmap_canvas_set_label_font_color(const char *color) {
+}
+
+void roadmap_canvas_set_label_font_size(int size) {
+}
 
 void roadmap_canvas_set_linestyle (const char *style) {
 
@@ -210,8 +219,6 @@ void roadmap_canvas_set_brush_style(const char *style) {}
 void roadmap_canvas_set_brush_isbackground(int isbackground) {}
 
 void roadmap_canvas_set_label_font_name(const char *name) {}
-void roadmap_canvas_set_label_font_color(const char *color) {}
-void roadmap_canvas_set_label_font_size(int size) {}
 void roadmap_canvas_set_label_font_spacing(int spacing) {}
 void roadmap_canvas_set_label_font_weight(const char *weight) {}
 void roadmap_canvas_set_label_font_style(int style) {}
@@ -259,13 +266,103 @@ void roadmap_canvas_draw_string (RoadMapGuiPoint *position,
        start->x, start->y, RoadMapLayout);
 }
 
-void roadmap_canvas_draw_string_angle (RoadMapGuiPoint *position,
+#ifdef TRY_DRAWING_LABELS_WITH_GTK_LABEL
+void roadmap_canvas_draw_string_angle (RoadMapGuiPoint *center,
                                        int size,
                                        int angle, const char *text)
 {
-   /* no angle possible */
-   roadmap_canvas_draw_string (position,
-	 ROADMAP_CANVAS_CENTER_X|ROADMAP_CANVAS_BOTTOM, size, text);
+   int text_width;
+   int text_ascent;
+   int text_descent;
+   RoadMapGuiPoint start[1];
+   GtkWidget *layout;
+   GtkWidget *label;
+
+   layout = gtk_layout_new (NULL, NULL);
+   gtk_container_add (GTK_CONTAINER (RoadMapDrawingArea), layout);
+
+   roadmap_canvas_get_text_extents 
+        (text, size, &text_width, &text_ascent, &text_descent, NULL);
+   roadmap_log(ROADMAP_WARNING, "%s @ %d: w %d a %d d %d\n",text, angle,
+	  text_width, text_ascent, text_descent);
+
+   start->x = center->x;
+   start->y = center->y;
+   label = gtk_label_new (text);
+   gtk_label_set_angle(GTK_LABEL(label),angle);
+
+   gtk_layout_put (GTK_LAYOUT (layout), label, start->x, start->y);
+
+   //gdk_draw_layout (RoadMapDrawingBuffer, RoadMapGc,
+   //    start->x, start->y, RoadMapLayout);
+}
+#endif
+
+void roadmap_canvas_draw_string_angle (RoadMapGuiPoint *center,
+                                       int size,
+                                       int angle, const char *text)
+{
+   int text_width;
+   int text_ascent;
+   int text_descent;
+   RoadMapGuiPoint start[1];
+   PangoMatrix matrix = PANGO_MATRIX_INIT;
+   PangoMatrix init_matrix = PANGO_MATRIX_INIT;
+   // PangoRenderer *renderer;
+   // int width, height;
+
+   roadmap_canvas_get_text_extents 
+        (text, size, &text_width, &text_ascent, &text_descent, NULL);
+
+   start->x = center->x - text_width/2;;
+   start->y = center->y - text_descent;
+
+#if 0
+   roadmap_log(ROADMAP_WARNING, "%s @ %d: w %d a %d d %d\n",text, angle,
+        text_width, text_ascent, text_descent);
+   roadmap_log(ROADMAP_WARNING, "rcdsa: x %d y %d\n",start->x, start->y);
+#endif
+
+
+#ifdef DRAW_HORIZONTAL_LABELS // for reference, while debugging
+   // pango_matrix_scale (&matrix, 1.5,1.5);
+   pango_context_set_matrix (RoadMapContext, &matrix);
+   pango_layout_context_changed (RoadMapLayout); 
+   gdk_draw_layout (RoadMapDrawingBuffer, RoadMapGc,
+       start->x, start->y, RoadMapLayout);
+#endif
+   // i can't get translations to have any affect whatsoever.  :-/
+   // pango_matrix_translate (&matrix, 100.,100.);
+   pango_matrix_scale (&matrix, 1.5, 1.5);
+   if (angle > 0) {
+      angle = -angle;
+      start->x = center->x;
+      start->y = center->y - text_descent/2;
+   } else if (angle < 0) {
+      angle = -angle;
+      start->x = center->x - text_width /2;
+      if (angle > 70)  // heuristic is latin for "hack", right?
+	  start->x = center->x - text_width / 4;
+      start->y = center->y - text_descent/2;
+   }
+   // renderer = gdk_pango_renderer_get_default (gtk_widget_get_screen (RoadMapDrawingArea));
+   // gdk_pango_renderer_set_drawable (GDK_PANGO_RENDERER (renderer), RoadMapDrawingArea->window);
+   // gdk_pango_renderer_set_gc (GDK_PANGO_RENDERER (renderer), RoadMapDrawingArea->style->black_gc);
+   pango_matrix_rotate (&matrix, (double)(angle));
+   pango_context_set_matrix (RoadMapContext, &matrix);
+
+   pango_layout_context_changed (RoadMapLayout); 
+
+   // pango_layout_get_size (RoadMapLayout, &width, &height);
+   // roadmap_log(ROADMAP_WARNING, "plgs: w %d h %d\n",width, height);
+   // pango_renderer_draw_layout (renderer, RoadMapLayout,
+   //    width/2, height/2);
+   //    start->x, start->y);
+   gdk_draw_layout (RoadMapDrawingBuffer, RoadMapGc,
+        start->x, start->y, RoadMapLayout);
+
+   pango_context_set_matrix (RoadMapContext, &init_matrix);
+   pango_layout_context_changed (RoadMapLayout); 
 }
 
 
@@ -499,13 +596,6 @@ int roadmap_canvas_height (void) {
 
 
 void roadmap_canvas_refresh (void) {
-
-   GdkRectangle update;
-
-   update.x = 0;
-   update.y = 0;
-   update.width  = RoadMapDrawingArea->allocation.width;
-   update.height = RoadMapDrawingArea->allocation.height;
 
    gtk_widget_queue_draw_area
        (RoadMapDrawingArea, 0, 0,
