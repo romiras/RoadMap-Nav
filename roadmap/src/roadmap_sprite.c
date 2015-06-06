@@ -41,6 +41,8 @@
 #include "roadmap_screen.h"
 #include "roadmap_label.h"
 
+static int RoadMapSpriteFastDraw;
+
 static RoadMapConfigDescriptor RoadMapConfigSpritePercent =
                         ROADMAP_CONFIG_ITEM ("General", "Sprite Scale");
 static int RoadMapSpritePercent;
@@ -859,7 +861,7 @@ void roadmap_sprite_draw_with_text
 
          roadmap_canvas_draw_multiple_polygons
             (plane->polygons.object_count,
-             plane->polygons.obj.objects, RoadMapSpritePoints, 1, 0);
+             plane->polygons.obj.objects, RoadMapSpritePoints, 1, RoadMapSpriteFastDraw);
       }
 
       if (textseq != NULL && plane->flags & SPRITE_TEXT_RECTANGLE) {
@@ -870,7 +872,7 @@ void roadmap_sprite_draw_with_text
             (textpoly, location, -roadmap_math_get_orientation(), scale);
          roadmap_canvas_draw_multiple_polygons
             (textpoly->object_count,
-             textpoly->obj.objects, RoadMapSpritePoints, 1, 0);
+             textpoly->obj.objects, RoadMapSpritePoints, 1, RoadMapSpriteFastDraw);
       }
 
       if (plane->disks.object_count > 0) {
@@ -881,7 +883,7 @@ void roadmap_sprite_draw_with_text
             (plane->disks.object_count,
              RoadMapSpritePoints,
              roadmap_sprite_scale_diameters(&(plane->disks), scale),
-             1, 0);
+             1, RoadMapSpriteFastDraw);
       }
 
       if (plane->lines.object_count > 0) {
@@ -890,7 +892,7 @@ void roadmap_sprite_draw_with_text
 
          roadmap_canvas_draw_multiple_lines
             (plane->lines.object_count,
-             plane->lines.obj.objects, RoadMapSpritePoints, 0);
+             plane->lines.obj.objects, RoadMapSpritePoints, RoadMapSpriteFastDraw);
       }
 
       if (textseq != NULL && plane->flags & SPRITE_TEXT_BOX) {
@@ -901,7 +903,7 @@ void roadmap_sprite_draw_with_text
             (textrect, location, -roadmap_math_get_orientation(), scale);
          roadmap_canvas_draw_multiple_lines
             (textrect->object_count,
-             textrect->obj.objects, RoadMapSpritePoints, 0);
+             textrect->obj.objects, RoadMapSpritePoints, RoadMapSpriteFastDraw);
       }
 
 
@@ -915,7 +917,7 @@ void roadmap_sprite_draw_with_text
             (plane->circles.object_count,
              RoadMapSpritePoints, 
              roadmap_sprite_scale_diameters(&(plane->circles), scale),
-             0, 0);
+             0, RoadMapSpriteFastDraw);
       }
 
       if (textseq != NULL && plane->flags & SPRITE_TEXT) {
@@ -1033,6 +1035,12 @@ void roadmap_sprite_load (void)
 
    RoadMapSpritePercent = roadmap_config_get_integer (&RoadMapConfigSpritePercent);
 
+}
+
+int roadmap_sprite_set_fast_draw(int fastdraw) {
+    int tmp = RoadMapSpriteFastDraw;
+    RoadMapSpriteFastDraw = fastdraw;
+    return tmp;
 }
 
 /**
