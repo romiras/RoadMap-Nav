@@ -27,6 +27,8 @@
 
 #define PEN_DEBUG 0
 
+#define FAST 0
+
 
 #ifdef WIN32_PROFILE
 #include <C:\Program Files\Windows CE Tools\Common\Platman\sdk\wce500\include\cecap.h>
@@ -399,7 +401,7 @@ void roadmap_canvas_draw_multiple_lines (int count, int *lines,
 #endif
 
    raso.round_cap(true);
-   if (!fast_draw) {
+   if (!(fast_draw || FAST)) {
       raso.line_join(agg::outline_miter_accurate_join);
    }
 
@@ -430,7 +432,7 @@ void roadmap_canvas_draw_multiple_lines (int count, int *lines,
       dbg_time_end(DBG_TIME_CREATE_PATH);
       dbg_time_start(DBG_TIME_ADD_PATH);
       
-      if (fast_draw) {
+      if (fast_draw || FAST) {
          renderer_pr ren_pr(agg_renb);
          agg::rasterizer_outline<renderer_pr> ras_line(ren_pr);
          ren_pr.line_color(CurrentPen->color);
@@ -461,7 +463,7 @@ void roadmap_canvas_draw_multiple_polygons
 
    int i;
    int count_of_points;
-   
+
    agg::path_storage path;
    
    for (i = 0; i < count; ++i) {
@@ -490,7 +492,7 @@ void roadmap_canvas_draw_multiple_polygons
          ren_solid.color(CurrentPen->color);
          agg::render_scanlines( ras, sl, ren_solid);
          
-      } else if (fast_draw) {
+      } else if (fast_draw || FAST) {
          renderer_pr ren_pr(agg_renb);
          agg::rasterizer_outline<renderer_pr> ras_line(ren_pr);
          ren_pr.line_color(CurrentPen->color);
@@ -513,7 +515,7 @@ void roadmap_canvas_draw_multiple_circles
          int fast_draw) {
 
    int i;
-   
+
    agg::path_storage path;
    
    for (i = 0; i < count; ++i) {
@@ -533,7 +535,7 @@ void roadmap_canvas_draw_multiple_circles
          ren_solid.color(CurrentPen->color);
          agg::render_scanlines( ras, sl, ren_solid);
          
-      } else if (fast_draw) {
+      } else if (fast_draw || FAST) {
          renderer_pr ren_pr(agg_renb);
          agg::rasterizer_outline<renderer_pr> ras_line(ren_pr);
          ren_pr.line_color(CurrentPen->color);
