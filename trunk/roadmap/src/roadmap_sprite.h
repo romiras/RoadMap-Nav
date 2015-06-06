@@ -41,6 +41,9 @@ void roadmap_sprite_draw_with_text
 	 RoadMapGuiRect *bbox, RoadMapGuiRect *text_bbox, char *text);
 
 void roadmap_sprite_bbox (const char *name, RoadMapGuiRect *bbox);
+
+int roadmap_sprite_set_fast_draw(int fastdraw);
+
 void roadmap_sprite_shutdown (void);
 
 #endif // INCLUDE__ROADMAP_CANVAS__H
