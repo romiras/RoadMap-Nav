@@ -1287,11 +1287,14 @@ static int roadmap_screen_draw_square_places
 
    /* Draw each place that belongs to this square. */
    if (roadmap_place_in_square (square, layer, &first_place, &last_place) > 0) {
+      int sprites_were_fast;
 
       layer_pen = roadmap_layer_get_pen (layer, pen_index);
       if (layer_pen == NULL) return 0;
       layer_sprite = roadmap_layer_sprite(layer);
       labels_visible = roadmap_layer_labels_visible(layer);
+
+      sprites_were_fast = roadmap_sprite_set_fast_draw(1);
 
       for (place = first_place; place <= last_place; ++place) {
 	    RoadMapPosition pos;
@@ -1318,6 +1321,9 @@ static int roadmap_screen_draw_square_places
 		drawn += 1;
 	    }
       }
+
+      roadmap_sprite_set_fast_draw(sprites_were_fast);
+
    }
 
    roadmap_log_pop ();
@@ -2331,6 +2337,7 @@ void roadmap_screen_text_angle (int id, RoadMapGuiPoint *center,
         roadmap_linefont_text_angle ( center, size, theta, text);
     } else {
         roadmap_canvas_draw_string_angle ( center, size, theta, text);
+        // roadmap_sprite_draw ("PurpleCross", center, 0);
     }
 }
 
