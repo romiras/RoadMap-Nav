@@ -21,6 +21,8 @@
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#undef BUILDMAP_NAVIGATION_SUPPORT
+
 /**
  * @file
  * @brief convert a map into a table of lines.
@@ -48,7 +50,9 @@
 
 typedef struct {
    RoadMapLine record;
+#ifdef BUILDMAP_NAVIGATION_SUPPORT
    RoadMapLine2 data2;
+#endif
    int tlid;
    int sorted;
    int layer;
@@ -70,15 +74,18 @@ static int *SortedLine = NULL;
 static int *SortedLine2 = NULL;
 
 static void buildmap_line_register (void);
+#ifdef BUILDMAP_NAVIGATION_SUPPORT
 static void buildmap_line_add_bypoint(int, int);
 static void buildmap_line_count_linebypoint(int *LineByPoint1Count, int *LineByPoint2Count);
 static void buildmap_line_transform_linebypoint(RoadMapLineByPoint1 *, RoadMapLineByPoint2 *);
+#endif
 
 #define MAX_LONG_LINES 150000
 static RoadMapLongLine *LongLines;
 static int LongLinesCount;
 static RoadMapHash *LongLinesHash = NULL;
 
+#ifdef BUILDMAP_NAVIGATION_SUPPORT
 /*
  * @brief Line By Point stuff
  * This structure holds info about a point :  it gathers the line
@@ -99,6 +106,7 @@ static int	max_line_by_point = 0,		/**< highest index in lbp */
 
 #define	ALLOC_LINES	5	/**< increment allocation of ptr by this amount */
 #define	ALLOC_POINTS	100	/**< increment allocation of lbp by this amount */
+#endif
 
 
 /**
@@ -248,17 +256,21 @@ int buildmap_line_add (int tlid, int layer, int from, int to, int oneway)
    this_line->record.from = from;
    this_line->record.to   = to;
 
+#ifdef BUILDMAP_NAVIGATION_SUPPORT
    this_line->data2.oneway = oneway;
    this_line->data2.layer = layer;
+#endif
 
    roadmap_hash_add (LineById, tlid, LineCount);
 
+#ifdef BUILDMAP_NAVIGATION_SUPPORT
    /*
     * This adds info, but they will look wrong if you compare them with the
     * end result : transformation happens when "sorting".
     */
    buildmap_line_add_bypoint(from, LineCount);
    buildmap_line_add_bypoint(to, LineCount);
+#endif
 
    return LineCount++;
 }
@@ -649,14 +661,18 @@ static int buildmap_line_save (void) {
    int *db_layer2;
    int *db_index2;
    RoadMapLine *db_lines;
+#ifdef BUILDMAP_NAVIGATION_SUPPORT
    RoadMapLine2 *db_lines2;
+#endif
    RoadMapLineBySquare *db_square1;
    RoadMapLineBySquare *db_square2;
    RoadMapLongLine *db_long_lines;
 
    buildmap_db *root;
    buildmap_db *data_table;
+#ifdef BUILDMAP_NAVIGATION_SUPPORT
    buildmap_db *data2_table;
+#endif
    buildmap_db *square1_table;
    buildmap_db *layer1_table;
    buildmap_db *square2_table;
@@ -664,11 +680,13 @@ static int buildmap_line_save (void) {
    buildmap_db *layer2_table;
    buildmap_db *index2_table;
 
+#ifdef BUILDMAP_NAVIGATION_SUPPORT
    /* Navigation support */
    int			LineByPoint1Count = 0, LineByPoint2Count = 0;
    RoadMapLineByPoint1	*db_line_bypoint1;
    RoadMapLineByPoint2	*db_line_bypoint2;
    buildmap_db		*line_bypoint1_table, *line_bypoint2_table;
+#endif
 
    if (!LineCount) {
       buildmap_error (0, "LineCount is 0");
@@ -807,12 +825,14 @@ static int buildmap_line_save (void) {
    }
    buildmap_db_add_data (data_table, LineCount, sizeof(RoadMapLine));
 
+#ifdef BUILDMAP_NAVIGATION_SUPPORT
    data2_table = buildmap_db_add_section (root, "data2");
    if (data2_table == NULL) {
       buildmap_error (0, "Can't add a new section");
       return 1;
    }
    buildmap_db_add_data (data2_table, LineCount, sizeof(RoadMapLine2));
+#endif
 
    square1_table = buildmap_db_add_section (root, "bysquare1");
    if (square1_table == NULL) {
@@ -860,6 +880,7 @@ static int buildmap_line_save (void) {
    }
    buildmap_db_add_data (index2_table, LineCrossingCount, sizeof(int));
 
+#ifdef BUILDMAP_NAVIGATION_SUPPORT
    buildmap_line_count_linebypoint(&LineByPoint1Count, &LineByPoint2Count);
    line_bypoint1_table = buildmap_db_add_section (root, "bypoint1");
    if (line_bypoint1_table == NULL) {
@@ -874,17 +895,22 @@ static int buildmap_line_save (void) {
       return 1;
    }
    buildmap_db_add_data (line_bypoint2_table, LineByPoint2Count, sizeof(int));
+#endif
 
    db_lines   = (RoadMapLine *) buildmap_db_get_data (data_table);
+#ifdef BUILDMAP_NAVIGATION_SUPPORT
    db_lines2  = (RoadMapLine2 *) buildmap_db_get_data (data2_table);
+#endif
    db_square1 = (RoadMapLineBySquare *) buildmap_db_get_data (square1_table);
    db_layer1  = (int *) buildmap_db_get_data (layer1_table);
    db_square2 = (RoadMapLineBySquare *) buildmap_db_get_data (square2_table);
    db_long_lines = (RoadMapLongLine *) buildmap_db_get_data (long_lines_table);
    db_layer2  = (int *) buildmap_db_get_data (layer2_table);
    db_index2  = (int *) buildmap_db_get_data (index2_table);
+#ifdef BUILDMAP_NAVIGATION_SUPPORT
    db_line_bypoint1 = (RoadMapLineByPoint1 *) buildmap_db_get_data (line_bypoint1_table);
    db_line_bypoint2 = (RoadMapLineByPoint2 *) buildmap_db_get_data (line_bypoint2_table);
+#endif
 
 
    square_current = -1;
@@ -898,7 +924,9 @@ static int buildmap_line_save (void) {
       one_line = Line[j/BUILDMAP_BLOCK] + (j % BUILDMAP_BLOCK);
 
       db_lines[i] = one_line->record;
+#ifdef BUILDMAP_NAVIGATION_SUPPORT
       db_lines2[i] = one_line->data2;
+#endif
 
       square = one_line->square_from;
 
@@ -1006,7 +1034,9 @@ static int buildmap_line_save (void) {
 
    memcpy (db_long_lines, LongLines, LongLinesCount * sizeof (RoadMapLongLine));
 
+#ifdef BUILDMAP_NAVIGATION_SUPPORT
    buildmap_line_transform_linebypoint(db_line_bypoint1, db_line_bypoint2);
+#endif
 
    return 0;
 }
@@ -1047,10 +1077,12 @@ static void buildmap_line_reset (void) {
    roadmap_hash_delete (LineById);
    LineById = NULL;
 
+#ifdef BUILDMAP_NAVIGATION_SUPPORT
    free(lbp);
    lbp = 0;
    max_line_by_point = 0;
    nalloc_line_by_point = 0;
+#endif
 }
 
 /**
@@ -1071,6 +1103,7 @@ static void buildmap_line_register (void) {
    buildmap_db_register (&BuildMapLineModule);
 }
 
+#ifdef BUILDMAP_NAVIGATION_SUPPORT
 /**
  * @brief Line By Point support : announce that this line starts or ends at this point
  * @param point the point
@@ -1204,3 +1237,4 @@ static void buildmap_line_count_linebypoint(int *LineByPoint1Count, int *LineByP
 	*LineByPoint1Count = max_line_by_point;
 	*LineByPoint2Count = cnt;
 }
+#endif
