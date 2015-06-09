@@ -688,11 +688,6 @@ buildmap_osm_text_way_tag(char *data)
 		return;
 	} 
 	
-	if (strcasecmp(tag, "landuse") == 0) {
-		wi.WayIsInteresting = 0;
-		return;
-	}
-	
 	if (strcasecmp(tag, "oneway") == 0 && strcasecmp(value, "yes") == 0) {
 		wi.WayIsOneWay = ROADMAP_LINE_DIRECTION_ONEWAY;
 		return;
