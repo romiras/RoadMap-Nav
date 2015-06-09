@@ -242,6 +242,21 @@ void roadmap_canvas_erase (void) {
                        RoadMapDrawingArea->allocation.height);
 }
 
+void
+roadmap_pango_matrix_rotate (PangoMatrix *matrix,
+	int degrees, int sine, int cosine)
+{
+  PangoMatrix tmp;
+
+  tmp.xx = cosine/32768.;
+  tmp.xy = sine/32768.;
+  tmp.yx = -sine/32768.;
+  tmp.yy = cosine/32768.;
+  tmp.x0 = 0;
+  tmp.y0 = 0;
+
+  pango_matrix_concat (matrix, &tmp);
+}
 
 void roadmap_canvas_draw_string (RoadMapGuiPoint *position,
                                  int corner, int size, const char *text) {
@@ -295,22 +310,23 @@ roadmap_canvas_draw_string_angle(RoadMapGuiPoint *position,
 
     angle = -angle;
 
-    fprintf(stderr, "position: x %d y %d\n", position->x, position->y);
-    fprintf(stderr, "%s @ %d degrees: width %d ascent %d descent %d\n",
-	    text, angle, text_width, text_ascent, text_descent);
+    // fprintf(stderr, "position: x %d y %d\n", position->x, position->y);
+    // fprintf(stderr, "%s @ %d degrees: width %d ascent %d descent %d\n",
+    //	    text, angle, text_width, text_ascent, text_descent);
 
     start->x = position->x;
     start->y = position->y - text_height;
    
 
     roadmap_math_trigonometry (angle, &sine, &cosine);
-    fprintf(stderr, "a %d cos(a) %d  sin(a) %d", angle, cosine, sine);
+    // fprintf(stderr, "a %d cos(a) %d  sin(a) %d", angle, cosine, sine);
 
 
     // scaling works fine, and obviously so does rotation.
     // but i can't get translations to have any affect whatsoever.  :-/
     pango_matrix_translate (&matrix, 0, (text_ascent + text_descent));
-    pango_matrix_rotate(&matrix, (double) (angle));
+    // pango_matrix_rotate(&matrix, angle);
+    roadmap_pango_matrix_rotate(&matrix, angle, sine, cosine);
 
     pango_context_set_matrix(RoadMapContext, &matrix);
     pango_layout_context_changed(RoadMapLayout);
@@ -333,7 +349,7 @@ roadmap_canvas_draw_string_angle(RoadMapGuiPoint *position,
 			(text_height * angle / 90);
     } else {
 	start->x = start->x - (width/2 * cosine / 32768) -
-			(text_height * 140 * angle / 90 / 100);
+			(text_height * 120 * angle / 90 / 100);
 	start->y = start->y - (width/2 * sine / 32768) +
 			(text_height * angle / 90);
     }
