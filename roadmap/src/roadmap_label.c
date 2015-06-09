@@ -250,7 +250,7 @@ void roadmap_label_draw_text(const char *text,
          (ROADMAP_TEXT_LABELS, pos, angle, size, text);
    } else {
       roadmap_screen_text
-         (ROADMAP_TEXT_LABELS, pos, ROADMAP_CANVAS_CENTER, size, text);
+         (ROADMAP_TEXT_LABELS, pos, ROADMAP_CANVAS_CENTER_BOTTOM, size, text);
    }
 }
 
@@ -585,6 +585,7 @@ int roadmap_label_draw_cache (int angles) {
 #if POLY_OUTLINE
          {
             int lines = 4;
+	    RoadMapPen pen = roadmap_canvas_select_pen (RoadMapLabelPen);
             if (!angles) {
                 cPtr->poly[0].x = cPtr->bbox.minx;
                 cPtr->poly[0].y = cPtr->bbox.miny;
@@ -596,6 +597,7 @@ int roadmap_label_draw_cache (int angles) {
                 cPtr->poly[3].y = cPtr->bbox.miny;
             }
             roadmap_canvas_draw_multiple_lines(1, &lines, cPtr->poly, 1);
+	    pen = roadmap_canvas_select_pen (pen);
          }
 #endif
 
