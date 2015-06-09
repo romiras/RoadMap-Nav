@@ -33,6 +33,7 @@
 #include "roadmap.h"
 #include "roadmap_types.h"
 #include "roadmap_gui.h"
+#include "roadmap_math.h"
 
 #include "roadmap_canvas.h"
 #include "roadmap_gtkcanvas.h"
@@ -109,19 +110,24 @@ void roadmap_canvas_get_text_extents
    PangoRectangle rectangle;
 
    if (RoadMapLayout == NULL) {
+       PangoFontDescription *desc;
        RoadMapLayout = gtk_widget_create_pango_layout
                            (GTK_WIDGET(RoadMapDrawingArea), text);
        RoadMapContext =  gtk_widget_get_pango_context(GTK_WIDGET(RoadMapDrawingArea));
        pango_layout_set_width (RoadMapLayout, -1);
+
+       desc = pango_font_description_from_string ("Sans Bold 15");
+       pango_layout_set_font_description (RoadMapLayout, desc);
+       pango_font_description_free (desc);
    }
+
    pango_layout_set_text (RoadMapLayout, text, -1);
 
    pango_layout_get_extents (RoadMapLayout, NULL, &rectangle);
 
-   *width   = 3 * rectangle.width / 2 / PANGO_SCALE;
-   *ascent  = 3 * PANGO_ASCENT(rectangle) / 2 / PANGO_SCALE;
-   *descent = 3 * PANGO_DESCENT(rectangle) / 2 / PANGO_SCALE;
-   // if (can_tilt) *can_tilt = 0;
+   *width   = rectangle.width / PANGO_SCALE;
+   *ascent  = PANGO_ASCENT(rectangle) / PANGO_SCALE;
+   *descent = PANGO_DESCENT(rectangle) / PANGO_SCALE;
    if (can_tilt) *can_tilt = 1;
 }
 
@@ -250,6 +256,7 @@ void roadmap_canvas_draw_string (RoadMapGuiPoint *position,
 
    start->x = position->x;
    start->y = position->y;
+
    if (corner & ROADMAP_CANVAS_RIGHT)
       start->x -= text_width;
    else if (corner & ROADMAP_CANVAS_CENTER_X)
@@ -266,103 +273,78 @@ void roadmap_canvas_draw_string (RoadMapGuiPoint *position,
        start->x, start->y, RoadMapLayout);
 }
 
-#ifdef TRY_DRAWING_LABELS_WITH_GTK_LABEL
-void roadmap_canvas_draw_string_angle (RoadMapGuiPoint *center,
-                                       int size,
-                                       int angle, const char *text)
+
+void
+roadmap_canvas_draw_string_angle(RoadMapGuiPoint *position,
+				 int size, int angle, const char *text)
 {
-   int text_width;
-   int text_ascent;
-   int text_descent;
-   RoadMapGuiPoint start[1];
-   GtkWidget *layout;
-   GtkWidget *label;
+    int text_width;
+    int text_height;
+    int text_ascent;
+    int text_descent;
+    int width, height;
+    int sine, cosine;
+    RoadMapGuiPoint start[1];
+    PangoMatrix matrix = PANGO_MATRIX_INIT;
+    PangoMatrix init_matrix = PANGO_MATRIX_INIT;
 
-   layout = gtk_layout_new (NULL, NULL);
-   gtk_container_add (GTK_CONTAINER (RoadMapDrawingArea), layout);
 
-   roadmap_canvas_get_text_extents 
+    roadmap_canvas_get_text_extents 
         (text, size, &text_width, &text_ascent, &text_descent, NULL);
-   roadmap_log(ROADMAP_WARNING, "%s @ %d: w %d a %d d %d\n",text, angle,
-	  text_width, text_ascent, text_descent);
+    text_height = (text_ascent + text_descent);
 
-   start->x = center->x;
-   start->y = center->y;
-   label = gtk_label_new (text);
-   gtk_label_set_angle(GTK_LABEL(label),angle);
+    angle = -angle;
 
-   gtk_layout_put (GTK_LAYOUT (layout), label, start->x, start->y);
+    fprintf(stderr, "position: x %d y %d\n", position->x, position->y);
+    fprintf(stderr, "%s @ %d degrees: width %d ascent %d descent %d\n",
+	    text, angle, text_width, text_ascent, text_descent);
 
-   //gdk_draw_layout (RoadMapDrawingBuffer, RoadMapGc,
-   //    start->x, start->y, RoadMapLayout);
-}
+    start->x = position->x;
+    start->y = position->y - text_height;
+   
+
+    roadmap_math_trigonometry (angle, &sine, &cosine);
+    fprintf(stderr, "a %d cos(a) %d  sin(a) %d", angle, cosine, sine);
+
+
+    // scaling works fine, and obviously so does rotation.
+    // but i can't get translations to have any affect whatsoever.  :-/
+    pango_matrix_translate (&matrix, 0, (text_ascent + text_descent));
+    pango_matrix_rotate(&matrix, (double) (angle));
+
+    pango_context_set_matrix(RoadMapContext, &matrix);
+    pango_layout_context_changed(RoadMapLayout);
+
+    pango_layout_get_size (RoadMapLayout, &width, &height);
+    width /= PANGO_SCALE;
+
+#if 1
+	/* major hacks ahead.  gdk_draw_layout doesn't fully honor
+	 * the pango matrix transform.  we can't use 
+	 * pango_renderer_draw_layout() instead, because it
+	 * won't render to a GdkPixmap (that i can find).
+	 * so we adjust the position of the rotated text in
+	 * a few ad-hoc ways, and the result is reasonable.
+	 * not great, just reasonable.
+	 */
+    if (angle < 0) {
+	start->x = start->x - (width/2 * cosine / 32768);
+	start->y = start->y + (width/2 * sine / 32768) -
+			(text_height * angle / 90);
+    } else {
+	start->x = start->x - (width/2 * cosine / 32768) -
+			(text_height * 140 * angle / 90 / 100);
+	start->y = start->y - (width/2 * sine / 32768) +
+			(text_height * angle / 90);
+    }
 #endif
-
-void roadmap_canvas_draw_string_angle (RoadMapGuiPoint *center,
-                                       int size,
-                                       int angle, const char *text)
-{
-   int text_width;
-   int text_ascent;
-   int text_descent;
-   RoadMapGuiPoint start[1];
-   PangoMatrix matrix = PANGO_MATRIX_INIT;
-   PangoMatrix init_matrix = PANGO_MATRIX_INIT;
-   // PangoRenderer *renderer;
-   // int width, height;
-
-   roadmap_canvas_get_text_extents 
-        (text, size, &text_width, &text_ascent, &text_descent, NULL);
-
-   start->x = center->x - text_width/2;;
-   start->y = center->y - text_descent;
-
-#if 0
-   roadmap_log(ROADMAP_WARNING, "%s @ %d: w %d a %d d %d\n",text, angle,
-        text_width, text_ascent, text_descent);
-   roadmap_log(ROADMAP_WARNING, "rcdsa: x %d y %d\n",start->x, start->y);
-#endif
+    gdk_draw_layout(RoadMapDrawingBuffer, RoadMapGc,
+		start->x, start->y, RoadMapLayout);
 
 
-#ifdef DRAW_HORIZONTAL_LABELS // for reference, while debugging
-   // pango_matrix_scale (&matrix, 1.5,1.5);
-   pango_context_set_matrix (RoadMapContext, &matrix);
-   pango_layout_context_changed (RoadMapLayout); 
-   gdk_draw_layout (RoadMapDrawingBuffer, RoadMapGc,
-       start->x, start->y, RoadMapLayout);
-#endif
-   // i can't get translations to have any affect whatsoever.  :-/
-   // pango_matrix_translate (&matrix, 100.,100.);
-   pango_matrix_scale (&matrix, 1.5, 1.5);
-   if (angle > 0) {
-      angle = -angle;
-      start->x = center->x;
-      start->y = center->y - text_descent/2;
-   } else if (angle < 0) {
-      angle = -angle;
-      start->x = center->x - text_width /2;
-      if (angle > 70)  // heuristic is latin for "hack", right?
-	  start->x = center->x - text_width / 4;
-      start->y = center->y - text_descent/2;
-   }
-   // renderer = gdk_pango_renderer_get_default (gtk_widget_get_screen (RoadMapDrawingArea));
-   // gdk_pango_renderer_set_drawable (GDK_PANGO_RENDERER (renderer), RoadMapDrawingArea->window);
-   // gdk_pango_renderer_set_gc (GDK_PANGO_RENDERER (renderer), RoadMapDrawingArea->style->black_gc);
-   pango_matrix_rotate (&matrix, (double)(angle));
-   pango_context_set_matrix (RoadMapContext, &matrix);
-
-   pango_layout_context_changed (RoadMapLayout); 
-
-   // pango_layout_get_size (RoadMapLayout, &width, &height);
-   // roadmap_log(ROADMAP_WARNING, "plgs: w %d h %d\n",width, height);
-   // pango_renderer_draw_layout (renderer, RoadMapLayout,
-   //    width/2, height/2);
-   //    start->x, start->y);
-   gdk_draw_layout (RoadMapDrawingBuffer, RoadMapGc,
-        start->x, start->y, RoadMapLayout);
-
-   pango_context_set_matrix (RoadMapContext, &init_matrix);
-   pango_layout_context_changed (RoadMapLayout); 
+    // reset 
+    pango_context_set_matrix(RoadMapContext, &init_matrix);
+    pango_layout_context_changed(RoadMapLayout);
 }
 
 
