@@ -40,7 +40,8 @@
 
 void roadmap_messagebox_hide (void *handle) {
 
-   gtk_widget_destroy ((GtkWidget *)handle);
+   if (handle)
+    gtk_widget_destroy ((GtkWidget *)handle);
 
 }
 
