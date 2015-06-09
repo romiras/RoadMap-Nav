@@ -294,6 +294,10 @@ layer_info_t cycleway_to_layer[] = {
         { 0,                    NULL,           0 },
 };
 
+layer_info_t landuse_to_layer[] = {
+        { "reservoir",              LAKE,           AREA },
+};
+
 layer_info_t waterway_to_layer[] = {
         { 0,                    NULL,           0 },
         { "river",              RIVER,          0 },            /* 1 */
@@ -645,7 +649,7 @@ layer_info_sublist_t list_info[] = {
         {"shop",                NULL,                 NULL },
         {"tourism",             NULL,                 NULL },
         {"historic",            historic_to_layer,    NULL },
-        {"landuse",             NULL,                 NULL },
+        {"landuse",             landuse_to_layer,     NULL },
         {"military",            NULL,                 NULL },
         {"natural",             natural_to_layer,     NULL },
         {"route",               NULL,                 NULL },
