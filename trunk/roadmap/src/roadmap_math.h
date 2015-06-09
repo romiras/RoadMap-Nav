@@ -193,4 +193,6 @@ int roadmap_math_calc_line_length (const RoadMapPosition *position,
                                    int                   *total_length);
 #endif
 
+void roadmap_math_trigonometry (int angle, int *sine_p, int *cosine_p);
+
 #endif // INCLUDED__ROADMAP_MATH__H
