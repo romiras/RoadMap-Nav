@@ -183,7 +183,7 @@ void roadmap_math_working_context(void) {
  * @param sine_p
  * @param cosine_p
  */
-static void roadmap_math_trigonometry (int angle, int *sine_p, int *cosine_p) {
+void roadmap_math_trigonometry (int angle, int *sine_p, int *cosine_p) {
 
    int i = angle % 90;
    int sine;
