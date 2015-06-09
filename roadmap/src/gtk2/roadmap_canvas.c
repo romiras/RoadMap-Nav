@@ -51,6 +51,12 @@ struct roadmap_canvas_pen {
    char  *name;
    GdkLineStyle style;
    GdkGC *gc;
+
+   char  *color_name;
+   GdkColor *native_color;
+
+   char  *font_color_name;
+   GdkColor *font_native_color;
 };
 
 
@@ -136,6 +142,7 @@ RoadMapPen roadmap_canvas_select_pen (RoadMapPen pen) {
 
    RoadMapPen old_pen = CurrentPen;
    CurrentPen = pen;
+   gdk_gc_set_foreground (pen->gc, CurrentPen->native_color);
    RoadMapGc = pen->gc;
    return old_pen;
 }
@@ -167,6 +174,13 @@ RoadMapPen roadmap_canvas_create_pen (const char *name) {
       pen->gc   = gc;
       pen->style = GDK_LINE_SOLID;
       pen->next = RoadMapPenList;
+      pen->color_name = pen->font_color_name = 0;
+      pen->native_color = (GdkColor *) g_malloc (sizeof(GdkColor));
+      gdk_color_parse ("black", pen->native_color);
+      gdk_color_alloc (gdk_colormap_get_system(), pen->native_color);
+
+      pen->font_native_color = (GdkColor *) g_malloc (sizeof(GdkColor));
+      memcpy(pen->font_native_color, pen->native_color, sizeof(GdkColor));
 
       RoadMapPenList = pen;
    }
@@ -179,19 +193,22 @@ RoadMapPen roadmap_canvas_create_pen (const char *name) {
 
 void roadmap_canvas_set_foreground (const char *color) {
 
-   static GdkColor *native_color;
+   if (!CurrentPen) return;
 
-   if (native_color == NULL) {
-      native_color = (GdkColor *) g_malloc (sizeof(GdkColor));
-   }
+   CurrentPen->color_name = strdup (color);
 
-   gdk_color_parse (color, native_color);
-   gdk_color_alloc (gdk_colormap_get_system(), native_color);
-
-   gdk_gc_set_foreground (RoadMapGc, native_color);
+   gdk_color_parse (color, CurrentPen->native_color);
+   gdk_color_alloc (gdk_colormap_get_system(), CurrentPen->native_color);
 }
 
 void roadmap_canvas_set_label_font_color(const char *color) {
+
+   if (!CurrentPen) return;
+
+   CurrentPen->font_color_name = strdup (color);
+
+   gdk_color_parse (color, CurrentPen->font_native_color);
+   gdk_color_alloc (gdk_colormap_get_system(), CurrentPen->font_native_color);
 }
 
 void roadmap_canvas_set_label_font_size(int size) {
@@ -284,6 +301,7 @@ void roadmap_canvas_draw_string (RoadMapGuiPoint *position,
    else /* TOP */
       start->y += text_ascent;
 
+   gdk_gc_set_foreground (CurrentPen->gc, CurrentPen->font_native_color);
    gdk_draw_layout (RoadMapDrawingBuffer, RoadMapGc,
        start->x, start->y, RoadMapLayout);
 }
@@ -354,6 +372,7 @@ roadmap_canvas_draw_string_angle(RoadMapGuiPoint *position,
 			(text_height * angle / 90);
     }
 #endif
+    gdk_gc_set_foreground (CurrentPen->gc, CurrentPen->font_native_color);
     gdk_draw_layout(RoadMapDrawingBuffer, RoadMapGc,
 		start->x, start->y, RoadMapLayout);
 
