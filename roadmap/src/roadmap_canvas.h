@@ -69,7 +69,7 @@ void roadmap_canvas_register_configure_handler
  * according to the current font.
  */
 void roadmap_canvas_get_text_extents 
-        (const char *text, int size, int *width,
+        (const char *text, int *width,
             int *ascent, int *descent, int *can_tilt);
 
 
@@ -147,11 +147,9 @@ void roadmap_canvas_erase (void);
 
 void roadmap_canvas_draw_string  (RoadMapGuiPoint *position,
                                   int corner,
-                                  int size,
                                   const char *text);
 
 void roadmap_canvas_draw_string_angle ( RoadMapGuiPoint *center,
-                                       int size,
                                        int angle,
                                        const char *text);
 

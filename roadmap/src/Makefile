@@ -46,7 +46,6 @@ RMLIBSRC = roadmap_log.c \
 	roadmap_sunrise.c \
 	roadmap_state.c \
 	roadmap_gpx.c \
-	roadmap_linefont.c \
 	roadmap_lang.c \
 	roadmap_iso.c
 #	roadmap_turns.c
@@ -258,7 +257,6 @@ RMHEADERS = \
 	roadmap_layer.h \
 	roadmap_library.h \
 	roadmap_line.h \
-	roadmap_linefont.h \
 	roadmap_list.h \
 	roadmap_locator.h \
 	roadmap_main.h \

@@ -84,7 +84,7 @@ static void roadmap_canvas_convert_points (POINT *winpoints,
 }
 
 
-void roadmap_canvas_get_text_extents (const char *text, int size,
+void roadmap_canvas_get_text_extents (const char *text,
 			int *width, int *ascent, int *descent, int *can_tilt)
 {
 	TEXTMETRIC metric;
@@ -235,7 +235,6 @@ void roadmap_canvas_erase (void)
 
 void roadmap_canvas_draw_string (RoadMapGuiPoint *position,
 				 int corner,
-				 int size,
 				 const char *text)
 {
 	int x;
@@ -248,7 +247,7 @@ void roadmap_canvas_draw_string (RoadMapGuiPoint *position,
 	LPWSTR text_unicode;
 
 	roadmap_canvas_get_text_extents
-            (text, -1, &text_width, &text_ascent, &text_descent, NULL);
+            (text, &text_width, &text_ascent, &text_descent, NULL);
 
 	text_height = text_ascent + text_descent;
 
@@ -278,11 +277,10 @@ void roadmap_canvas_draw_string (RoadMapGuiPoint *position,
 }
 
 void roadmap_canvas_draw_string_angle (RoadMapGuiPoint *center,
-				       int size,
 				       int angle, const char *text)
 {
 	/* no angle possible, currently.  at least try and center the text */
-	roadmap_canvas_draw_string (center, ROADMAP_CANVAS_CENTER, size, text);
+	roadmap_canvas_draw_string (center, ROADMAP_CANVAS_CENTER, text);
 }
 
 

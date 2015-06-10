@@ -149,14 +149,13 @@ RoadMapCanvasConfigureHandler RoadMapCanvasConfigure =
 static void roadmap_canvas_draw_string_worker (RoadMapGuiPoint *start,
                                        RoadMapGuiPoint *center,
                                        int width,
-                                       int size,
                                        int angle, const char *text);
 
 void roadmap_canvas_get_text_extents 
-        (const char *text, int size, int *width,
+        (const char *text, int *width,
             int *ascent, int *descent, int *can_tilt) {
 
-   size = CurrentPen->size;
+   int size = CurrentPen->size;
    *ascent = 0;
    *descent = 0;
    if (can_tilt) *can_tilt = 1;
@@ -341,7 +340,7 @@ void roadmap_canvas_draw_string (RoadMapGuiPoint *position,
    RoadMapGuiPoint start[1];
    
    roadmap_canvas_get_text_extents 
-         (text, size, &text_width, &text_ascent, &text_descent, NULL);
+         (text, &text_width, &text_ascent, &text_descent, NULL);
    
    start->x = position->x;
    start->y = position->y;
@@ -357,24 +356,23 @@ void roadmap_canvas_draw_string (RoadMapGuiPoint *position,
    else /* TOP */
       start->y += text_ascent;
 
-   roadmap_canvas_draw_string_worker (start, position, 0, size, 0, text);
+   roadmap_canvas_draw_string_worker (start, position, 0, 0, text);
 }
 
 void roadmap_canvas_draw_string_angle
-    (  RoadMapGuiPoint *center,
-        int size, int theta, const char *text) {
+    (  RoadMapGuiPoint *center, int theta, const char *text) {
    int text_width;
    int text_ascent;
    int text_descent;
    RoadMapGuiPoint start[1];
 
    roadmap_canvas_get_text_extents 
-      (text, size, &text_width, &text_ascent, &text_descent, NULL);
+      (text, &text_width, &text_ascent, &text_descent, NULL);
 
    start->x = center->x - text_width/2;
    start->y = center->y - text_descent;
 
-   roadmap_canvas_draw_string_worker (start, center, text_width, size, theta, text);
+   roadmap_canvas_draw_string_worker (start, center, text_width, theta, text);
 }
 
 
@@ -647,7 +645,6 @@ static wchar_t* bidi_string(wchar_t *logical) {
 static void roadmap_canvas_draw_string_worker (RoadMapGuiPoint *start,
                                        RoadMapGuiPoint *center,
                                        int width,
-                                       int size,
                                        int angle, const char *text)
 {
    

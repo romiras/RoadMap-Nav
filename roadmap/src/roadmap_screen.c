@@ -139,8 +139,6 @@ static int RoadMapScreenRotation;
 static int RoadMapScreenWidth;
 static int RoadMapScreenHeight;
 
-static int RoadMapLineFontSelect;
-
 static int RoadMapScreenDeltaX;
 static int RoadMapScreenDeltaY;
 
@@ -188,37 +186,6 @@ static struct roadmap_screen_point_buffer Points;
 
 static RoadMapPen RoadMapBackground = NULL;
 static RoadMapPen RoadMapPenEdges = NULL;
-
-/**
- * @brief
- */
-static void roadmap_screen_setfont(void) {
-
-   const char *p;
-   int labels_was = (RoadMapLineFontSelect & ROADMAP_TEXT_LABELS);
-
-   RoadMapLineFontSelect = 0;
-   p = roadmap_config_get(&RoadMapConfigLinefontSelector);
-   if (p == NULL) {
-      RoadMapLineFontSelect |= ROADMAP_TEXT_LABELS;
-   } else {
-      if (*p == 'l') { // "labels"
-         RoadMapLineFontSelect |= ROADMAP_TEXT_LABELS;
-      } else if (*p == 's') { // "signs"
-         RoadMapLineFontSelect |= ROADMAP_TEXT_SIGNS;
-      } else if (*p == 'a') { // "all"
-         RoadMapLineFontSelect |= ROADMAP_TEXT_SIGNS|ROADMAP_TEXT_LABELS;
-      }
-   }
-
-   /* If the LABELS bit changes here, reset the cache in
-    * roadmap_label.c:  the font has changed, and therefore the
-    * dimensions and bounding boxes.
-    */
-   if (labels_was != (RoadMapLineFontSelect & ROADMAP_TEXT_LABELS)) {
-      roadmap_label_cache_invalidate();
-   }
-}
 
 /**
  * @brief
@@ -1560,8 +1527,6 @@ void roadmap_screen_repaint (void) {
     if (!RoadMapScreenDragging)
         roadmap_screen_set_cursor (ROADMAP_CURSOR_WAIT_WITH_DELAY);
 
-    roadmap_screen_setfont();
-
     roadmap_log_push ("roadmap_screen_repaint");
 
     /* Clean the drawing buffer. */
@@ -2320,49 +2285,6 @@ void roadmap_screen_zoom_reset (void) {
    }
 }
 
-
-void roadmap_screen_text (int id, RoadMapGuiPoint *center, int where,
-		int size, const char *text) {
-    if ((RoadMapLineFontSelect & id) != 0) {
-        roadmap_linefont_text ( center, where, size, text);
-    } else {
-        roadmap_canvas_draw_string ( center, where, size, text);
-    }
-}
-
-void roadmap_screen_text_angle (int id, RoadMapGuiPoint *center,
-                int theta, int size, const char *text) {
-
-    if ((RoadMapLineFontSelect & id) != 0) {
-        roadmap_linefont_text_angle ( center, size, theta, text);
-    } else {
-        roadmap_canvas_draw_string_angle ( center, size, theta, text);
-        // roadmap_sprite_draw ("PurpleCross", center, 0);
-    }
-}
-
-/**
- * @brief initialize
- * @param id
- * @param text
- * @param size
- * @param width
- * @param ascent
- * @param descent
- * @param can_tilt
- */
-void roadmap_screen_text_extents (int id, const char *text, int size,
-	RoadMapPen pen, int *width, int *ascent, int *descent, int *can_tilt) {
-    if ((RoadMapLineFontSelect & id) != 0) {
-        roadmap_linefont_extents
-                (text, size, width, ascent, descent, can_tilt);
-    } else {
-	if (pen) roadmap_canvas_select_pen(pen);
-        roadmap_canvas_get_text_extents
-                (text, size, width, ascent, descent, can_tilt);
-    }
-}
-
 /**
  * @brief initialize
  */
@@ -2469,8 +2391,6 @@ void roadmap_screen_shutdown (void)
 	RoadMapScreenRotation = 0;
 	RoadMapScreenWidth = 0;
 	RoadMapScreenHeight = 0;
-
-	RoadMapLineFontSelect = 0;
 
 	RoadMapScreenDeltaX = 0;
 	RoadMapScreenDeltaY = 0;

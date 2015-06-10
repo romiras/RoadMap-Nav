@@ -368,9 +368,10 @@ static void roadmap_sprite_decode_text
 
        max_width = tot_height = 0;
        for (i = 0; i < count; i++) {
-          roadmap_screen_text_extents 
-            (ROADMAP_TEXT_LABELS, textseq->obj.strings[i],
-             sprite->textsize, NULL, &width, &ascent, &descent, NULL);
+	  roadmap_canvas_set_label_font_size(sprite->textsize);
+          roadmap_canvas_get_text_extents 
+            (textseq->obj.strings[i],
+             &width, &ascent, &descent, NULL);
           if (width > max_width) max_width = width;
           tot_height += ascent + descent + 2;
        }
@@ -931,10 +932,10 @@ void roadmap_sprite_draw_with_text
 
             t =  textseq->obj.strings[i];
             if (t != NULL) {
-               roadmap_screen_text
-                  (ROADMAP_TEXT_LABELS, &RoadMapSpritePoints[i],
-                   ROADMAP_CANVAS_CENTER,
-                   sprite->textsize * scale / 100, t);
+		roadmap_canvas_set_label_font_size(sprite->textsize * scale / 100);
+                roadmap_canvas_draw_string
+                  (&RoadMapSpritePoints[i],
+                   ROADMAP_CANVAS_CENTER, t);
             }
          }
       }
