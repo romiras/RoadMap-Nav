@@ -70,7 +70,7 @@ E reception_na
 E reception_none %v/%s
 E reception_poor %v/%s
 E reception_good %v/%s
-A gps
+A gpsconsole
 R
 
 # When the Download object is visible, it indicates that RoadMap is
