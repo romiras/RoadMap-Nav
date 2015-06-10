@@ -210,7 +210,9 @@ void roadmap_canvas_set_brush_is_background(int is_background) {}
 
 void roadmap_canvas_set_label_font_name(const char *name) {}
 void roadmap_canvas_set_label_font_color(const char *color) {}
-void roadmap_canvas_set_label_font_size(int size) {}
+void roadmap_canvas_set_label_font_size(int size) {
+#warning  font size stub should be completed
+}
 void roadmap_canvas_set_label_font_spacing(int spacing) {}
 void roadmap_canvas_set_label_font_weight(const char *weight) {}
 void roadmap_canvas_set_label_font_style(int style) {}
