@@ -43,6 +43,7 @@
 #define ROADMAP_CURSOR_SIZE           10
 #define ROADMAP_CANVAS_POINT_BLOCK  1024
 
+#define DEFAULT_FONT_SIZE 15
 
 struct roadmap_canvas_pen {
 
@@ -57,6 +58,8 @@ struct roadmap_canvas_pen {
 
    char  *font_color_name;
    GdkColor *font_native_color;
+
+   int size;
 };
 
 
@@ -113,19 +116,23 @@ void roadmap_canvas_get_text_extents
         (const char *text, int size, int *width,
             int *ascent, int *descent, int *can_tilt) {
 
+   size = CurrentPen->size;
    PangoRectangle rectangle;
+   PangoFontDescription *desc;
+   char fontname[50];
 
    if (RoadMapLayout == NULL) {
-       PangoFontDescription *desc;
        RoadMapLayout = gtk_widget_create_pango_layout
                            (GTK_WIDGET(RoadMapDrawingArea), text);
        RoadMapContext =  gtk_widget_get_pango_context(GTK_WIDGET(RoadMapDrawingArea));
        pango_layout_set_width (RoadMapLayout, -1);
-
-       desc = pango_font_description_from_string ("Sans Bold 15");
-       pango_layout_set_font_description (RoadMapLayout, desc);
-       pango_font_description_free (desc);
    }
+
+   snprintf(fontname, sizeof(fontname), "Liberation Sans Bold %d",
+   	size < 0 ? DEFAULT_FONT_SIZE : size); 
+   desc = pango_font_description_from_string (fontname);
+   pango_layout_set_font_description (RoadMapLayout, desc);
+   pango_font_description_free (desc);
 
    pango_layout_set_text (RoadMapLayout, text, -1);
 
@@ -182,6 +189,8 @@ RoadMapPen roadmap_canvas_create_pen (const char *name) {
       pen->font_native_color = (GdkColor *) g_malloc (sizeof(GdkColor));
       memcpy(pen->font_native_color, pen->native_color, sizeof(GdkColor));
 
+      pen->size = DEFAULT_FONT_SIZE;
+
       RoadMapPenList = pen;
    }
 
@@ -212,6 +221,9 @@ void roadmap_canvas_set_label_font_color(const char *color) {
 }
 
 void roadmap_canvas_set_label_font_size(int size) {
+   if (!CurrentPen) return;
+   CurrentPen->size = size;
+   roadmap_canvas_select_pen(CurrentPen);
 }
 
 void roadmap_canvas_set_linestyle (const char *style) {
