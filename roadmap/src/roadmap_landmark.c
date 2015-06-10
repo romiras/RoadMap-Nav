@@ -45,10 +45,13 @@ extern int RoadMapTripMakeBackups;
 static RoadMapConfigDescriptor RoadMapConfigLandmarkName =
                         ROADMAP_CONFIG_ITEM ("Landmarks", "Name");
 
-static RoadMapConfigDescriptor RoadMapConfigLandmarksColor =
+static RoadMapConfigDescriptor RoadMapConfigLandmarkColor =
                         ROADMAP_CONFIG_ITEM ("Landmarks", "Color");
 
-static RoadMapConfigDescriptor RoadMapConfigLandmarkSize =
+static RoadMapConfigDescriptor RoadMapConfigLandmarkDeclutter =
+                        ROADMAP_CONFIG_ITEM ("Landmarks", "Declutter");
+
+static RoadMapConfigDescriptor RoadMapConfigLandmarkFontSize =
                         ROADMAP_CONFIG_ITEM ("Landmarks", "Font Size");
 
 static RoadMapConfigDescriptor RoadMapConfigBackupFiles =
@@ -61,6 +64,7 @@ void roadmap_landmark_set_modified(void) {
 
 
 static int RoadMapLandmarkFontSize;
+static int RoadMapLandmarkDeclutter;
 
 void roadmap_landmark_draw_waypoint
         (const waypoint *waypointp,
@@ -87,11 +91,9 @@ void roadmap_landmark_draw_waypoint
         roadmap_sprite_draw (sprite, &guipoint, 0);
     }
 
-    if (pen) {
-        roadmap_canvas_select_pen (pen);
-        if (sprite)
-            guipoint.y += 15; /* space for sprite */
+    if (pen && roadmap_math_declutter(RoadMapLandmarkDeclutter )) {
 
+        roadmap_canvas_select_pen (pen);
         /* FIXME -- We should do label collision detection, which
          * means joining in the fun in roadmap_label_add() and
          * roadmap_label_draw_cache().  Landmark labels should
@@ -99,8 +101,7 @@ void roadmap_landmark_draw_waypoint
          * should probably be drawn last, however, so that their
          * labels come out on "top" of other map features.
          */
-        roadmap_label_draw_text(waypointp->shortname,
-           &guipoint, 0, 0, pen);
+        roadmap_label_draw_text(waypointp->shortname, &guipoint, 0, 0, pen);
     }
 }
 
@@ -124,9 +125,6 @@ void roadmap_landmark_draw_weepoint
 
     if (pen) {
         roadmap_canvas_select_pen (pen);
-        if (sprite)
-            guipoint.y += 15; /* space for sprite */
-
         /* FIXME -- We should do label collision detection, which
          * means joining in the fun in roadmap_label_add() and
          * roadmap_label_draw_cache().  Landmark labels should
@@ -134,8 +132,7 @@ void roadmap_landmark_draw_weepoint
          * should probably be drawn last, however, so that their
          * labels come out on "top" of other map features.
          */
-        roadmap_label_draw_text(weepointp->name,
-           &guipoint, 0, 0, pen);
+        roadmap_label_draw_text(weepointp->name, &guipoint, 0, 0, pen);
     }
 }
 
@@ -145,9 +142,6 @@ static void roadmap_landmark_draw(const waypoint *waypointp) {
 }
 
 void roadmap_landmark_display (void) {
-
-    RoadMapLandmarkFontSize =
-            roadmap_config_get_integer (&RoadMapConfigLandmarkSize);
 
     waypt_iterator (&RoadMapLandmarkHead, roadmap_landmark_draw);
 
@@ -291,9 +285,17 @@ void roadmap_landmark_load(void) {
     RoadMapList tmp_waypoint_list;
     int defaulted, ret;
 
+    RoadMapLandmarkFontSize =
+            roadmap_config_get_integer (&RoadMapConfigLandmarkFontSize);
+    RoadMapLandmarkDeclutter =
+            roadmap_config_get_integer (&RoadMapConfigLandmarkDeclutter);
+
     RoadMapLandmarksPen = roadmap_canvas_create_pen ("landmarks.labels");
     roadmap_canvas_set_foreground
-        (roadmap_config_get (&RoadMapConfigLandmarksColor));
+        (roadmap_config_get (&RoadMapConfigLandmarkColor));
+    roadmap_canvas_set_label_font_size(RoadMapLandmarkFontSize);
+    roadmap_canvas_set_label_font_color
+	(roadmap_config_get (&RoadMapConfigLandmarkColor));
 
     roadmap_canvas_set_thickness (2);
 
@@ -332,10 +334,13 @@ roadmap_landmark_initialize(void) {
         ("preferences", &RoadMapConfigLandmarkName, "");
 
     roadmap_config_declare
-       ("preferences", &RoadMapConfigLandmarksColor,  "darkred");
+       ("preferences", &RoadMapConfigLandmarkColor,  "darkred");
 
-   roadmap_config_declare
-       ("preferences", &RoadMapConfigLandmarkSize,  "18");
+    roadmap_config_declare
+       ("preferences", &RoadMapConfigLandmarkDeclutter,  "99999");
+
+    roadmap_config_declare
+       ("preferences", &RoadMapConfigLandmarkFontSize,  "18");
 
 
     ROADMAP_LIST_INIT(&RoadMapLandmarkHead);
