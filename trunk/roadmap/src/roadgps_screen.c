@@ -268,7 +268,6 @@ static void roadgps_screen_draw_satellite_label
    roadmap_canvas_select_pen (reverse ?
       RoadGpsInactiveLabels : RoadGpsActiveLabels);
 
-   roadmap_canvas_set_label_font_size(RoadMapGPSFontSize);
    roadmap_canvas_draw_string
       (&satellite->position, ROADMAP_CANVAS_CENTER,
         satellite->label);
@@ -297,7 +296,6 @@ static void roadgps_screen_draw_satellite_signal (int satellite, int filled) {
 
    roadmap_canvas_select_pen (filled ?
       RoadGpsActiveLabels : RoadGpsInactiveLabels);
-   roadmap_canvas_set_label_font_size(RoadMapGPSFontSize);
    roadmap_canvas_draw_string
       (&position, ROADMAP_CANVAS_CENTER,
          RoadGpsSatellites[satellite].label);
@@ -347,13 +345,11 @@ static void roadgps_screen_draw_position (void) {
   point.x = RoadGpsFrame.latitude_offset_x;
   point.y = RoadGpsFrame.latitude_offset_y;
   roadmap_canvas_select_pen (RoadGpsLabels);
-  roadmap_canvas_set_label_font_size(RoadMapGPSFontSize);
   roadmap_canvas_draw_string (&point, ROADMAP_CANVAS_LEFT, "Latitude:");
   point.y = point.y+RoadGpsFrame.label_height;
 
   roadgps_screen_to_coord(data,1,RoadGpsPosition.latitude);
   roadmap_canvas_select_pen (RoadGpsValues);
-  roadmap_canvas_set_label_font_size(RoadMapGPSFontSize);
   roadmap_canvas_draw_string
       (&point, ROADMAP_CANVAS_LEFT, data);
 
@@ -361,20 +357,17 @@ static void roadgps_screen_draw_position (void) {
   point.y = RoadGpsFrame.longitude_offset_y;
 
   roadmap_canvas_select_pen (RoadGpsLabels);
-  roadmap_canvas_set_label_font_size(RoadMapGPSFontSize);
   roadmap_canvas_draw_string
       (&point, ROADMAP_CANVAS_LEFT, "Longitude:");
   point.y = point.y+RoadGpsFrame.label_height;
 
   roadgps_screen_to_coord(data,0,RoadGpsPosition.longitude);
   roadmap_canvas_select_pen (RoadGpsValues);
-  roadmap_canvas_set_label_font_size(RoadMapGPSFontSize);
   roadmap_canvas_draw_string
       (&point, ROADMAP_CANVAS_LEFT, data);
 
   point.y = point.y+RoadGpsFrame.label_height;
   roadmap_canvas_select_pen (RoadGpsLabels);
-  roadmap_canvas_set_label_font_size(RoadMapGPSFontSize);
   roadmap_canvas_draw_string
       (&point, ROADMAP_CANVAS_LEFT, "Altitude:");
   sprintf(data,"%d%s",RoadGpsPosition.altitude,roadmap_math_distance_unit());
@@ -385,7 +378,6 @@ static void roadgps_screen_draw_position (void) {
 
   point.y = point.y+RoadGpsFrame.label_height;
   roadmap_canvas_select_pen (RoadGpsLabels);
-  roadmap_canvas_set_label_font_size(RoadMapGPSFontSize);
   roadmap_canvas_draw_string
       (&point, ROADMAP_CANVAS_LEFT, "Speed:");
   sprintf(data,"%d%s",
@@ -393,7 +385,6 @@ static void roadgps_screen_draw_position (void) {
      roadmap_math_speed_unit());
   point.y = point.y+RoadGpsFrame.label_height;
   roadmap_canvas_select_pen (RoadGpsValues);
-  roadmap_canvas_set_label_font_size(RoadMapGPSFontSize);
   roadmap_canvas_draw_string
       (&point, ROADMAP_CANVAS_LEFT, data);
 
@@ -405,14 +396,12 @@ static void roadgps_screen_draw_position (void) {
   if (fix < 1) fix = 1;
   else if (fix > 3) fix = 3;
   sprintf(data,"%d active satellites, %s fix", satcount, fixes[fix-1]);
-  roadmap_canvas_set_label_font_size(RoadMapGPSFontSize);
   roadmap_canvas_draw_string
       (&point, ROADMAP_CANVAS_LEFT, data);
 
   if (RoadMapGpsReceivedTime != 0) {
      point.y = point.y+RoadGpsFrame.label_height;
      roadmap_canvas_select_pen (RoadGpsLabels);
-     roadmap_canvas_set_label_font_size(RoadMapGPSFontSize);
      strftime(data, sizeof(data),
                 "  %Y/%m/%d %H:%M:%S", localtime(&RoadMapGpsReceivedTime));
      roadmap_canvas_draw_string
@@ -624,7 +613,6 @@ static void roadgps_screen_format_frame (void) {
    canvas_width  = roadmap_canvas_width();
    canvas_height = roadmap_canvas_height();
 
-   roadmap_canvas_set_label_font_size(RoadMapGPSFontSize);
    roadmap_canvas_get_text_extents
        ("09", &text_width,
          &text_ascent, &text_descent, NULL);
@@ -698,6 +686,8 @@ void roadgps_screen_configure (void) {
 
    if (! Initialized) {
 
+      RoadMapGPSFontSize = roadmap_config_get_integer(&RoadMapConfigGPSFontSize);
+
       RoadGpsEraser = roadmap_canvas_create_pen ("eraser");
       roadmap_canvas_set_thickness (2);
       roadmap_canvas_set_foreground
@@ -707,6 +697,7 @@ void roadgps_screen_configure (void) {
       roadmap_canvas_set_thickness (2);
       roadmap_canvas_set_foreground
           (roadmap_config_get (&RoadMapConfigGPSForeground));
+      roadmap_canvas_set_label_font_size(RoadMapGPSFontSize);
 
       RoadGpsFramePen = roadmap_canvas_create_pen ("gps/frame");
       roadmap_canvas_set_thickness (2);
@@ -746,24 +737,26 @@ void roadgps_screen_configure (void) {
       roadmap_canvas_set_thickness (2);
       roadmap_canvas_set_foreground
           (roadmap_config_get (&RoadMapConfigGPSActiveLabels));
+      roadmap_canvas_set_label_font_size(RoadMapGPSFontSize);
 
       RoadGpsInactiveLabels = roadmap_canvas_create_pen ("gps/inactivelabels");
       roadmap_canvas_set_thickness (2);
       roadmap_canvas_set_foreground
           (roadmap_config_get (&RoadMapConfigGPSInactiveLabels));
+      roadmap_canvas_set_label_font_size(RoadMapGPSFontSize);
 
       RoadGpsLabels = roadmap_canvas_create_pen ("gps/labels");
       roadmap_canvas_set_thickness (2);
       roadmap_canvas_set_foreground
           (roadmap_config_get (&RoadMapConfigGPSLabels));
+      roadmap_canvas_set_label_font_size(RoadMapGPSFontSize);
 
      RoadGpsValues = roadmap_canvas_create_pen ("gps/values");
       roadmap_canvas_set_thickness (3);
       roadmap_canvas_set_foreground
           (roadmap_config_get (&RoadMapConfigGPSValues));
+      roadmap_canvas_set_label_font_size(RoadMapGPSFontSize);
 
-     RoadMapGPSFontSize =
-      roadmap_config_get_integer (&RoadMapConfigGPSFontSize);
    }
    roadgps_screen_format_frame ();
 

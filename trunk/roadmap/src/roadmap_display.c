@@ -79,9 +79,9 @@ static RoadMapConfigDescriptor RoadMapConfigDisplayFontSize =
                         ROADMAP_CONFIG_ITEM("Display", "Font Size");
 
 
-static RoadMapPen RoadMapMessageContour;
-static RoadMapPen RoadMapConsoleBackground;
-static RoadMapPen RoadMapConsoleForeground;
+static RoadMapPen RoadMapMessageContourPen;
+static RoadMapPen RoadMapConsoleBackgroundPen;
+static RoadMapPen RoadMapConsoleForegroundPen;
 
 static int RoadMapDisplayFontSize;
 
@@ -167,8 +167,7 @@ static RoadMapPen roadmap_display_new_pen
 
         if (sizeof(pen_name) <
               strlen(descriptor->category) + strlen(descriptor->name) + 2) {
-           roadmap_log(ROADMAP_FATAL,
-                       "not enough space for pen name %s.%s\n",
+           roadmap_log(ROADMAP_FATAL, "not enough space for pen name %s.%s\n",
                        descriptor->category,
                        descriptor->name);
         }
@@ -178,11 +177,12 @@ static RoadMapPen roadmap_display_new_pen
 
         pen = roadmap_canvas_create_pen (pen_name);
         roadmap_canvas_set_foreground (color);
+        roadmap_canvas_set_label_font_size(RoadMapDisplayFontSize);
 
         return pen;
     }
 
-    return RoadMapMessageContour;
+    return RoadMapMessageContourPen;
 }
 
 static int RoadMapDisplayPensCreated = 0;
@@ -195,13 +195,13 @@ static void roadmap_display_create_pens (void) {
 
     RoadMapDisplayPensCreated = 1;
 
-    RoadMapMessageContour = roadmap_canvas_create_pen ("message.contour");
+    RoadMapMessageContourPen = roadmap_canvas_create_pen ("message.contour");
     roadmap_canvas_set_foreground ("black");
 
-    RoadMapConsoleBackground =
+    RoadMapConsoleBackgroundPen =
         roadmap_display_new_pen (&RoadMapConfigConsoleBackground);
 
-    RoadMapConsoleForeground =
+    RoadMapConsoleForegroundPen =
         roadmap_display_new_pen (&RoadMapConfigConsoleForeground);
 
     for (sign = RoadMapStreetSign; sign->title != NULL; ++sign) {
@@ -246,7 +246,6 @@ static void roadmap_display_string
 	saved = *p1;
 	*p1 = 0;
 
-	roadmap_canvas_set_label_font_size(RoadMapDisplayFontSize);
 	roadmap_canvas_draw_string (position, 
 	    ROADMAP_CANVAS_LEFT|ROADMAP_CANVAS_TOP,
 	    text_line);
@@ -257,7 +256,6 @@ static void roadmap_display_string
 
     }
 
-    roadmap_canvas_set_label_font_size(RoadMapDisplayFontSize);
     roadmap_canvas_draw_string (position,
                 ROADMAP_CANVAS_LEFT|ROADMAP_CANVAS_TOP,
                 text_line);
@@ -292,6 +290,7 @@ static void roadmap_display_highlight (const RoadMapPosition *position) {
 }
 
 
+// "signs" are the dynamic boxes with long pointers to waypoints
 static void roadmap_display_sign (RoadMapSign *sign) {
 
     RoadMapGuiPoint points[7];
@@ -304,7 +303,7 @@ static void roadmap_display_sign (RoadMapSign *sign) {
 
     roadmap_log_push ("roadmap_display_sign");
 
-    roadmap_canvas_set_label_font_size(RoadMapDisplayFontSize);
+    roadmap_canvas_select_pen (RoadMapConsoleForegroundPen);
     roadmap_canvas_get_text_extents
         (sign->content,
             &width, &ascent, &descent, NULL);
@@ -438,7 +437,7 @@ static void roadmap_display_sign (RoadMapSign *sign) {
     roadmap_canvas_select_pen (sign->background);
     roadmap_canvas_draw_multiple_polygons (1, &count, points, 1, 0);
 
-    roadmap_canvas_select_pen (RoadMapMessageContour);
+    roadmap_canvas_select_pen (RoadMapMessageContourPen);
     roadmap_canvas_draw_multiple_polygons (1, &count, points, 0, 0);
 
     roadmap_canvas_select_pen (sign->foreground);
@@ -611,6 +610,7 @@ void roadmap_display_hide (const char *title) {
     }
 }
 
+// "console boxes" are the boxes of info in the screen corners
 static void roadmap_display_console_box
                 (int corner, RoadMapConfigDescriptor *item) {
 
@@ -632,7 +632,7 @@ static void roadmap_display_console_box
         return;
     }
 
-    roadmap_canvas_set_label_font_size(RoadMapDisplayFontSize);
+    roadmap_canvas_select_pen (RoadMapConsoleForegroundPen);
     roadmap_canvas_get_text_extents
         (text,
             &width, &ascent, &descent, NULL);
@@ -668,16 +668,15 @@ static void roadmap_display_console_box
 
 
     count = 4;
-    roadmap_canvas_select_pen (RoadMapConsoleBackground);
+    roadmap_canvas_select_pen (RoadMapConsoleBackgroundPen);
     roadmap_canvas_draw_multiple_polygons (1, &count, frame, 1, 0);
 
-    roadmap_canvas_select_pen (RoadMapConsoleForeground);
+    roadmap_canvas_select_pen (RoadMapConsoleForegroundPen);
     roadmap_canvas_draw_multiple_polygons (1, &count, frame, 0, 0);
 
     frame[0].x += 3;
     frame[0].y += 3;
 
-    roadmap_canvas_set_label_font_size(RoadMapDisplayFontSize);
     roadmap_canvas_draw_string(frame,
                 ROADMAP_CANVAS_LEFT|ROADMAP_CANVAS_TOP,
                 text);
