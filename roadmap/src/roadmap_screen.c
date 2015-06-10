@@ -61,7 +61,6 @@
 #include "roadmap_pointer.h"
 #include "roadmap_display.h"
 #include "roadmap_label.h"
-#include "roadmap_linefont.h"
 #include "roadmap_plugin.h"
 #include "roadmap_factory.h"
 #include "roadmap_time.h"
