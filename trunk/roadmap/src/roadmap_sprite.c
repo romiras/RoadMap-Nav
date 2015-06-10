@@ -41,6 +41,8 @@
 #include "roadmap_screen.h"
 #include "roadmap_label.h"
 
+#define DEFAULT_SPRITE_TEXTSIZE 10
+
 static int RoadMapSpriteFastDraw;
 
 static RoadMapConfigDescriptor RoadMapConfigSpritePercent =
@@ -97,6 +99,7 @@ typedef struct roadmap_sprite_record {
    RoadMapGuiRect text_bbox;
    RoadmapSpriteDrawingSequence textseq;
    int textsize;
+   RoadMapPen textpen;
    RoadMapGuiPoint textcenter[1];
 
    struct roadmap_sprite_record *next;
@@ -185,6 +188,7 @@ static void roadmap_sprite_decode_plane
 
    snprintf (pen, sizeof(pen), "%s.%d.%s", sprite->name, t, color);
    sprite->drawing.planes.last->pen = roadmap_canvas_create_pen (pen);
+   roadmap_canvas_set_label_font_size(sprite->textsize);
 
    roadmap_canvas_set_foreground (color);
    roadmap_canvas_set_thickness  (t);
@@ -368,9 +372,7 @@ static void roadmap_sprite_decode_text
 
        max_width = tot_height = 0;
        for (i = 0; i < count; i++) {
-	  roadmap_canvas_set_label_font_size(sprite->textsize);
-          roadmap_canvas_get_text_extents 
-            (textseq->obj.strings[i],
+          roadmap_canvas_get_text_extents (textseq->obj.strings[i],
              &width, &ascent, &descent, NULL);
           if (width > max_width) max_width = width;
           tot_height += ascent + descent + 2;
@@ -440,6 +442,7 @@ static RoadMapSprite roadmap_sprite_new
    sprite->name = strdup (argv[1]);
    sprite->scale = 100;
    sprite->drawing.planes.first.pen = roadmap_canvas_create_pen ("Black");
+   roadmap_canvas_set_label_font_size(DEFAULT_SPRITE_TEXTSIZE);
 
    sprite->next = RoadMapSpriteList;
    RoadMapSpriteList = sprite;
@@ -577,6 +580,8 @@ static int roadmap_sprite_load_line (char *line)
          break;
       }
       sprite->scale = atoi(argv[1]);
+      // perhaps need to scale the fontsize here?
+      //    roadmap_canvas_set_label_font_size(sprite->textsize * scale / 100);
       break;
 
    case 'L':
@@ -629,11 +634,17 @@ static int roadmap_sprite_load_line (char *line)
                     sprite->name);
             } else {
                 int size;
+		char  pen[256];
 
                 roadmap_sprite_decode_point (sprite->textcenter, argv[1]);
 
-                size = (argc < 3) ? 18 : atoi(argv[2]);
+	        snprintf (pen, sizeof(pen), "%s.text", sprite->name);
+		sprite->textpen = roadmap_canvas_create_pen (pen);
+
+                size = (argc < 3) ? DEFAULT_SPRITE_TEXTSIZE : atoi(argv[2]);
                 sprite->textsize = size;
+
+		roadmap_canvas_set_label_font_size(sprite->textsize);
 
                 if (argc < 4) {
                     roadmap_sprite_decode_text (sprite,
@@ -834,9 +845,11 @@ void roadmap_sprite_draw_with_text
 
    textseq = NULL;
 
+
    if (text) {
-       roadmap_sprite_decode_text (sprite, textsequence, text, text_bbox);
-       if (textsequence->object_count != 0)
+	roadmap_canvas_select_pen (sprite->textpen);
+        roadmap_sprite_decode_text (sprite, textsequence, text, text_bbox);
+        if (textsequence->object_count != 0)
           textseq = textsequence;
    } else if (sprite->textseq.object_count) {
        textseq = &sprite->textseq;
@@ -932,7 +945,7 @@ void roadmap_sprite_draw_with_text
 
             t =  textseq->obj.strings[i];
             if (t != NULL) {
-		roadmap_canvas_set_label_font_size(sprite->textsize * scale / 100);
+		roadmap_canvas_select_pen (sprite->textpen);
                 roadmap_canvas_draw_string
                   (&RoadMapSpritePoints[i],
                    ROADMAP_CANVAS_CENTER, t);
@@ -949,8 +962,10 @@ void roadmap_sprite_draw_with_text
       free (textsequence->obj.strings);
       free (textsequence->points);
    }
+#if 0 // i think we did this scaling above?
    if (text_bbox && text_bbox != &sprite->text_bbox)
       roadmap_sprite_scale_bbox(text_bbox, text_bbox, scale);
+#endif
 
    roadmap_canvas_select_pen (prevpen);
 }
