@@ -83,7 +83,7 @@ void roadmap_canvas_register_configure_handler(
    }
 }
 
-void roadmap_canvas_get_text_extents(const char *text, int size,
+void roadmap_canvas_get_text_extents(const char *text,
    int *width, int *ascent, int *descent, int *can_tilt) {
 
    roadMapCanvas->getTextExtents(text, width, ascent, descent, can_tilt);
@@ -148,7 +148,6 @@ void roadmap_canvas_draw_string(RoadMapGuiPoint *position, int corner,
 }
 
 void roadmap_canvas_draw_string_angle (RoadMapGuiPoint *position,
-                                       int size,
                                        int angle, const char *text)
 {
    roadMapCanvas->drawStringAngle(position, 0, text, angle);

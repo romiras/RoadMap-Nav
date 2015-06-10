@@ -89,6 +89,7 @@ static int  NavigateBarEnabled = 0;
  * @param size
  * @return
  */
+#if 0
 static int navigate_bar_align_text (char *text, char **line1, char **line2,
                                     int size) {
 
@@ -156,6 +157,7 @@ static int navigate_bar_align_text (char *text, char **line1, char **line2,
 
    return -1;
 }
+#endif
 
 /**
  * @brief called from a plugin handler

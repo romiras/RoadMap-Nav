@@ -90,9 +90,6 @@ static RoadMapConfigDescriptor RoadMapConfigMinFeatureSize =
 static RoadMapConfigDescriptor RoadMapConfigLabelsColor =
                         ROADMAP_CONFIG_ITEM("Labels", "Color");
 
-static RoadMapConfigDescriptor RoadMapConfigLabelSize =
-                        ROADMAP_CONFIG_ITEM("Labels", "Font Size");
-
 /* this is fairly arbitrary */
 #define MAX_LABELS 8192
 
@@ -139,8 +136,6 @@ static unsigned int RoadMapLabelCurrentZoom;
 static RoadMapPen RoadMapLabelPen;
 
 static int RoadMapLabelMinFeatSizeSq;
-
-static int RoadMapLabelFontSize;
 
 /* doesn't check for one completely inside the other -- just intersection */
 static int poly_overlap (roadmap_label *c1, roadmap_label *c2) {
@@ -238,7 +233,6 @@ void roadmap_label_draw_text(const char *text,
         RoadMapGuiPoint *pos,
         int doing_angles, int angle, RoadMapPen pen)
 {
-  int size = RoadMapLabelFontSize;
 
   if (pen!=0)
     roadmap_canvas_select_pen (pen);
@@ -246,11 +240,11 @@ void roadmap_label_draw_text(const char *text,
     roadmap_canvas_select_pen (RoadMapLabelPen);
                
    if (doing_angles) {
-      roadmap_screen_text_angle
-         (ROADMAP_TEXT_LABELS, pos, angle, size, text);
+      roadmap_canvas_draw_string_angle
+         (pos, angle, text);
    } else {
-      roadmap_screen_text
-         (ROADMAP_TEXT_LABELS, pos, ROADMAP_CANVAS_CENTER_BOTTOM, size, text);
+      roadmap_canvas_draw_string
+         (pos, ROADMAP_CANVAS_CENTER_BOTTOM, text);
    }
 }
 
@@ -279,8 +273,6 @@ void roadmap_label_start (void) {
    }
 
    roadmap_math_get_context (&last_center, &RoadMapLabelCurrentZoom, NULL);
-
-   RoadMapLabelFontSize = roadmap_config_get_integer (&RoadMapConfigLabelSize);
 
 }
 
@@ -535,9 +527,10 @@ int roadmap_label_draw_cache (int angles) {
 
 
          if (cPtr->bbox.minx > cPtr->bbox.maxx) {
-            roadmap_screen_text_extents
-                    (ROADMAP_TEXT_LABELS, cPtr->text,
-                       RoadMapLabelFontSize , cPtr->pen,
+	    if (cPtr->pen)
+		roadmap_canvas_select_pen(cPtr->pen);
+            roadmap_canvas_get_text_extents
+                    (cPtr->text,
                        &width, &ascent, &descent, &can_tilt);
             angles = angles && can_tilt;
 
@@ -735,9 +728,6 @@ int roadmap_label_initialize (void) {
 
    roadmap_config_declare
        ("preferences", &RoadMapConfigLabelsColor,  "#000000");
-
-   roadmap_config_declare
-       ("preferences", &RoadMapConfigLabelSize,  "16");
 
     
    ROADMAP_LIST_INIT(&RoadMapLabelCache);

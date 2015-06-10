@@ -246,9 +246,10 @@ static void roadmap_display_string
 	saved = *p1;
 	*p1 = 0;
 
-	roadmap_screen_text (ROADMAP_TEXT_SIGNS,  position, 
+	roadmap_canvas_set_label_font_size(RoadMapDisplayFontSize);
+	roadmap_canvas_draw_string (position, 
 	    ROADMAP_CANVAS_LEFT|ROADMAP_CANVAS_TOP,
-	    RoadMapDisplayFontSize, text_line);
+	    text_line);
 
 	*p1 = saved;
 	text_line = p1;
@@ -256,9 +257,10 @@ static void roadmap_display_string
 
     }
 
-    roadmap_screen_text (ROADMAP_TEXT_SIGNS, position,
+    roadmap_canvas_set_label_font_size(RoadMapDisplayFontSize);
+    roadmap_canvas_draw_string (position,
                 ROADMAP_CANVAS_LEFT|ROADMAP_CANVAS_TOP,
-                RoadMapDisplayFontSize, text_line);
+                text_line);
 }
 
 /**
@@ -302,8 +304,9 @@ static void roadmap_display_sign (RoadMapSign *sign) {
 
     roadmap_log_push ("roadmap_display_sign");
 
-    roadmap_screen_text_extents
-        (ROADMAP_TEXT_SIGNS, sign->content, RoadMapDisplayFontSize, NULL,
+    roadmap_canvas_set_label_font_size(RoadMapDisplayFontSize);
+    roadmap_canvas_get_text_extents
+        (sign->content,
             &width, &ascent, &descent, NULL);
 
     width += 8; /* Keep some room around the text. */
@@ -629,8 +632,9 @@ static void roadmap_display_console_box
         return;
     }
 
-    roadmap_screen_text_extents
-        (ROADMAP_TEXT_SIGNS, text, RoadMapDisplayFontSize, NULL,
+    roadmap_canvas_set_label_font_size(RoadMapDisplayFontSize);
+    roadmap_canvas_get_text_extents
+        (text,
             &width, &ascent, &descent, NULL);
 
     canvas_width = roadmap_canvas_width();
@@ -673,9 +677,10 @@ static void roadmap_display_console_box
     frame[0].x += 3;
     frame[0].y += 3;
 
-    roadmap_screen_text(ROADMAP_TEXT_SIGNS, frame,
+    roadmap_canvas_set_label_font_size(RoadMapDisplayFontSize);
+    roadmap_canvas_draw_string(frame,
                 ROADMAP_CANVAS_LEFT|ROADMAP_CANVAS_TOP,
-                RoadMapDisplayFontSize, text);
+                text);
 }
 
 

@@ -139,13 +139,15 @@ static void roadmap_canvas_convert_points (jfloatArray apoints,
  * @param descent
  * @param can_tilt
  */
-void roadmap_canvas_get_text_extents (const char *text, int size, int *width,
+void roadmap_canvas_get_text_extents (const char *text, int *width,
             int *ascent, int *descent, int *can_tilt)
 {
 	jclass		cls = TheClass();
 	jmethodID	mid = TheMethod(cls, "MeasureWidth", "(Ljava/lang/String;I)I");
 	jstring		js = (*RoadMapJniEnv)->NewStringUTF(RoadMapJniEnv, text);
 	int		r;
+
+	int size = CurrentPen->size;
 
 	r = (*RoadMapJniEnv)->CallIntMethod(RoadMapJniEnv, PanelThiz, mid, js, size);
 	if (width)
@@ -307,9 +309,10 @@ void roadmap_canvas_draw_string (RoadMapGuiPoint *position, int corner, int size
 }
 
 void roadmap_canvas_draw_string_angle (RoadMapGuiPoint *position,
-                                       int size,
                                        int angle, const char *text)
 {
+
+#warning need to set size
 	jstring		js;
 	jclass		cls = TheClass();
 	jmethodID	mid = TheMethod(cls, "DrawStringAngle", "(IIIILjava/lang/String;)V");
