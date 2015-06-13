@@ -108,6 +108,12 @@ int BuildMapLayerDrinks;
 int BuildMapLayerFuel;
 int BuildMapLayerATM;
 
+int BuildMapLayerHotel;
+int BuildMapLayerMotel ;
+int BuildMapLayerGuestHouse;
+int BuildMapLayerHostel;
+int BuildMapLayerHut;
+
 /* These defines are simply shorthand notation, to make
  * the tables below easier to manage
  */
@@ -147,6 +153,12 @@ int BuildMapLayerATM;
 #define	DRINKS      &BuildMapLayerDrinks
 #define	FUEL        &BuildMapLayerFuel
 #define	ATM         &BuildMapLayerATM
+
+#define HOTEL	    &BuildMapLayerHotel
+#define MOTEL  	    &BuildMapLayerMotel
+#define GUEST_HOUSE &BuildMapLayerGuestHouse
+#define HOSTEL	    &BuildMapLayerHostel
+#define HUT    	    &BuildMapLayerHut
 
 BuildMapDictionary DictionaryPrefix;
 BuildMapDictionary DictionaryStreet;
@@ -195,6 +207,12 @@ void buildmap_osm_common_find_layers (void) {
    BuildMapLayerCafe      = buildmap_layer_get ("cafe");
    BuildMapLayerDrinks    = buildmap_layer_get ("drinks");
    BuildMapLayerATM       = buildmap_layer_get ("atm");
+
+   BuildMapLayerHotel     = buildmap_layer_get ("hotel");   
+   BuildMapLayerMotel     = buildmap_layer_get ("motel");   
+   BuildMapLayerGuestHouse= buildmap_layer_get ("guesthouse");   
+   BuildMapLayerHostel    = buildmap_layer_get ("hostel"); 
+   BuildMapLayerHut       = buildmap_layer_get ("hut");    
 }
 
 char *stringtype[] = {
@@ -519,6 +537,16 @@ layer_info_t historic_to_layer[] = {
         { 0,                    NULL,           0 },
 };
 
+layer_info_t tourism_to_layer[] = {
+        { 0,                    NULL,           0 },
+        { "hotel",              HOTEL,          PLACE },            /* 1 */
+        { "motel",              MOTEL,          PLACE },            /* 2 */
+        { "guest_house",        GUEST_HOUSE,    PLACE },            /* 3 */
+        { "hostel",             HOSTEL,		PLACE },            /* 4 */
+        { "alpine_hut",         HUT,            PLACE },            /* 5 */
+        { 0,                    NULL,           0 },
+};
+
 #if NEEDED
 char *oneway_type[] = {
         0,
@@ -647,7 +675,7 @@ layer_info_sublist_t list_info[] = {
         {"leisure",             leisure_to_layer,     NULL },
         {"amenity",             amenity_to_layer,     NULL },
         {"shop",                NULL,                 NULL },
-        {"tourism",             NULL,                 NULL },
+        {"tourism",             tourism_to_layer,     NULL },
         {"historic",            historic_to_layer,    NULL },
         {"landuse",             landuse_to_layer,     NULL },
         {"military",            NULL,                 NULL },
