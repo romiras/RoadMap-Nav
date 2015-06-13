@@ -134,6 +134,7 @@ static int RoadMapScreenViewMode = VIEW_MODE_2D;
 static int RoadMapScreenOrientationDynamic = 1;
 static int RoadMapScreen3dHorizon;
 static int RoadMapScreenLabels;
+static int RoadMapScreenPOIs;
 static int RoadMapScreenRotation;
 static int RoadMapScreenWidth;
 static int RoadMapScreenHeight;
@@ -2175,6 +2176,13 @@ void roadmap_screen_toggle_view_mode (void) {
 void roadmap_screen_toggle_labels (void) {
    
    RoadMapScreenLabels = ! RoadMapScreenLabels;
+   roadmap_start_request_repaint_map(REPAINT_NOW);
+}
+
+void roadmap_screen_toggle_POIs (void) {
+   
+   RoadMapScreenPOIs = ! RoadMapScreenPOIs;
+   roadmap_layer_set_group_visibility(1, RoadMapScreenPOIs );
    roadmap_start_request_repaint_map(REPAINT_NOW);
 }
 

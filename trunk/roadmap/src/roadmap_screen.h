@@ -49,6 +49,7 @@ void roadmap_screen_move_right (void);
 void roadmap_screen_move_left  (void);
 
 void roadmap_screen_toggle_view_mode (void);
+void roadmap_screen_toggle_POIs (void);
 void roadmap_screen_toggle_labels (void);
 void roadmap_screen_toggle_orientation_mode (void);
 void roadmap_screen_increase_horizon (void);

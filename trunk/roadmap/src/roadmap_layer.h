@@ -87,6 +87,8 @@ int  roadmap_layer_select_class (const char *name);
 
 int roadmap_layer_navigable (int mode, int *layers, int size);
 
+void roadmap_layer_set_group_visibility(int group, int hide);
+
 int  roadmap_layer_visible_lines (int *layers, int size, unsigned int pen_index);
 int roadmap_layer_visible_places (int *layers, int size, unsigned int pen_index);
 
