@@ -68,7 +68,7 @@ Schools.Color: beige
  .Thickness: 1
  .Speed: 1
 Airports.Color: grey
- .Declutter: 300
+ .Declutter: 600
  .Thickness: 1
  .Speed: 1
 Stations.Color: grey

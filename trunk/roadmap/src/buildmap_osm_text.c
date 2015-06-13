@@ -64,8 +64,9 @@
 #include "buildmap_polygon.h"
 
 #include "buildmap_layer.h"
-#include "buildmap_osm_common.h"
 #include "buildmap_osm_text.h"
+
+#include "buildmap_osm_layers.h"
 
 extern char *BuildMapResult;
 
@@ -560,12 +561,12 @@ buildmap_osm_get_layer(char *tag, char *value, int *flags, int *layer)
     int		i;
     layer_info_t	*list;
 
-    for (i=1; list_info[i].name != 0; i++) {
-	if (strcmp(tag, list_info[i].name) == 0) {
+    for (i=1; list_info[i].osm_name != 0; i++) {
+	if (strcmp(tag, list_info[i].osm_name) == 0) {
 	    list = list_info[i].list;
 	    if (list) {
-		for (i=1; list[i].name; i++) {
-		    if (strcmp(value, list[i].name) == 0) {
+		for (i=1; list[i].osm_name; i++) {
+		    if (strcmp(value, list[i].osm_name) == 0) {
 			*flags = list[i].flags;
 			if (list[i].layerp)
 				*layer = *(list[i].layerp);
