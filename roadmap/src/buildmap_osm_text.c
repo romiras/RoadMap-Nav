@@ -82,14 +82,16 @@ static struct WayInfo {
     int      nWayNodes;          /**< number of nodes known for 
 						     this way */
     int      WayLayer;           /**< the layer for this way */
-    char     *WayStreetName;     /**< the street name */
+    char     *WayName;     /**< the street name */
     char     *WayStreetRef;	 /**< street code,
 				       to be used when no name (e.g. motorway) */
     int      WayFlags;           /**< properties of this way, from
 						     the table flags */
     int      WayIsOneWay;        /**< is this way one direction only */
+    int      WayIsBuilding;      /**< this way represents a building */
+    char     *WayTourism;        /**< value of tourism tag, if any */
     int      WayAdminLevel;	 /**< boundaries */
-    int      WayTerritorial; /* is this a territorial boundary? */
+    int      WayTerritorial;     /**< is this a territorial boundary? */
     int      WayCoast;           /**< coastline */
     int      WayIsInteresting;   /**< this way is interesting for RoadMap */
 } wi;
@@ -98,13 +100,12 @@ static struct WayInfo {
  * @brief variables referring to the current node
  */
 static struct NodeInfo {
-    nodeid_t      NodeId;             /**< which node */
+    nodeid_t      NodeId;         /**< which node */
     int      NodeLayer;           /**< the layer for this node */
     int      NodeFlags;           /**< properties of this node, from
 						     the table flags */
     char     *NodePlace;         /**< what kind of place is this */
-    char     *NodeName;      /**< which town */
-    char     *NodePostalCode;    /**< postal code */
+    char     *NodeName;          /**< what's it's name? */
     int      NodeLon,            /**< coordinates */
 	     NodeLat;            /**< coordinates */
     int      NodeFakeFips;       /**< fake postal code */
@@ -174,8 +175,9 @@ static char *FromXmlAndDup(const char *s)
 static void
 buildmap_osm_text_reset_way(void)
 {
-	if (wi.WayStreetName) free(wi.WayStreetName); 
+	if (wi.WayName) free(wi.WayName); 
 	if (wi.WayStreetRef) free(wi.WayStreetRef);
+	if (wi.WayTourism) free(wi.WayTourism);
 	memset(&wi, 0, sizeof(wi));
 }
 
@@ -187,7 +189,6 @@ buildmap_osm_text_reset_node(void)
 {
 	if (ni.NodePlace) free(ni.NodePlace);
 	if (ni.NodeName) free(ni.NodeName);
-	if (ni.NodePostalCode) free(ni.NodePostalCode);
 	memset(&ni, 0, sizeof(ni));
 }
 
@@ -291,8 +292,7 @@ buildmap_osm_text_node_finish(void)
 		buildmap_verbose("finishing %f %f %s %s layer: %d",
 		    (float)ni.NodeLat/1000000.0, (float)ni.NodeLon/1000000.0,
 		    ni.NodePlace, ni.NodeName, ni.NodeLayer);
-		s = buildmap_dictionary_add (DictionaryCity,
-			(char *) ni.NodeName, strlen(ni.NodeName));
+		s = str2dict (DictionaryCity, (char *) ni.NodeName);
 		buildmap_place_add(s, ni.NodeLayer, point);
 	    } else {
 		buildmap_verbose("dropping %s %s", ni.NodePlace, ni.NodeName);
@@ -556,20 +556,21 @@ buildmap_osm_text_node_read_lat_lon(char *p)
 }
 
 int
-buildmap_osm_get_layer(char *tag, char *value, int *flags, int *layer)
+buildmap_osm_get_layer(int lookfor, char *tag, char *value, int *flags, int *layer)
 {
-    int		i;
-    layer_info_t	*list;
+    int		i,j;
+    value_info_t	*value_list;
 
-    for (i=1; list_info[i].osm_name != 0; i++) {
-	if (strcmp(tag, list_info[i].osm_name) == 0) {
-	    list = list_info[i].list;
-	    if (list) {
-		for (i=1; list[i].osm_name; i++) {
-		    if (strcmp(value, list[i].osm_name) == 0) {
-			*flags = list[i].flags;
-			if (list[i].layerp)
-				*layer = *(list[i].layerp);
+    for (i=1; tag_info[i].osm_tname != 0; i++) {
+	if ((lookfor & tag_info[i].flags) &&
+		strcmp(tag, tag_info[i].osm_tname) == 0) {
+	    value_list = tag_info[i].value_list;
+	    if (value_list) {
+		for (j=1; value_list[j].osm_vname; j++) {
+		    if (strcmp(value, value_list[j].osm_vname) == 0) {
+			*flags = value_list[j].flags;
+			if (value_list[j].layerp)
+				*layer = *(value_list[j].layerp);
 			return 1;
 		    }
 		}
@@ -601,7 +602,7 @@ buildmap_osm_text_node_tag(char *data, int catalog)
 // characters, e.g. "Cortina d'Ampezzo".  but i assume that if
 // a placename actually contained a '"', then the XML escape
 // mechanisms would be used, and not single quotes.
-// summary:  stop parsing for 'string'.
+// summary:  stop parsing for 'string', just get "string".
 #ifdef BEFORE
         s = sscanf(data, "tag k=%*['\"]%[^\"']%*['\"] v=%*['\"]%[^\"']%*['\"]",
                         tagk, tagv);
@@ -612,34 +613,29 @@ buildmap_osm_text_node_tag(char *data, int catalog)
 	if (s != 2)
 		buildmap_fatal(0, "fail to scanf tag k and v (%s)", data);
 
-	if (strcmp(tagk, "place") == 0 ||     /* <tag k="place" v="town"/> */
-	    strcmp(tagk, "amenity") == 0) {   /* <tag k="amenity" v="fuel"/> */
-                if (ni.NodePlace)
-                        free(ni.NodePlace);
-                ni.NodePlace = strdup(tagv);
-		if (catalog) {
-		    saveInterestingNode(ni.NodeId);
-		    buildmap_verbose("saving node %u info k %s v %s",
-			    ni.NodeId, tagk, tagv);
-		}
-		if (!buildmap_osm_get_layer(tagk, tagv,
-				&ni.NodeFlags, &ni.NodeLayer)) {
-		    buildmap_verbose("no layer found for node %u info k %s v %s",
-			    ni.NodeId, tagk, tagv);
-		}
-		buildmap_verbose("layer for node %u info k %s v %s is %d",
-			    ni.NodeId, tagk, tagv, ni.NodeLayer);
-        } else if (strcmp(tagk, "name") == 0) {
+	if (strcmp(tagk, "name") == 0) {
                 /* <tag k="name" v="Herent"/> */
                 if (ni.NodeName)
                         free(ni.NodeName);
                 ni.NodeName = FromXmlAndDup(tagv);
 		if (catalog) {
 		    saveInterestingNode(ni.NodeId);
-		    // buildmap_verbose("saving node %u info k %s v %s", ni.NodeId, tagk, tagv);
 		}
         } else {
+	    if (!buildmap_osm_get_layer(PLACE, tagk, tagv,
+			    &ni.NodeFlags, &ni.NodeLayer)) {
+		return;
+	    }
+	    if (ni.NodeFlags & PLACE) {
+		    if (ni.NodePlace)
+			    free(ni.NodePlace);
+		    ni.NodePlace = strdup(tagv);
+		    if (catalog) {
+			saveInterestingNode(ni.NodeId);
+		    }
+	    } else {
 		buildmap_debug("dropping node %u info k %s v %s", ni.NodeId, tagk, tagv);
+	    }
 	}
 
 }
@@ -676,9 +672,9 @@ buildmap_osm_text_way_tag(char *data)
 
 	/* street names */
 	if (strcasecmp(tag, "name") == 0) {
-		if (wi.WayStreetName)
-			free(wi.WayStreetName);
-		wi.WayStreetName = FromXmlAndDup(value);
+		if (wi.WayName)
+			free(wi.WayName);
+		wi.WayName = FromXmlAndDup(value);
 		return;
 	} 
 	
@@ -689,23 +685,34 @@ buildmap_osm_text_way_tag(char *data)
 		return;
 	} 
 	
+#ifdef BUILDMAP_NAVIGATION_SUPPORT
 	if (strcasecmp(tag, "oneway") == 0 && strcasecmp(value, "yes") == 0) {
 		wi.WayIsOneWay = ROADMAP_LINE_DIRECTION_ONEWAY;
 		return;
 	}
+#endif
 	
 	if (strcasecmp(tag, "building") == 0) {
 		if (strcasecmp(value, "yes") == 0) {
 			/* what else would the value be? */
-			wi.WayIsInteresting = 0;
+			wi.WayIsBuilding = 1;
 		}
 		return;
 	}
-	
+
+	if (strcasecmp(tag, "tourism") == 0) {
+		if (wi.WayTourism)
+			free(wi.WayTourism);
+		wi.WayTourism = FromXmlAndDup(value);
+		return;
+	}
+
 	if (strcasecmp(tag, "admin_level") == 0) {
 		wi.WayAdminLevel = atoi(value);
+		return;
 	} else if (strcasecmp(tag, "border_type") == 0) {
 		wi.WayTerritorial = !strcasecmp(value, "territorial");
+		return;
 	} else if (strcasecmp(tag, "natural") == 0 &&
 			strcasecmp(value, "coastline") == 0) {
 		wi.WayCoast = 1;
@@ -714,8 +721,18 @@ buildmap_osm_text_way_tag(char *data)
 	/*
 	 * Get layer info
 	 */
-	buildmap_osm_get_layer(tag, value, &wi.WayFlags, &wi.WayLayer);
+	buildmap_osm_get_layer(ANY, tag, value, &wi.WayFlags, &wi.WayLayer);
 
+}
+
+void
+buildmap_osm_text_way_drop_uninteresting(void)
+{
+	if (wi.WayIsBuilding) {
+	    if (!wi.WayTourism) {
+		wi.WayIsInteresting = 0;
+	    }
+	}
 }
 
 /**
@@ -725,10 +742,10 @@ buildmap_osm_text_way_tag(char *data)
  * @return error indication
  */
 void
-buildmap_osm_text_way_finish(char *data)
+buildmap_osm_text_way_finish(void)
 {
         int             from_point, to_point, line, street;
-        int             fromlon, tolon, fromlat, tolat;
+        int             fromlon, fromlat;
         RoadMapString   rms_dirp, rms_dirs, rms_type, rms_name;
         int             j;
 	char compound_name[1024];
@@ -742,20 +759,22 @@ buildmap_osm_text_way_finish(char *data)
 		l_boundary = buildmap_layer_get("boundaries");;
 
         if (wi.WayId == 0)
-                buildmap_fatal(0, "Wasn't in a way (%s)", data);
+                buildmap_fatal(0, "Wasn't in a way");
 
 	if (wi.nWayNodes < 1) {
                 buildmap_osm_text_reset_way();
                 return;
 	}
 
-        from_point = buildmap_osm_text_point_get(WayNodes[0]);
-        to_point = buildmap_osm_text_point_get(WayNodes[wi.nWayNodes-1]);
 
-        fromlon = buildmap_point_get_longitude(from_point);
-        fromlat = buildmap_point_get_latitude(from_point);
-        tolon = buildmap_point_get_longitude(to_point);
-        tolat = buildmap_point_get_latitude(to_point);
+	if (wi.WayIsBuilding) {
+	    if (wi.WayTourism) {
+		buildmap_osm_get_layer(PLACE, "tourism", wi.WayTourism, &wi.WayFlags, &wi.WayLayer);
+	    } else {
+		buildmap_osm_text_reset_way();
+		return;
+	    }
+	}
 
 	if (wi.WayLayer == 0) {
 		/* if a way is both a coast and a boundary, treat it only as coast */
@@ -766,14 +785,18 @@ buildmap_osm_text_way_finish(char *data)
 			/* also ignore territorial (marine) borders */
 			if  (wi.WayAdminLevel > 4 || wi.WayTerritorial) {
 				wi.WayIsInteresting = 0;
-			}
+			} else if (wi.WayAdminLevel > 2) {
 
-			/* if we're not (roughly) in north america,
-			 * discard state boundaries as well.  */
-			if  ((wi.WayAdminLevel > 2) &&
-			    (fromlon > -32 || fromlat < 17)) {
-				/* east of the azores or south of mexico */
-				wi.WayIsInteresting = 0;
+			    from_point = buildmap_osm_text_point_get(WayNodes[0]);
+			    fromlon = buildmap_point_get_longitude(from_point);
+			    fromlat = buildmap_point_get_latitude(from_point);
+
+			    /* if we're not (roughly) in north america,
+			     * discard state boundaries as well.  */
+			    if (fromlon > -32 || fromlat < 17) {
+				    /* east of the azores or south of mexico */
+				    wi.WayIsInteresting = 0;
+			    }
 			}
 
 			wi.WayLayer = l_boundary;
@@ -782,7 +805,7 @@ buildmap_osm_text_way_finish(char *data)
 
         if ( !wi.WayIsInteresting || wi.WayLayer == 0) {
 		wayid_t *wp;
-                buildmap_debug("discarding way %d, not interesting (%s)", wi.WayId, data);
+                buildmap_debug("discarding way %d, not interesting (%s)", wi.WayId, wi.WayName);
 		wp = isWayInteresting(wi.WayId);
 		if (wp) {
 		    WayTableCopy[wp-WayTable] = 0;
@@ -798,7 +821,52 @@ buildmap_osm_text_way_finish(char *data)
         rms_name = 0;
 
 
-        if ((wi.WayFlags & AREA)  && (fromlon == tolon) && (fromlat == tolat)) {
+        if ((wi.WayFlags & PLACE) && wi.WayTourism) {
+	    /* we're finishing a way, but the flags may say PLACE if
+	     * we're treating a polygon as a place, for instance.  find
+	     * the center of the bounding box (which is good enough, for
+	     * these purposes), and make it into a place.
+	     */
+		int minlat = 999999999, maxlat = -999999999;
+		int minlon = 999999999, maxlon = -999999999;
+		int point, lon, lat;
+
+		for (j = 0; j < wi.nWayNodes; j++) {
+			point = buildmap_osm_text_point_get(WayNodes[j]);
+			lon = buildmap_point_get_longitude(point);
+			lat = buildmap_point_get_latitude(point);
+
+			if (lat < minlat) minlat = lat;
+			if (lat > maxlat) maxlat = lat;
+			if (lon < minlon) minlon = lon;
+			if (lon > maxlon) maxlon = lon;
+		}
+
+		lat = (maxlat + minlat) / 2;
+		lon = (maxlon + minlon) / 2;
+
+		/* this code looks like buildmap_osm_text_node_finish() */
+		point = buildmap_point_add(lon, lat);
+		buildmap_osm_text_point_add(ni.NodeId, point);
+
+		if (wi.WayName && wi.WayTourism) {
+		    if (wi.WayLayer) {
+			RoadMapString s;
+			buildmap_verbose("wayplace: finishing %f %f %s %s layer: %d",
+			    (float)lat/1000000.0, (float)lon/1000000.0,
+			    wi.WayTourism, wi.WayName, wi.WayLayer);
+			s = str2dict (DictionaryCity, (char *) wi.WayName);
+			buildmap_place_add(s, wi.WayLayer, point);
+		    } else {
+			buildmap_verbose("dropping %s %s", wi.WayTourism, wi.WayName);
+		    }
+		}
+
+
+	} else if ((wi.WayFlags & AREA) &&
+			(WayNodes[0] == WayNodes[wi.nWayNodes-1])) {
+		/* see http://wiki.openstreetmap.org/wiki/The_Future_of_Areas
+		 * for why the above conditions are simplistic */
                 static int polyid = 0;
                 static int cenid = 0;
 
@@ -809,7 +877,7 @@ buildmap_osm_text_way_finish(char *data)
                 cenid++;
                 polyid++;
 
-                rms_name = str2dict(DictionaryStreet, wi.WayStreetName);
+                rms_name = str2dict(DictionaryStreet, wi.WayName);
                 buildmap_polygon_add_landmark (nPolygons, wi.WayLayer, rms_name);
                 buildmap_polygon_add(nPolygons, cenid, polyid);
 
@@ -840,13 +908,9 @@ buildmap_osm_text_way_finish(char *data)
 
 		int     *lonsbuf, *latsbuf;
 
-		/* Map begin and end points to internal point id */
-		// from_point = buildmap_osm_text_point_get(WayNodes[0]);
-		// to_point = buildmap_osm_text_point_get(WayNodes[wi.nWayNodes-1]);
-
 		/* Street name */
 		buildmap_debug ("Way %d [%s] ref [%s]", wi.WayId,
-				wi.WayStreetName ? wi.WayStreetName : "",
+				wi.WayName ? wi.WayName : "",
 				wi.WayStreetRef ? wi.WayStreetRef : "");
 
 		if (wi.WayStreetRef) {
@@ -865,16 +929,20 @@ buildmap_osm_text_way_finish(char *data)
 		    n = compound_name;
 		    *d = '\0';
 
-		    if (wi.WayStreetName) {
-        		// sprintf(d, ", %s", wi.WayStreetName);
-        		sprintf(d, "%s%s", ENDASHSEP, wi.WayStreetName);
+		    if (wi.WayName) {
+        		// sprintf(d, ", %s", wi.WayName);
+        		sprintf(d, "%s%s", ENDASHSEP, wi.WayName);
         	    }
 		} else {
-        	    n = wi.WayStreetName;
+        	    n = wi.WayName;
 		}
 		rms_name = str2dict(DictionaryStreet, n);
 
 		LineId++;
+		/* Map begin and end points to internal point id */
+		from_point = buildmap_osm_text_point_get(WayNodes[0]);
+		to_point = buildmap_osm_text_point_get(WayNodes[wi.nWayNodes-1]);
+
 		line = buildmap_line_add(LineId,
 			wi.WayLayer, from_point, to_point, wi.WayIsOneWay);
 
@@ -1267,6 +1335,8 @@ buildmap_osm_text_read(char *fn, int tileid, int country_num, int division_num)
 			wi.WayIsInteresting = 0;
 		}
 
+		buildmap_osm_text_way_drop_uninteresting();
+
 		/* if the way is still flagged interesting, save it */
 		if (wi.WayId && wi.WayIsInteresting)
 			saveInterestingWay(wi.WayId);
@@ -1278,6 +1348,8 @@ buildmap_osm_text_read(char *fn, int tileid, int country_num, int division_num)
 
 		if (wi.WayId)
                 	buildmap_osm_text_way_tag(p);
+		else
+                	buildmap_osm_text_node_tag(p, 0);
                 continue;
 
         } else if (strncasecmp(p, "/osm>", 5) == 0) {
@@ -1488,7 +1560,7 @@ buildmap_osm_text_read(char *fn, int tileid, int country_num, int division_num)
         } else if (strncasecmp(p, "/way", 4) == 0) {
 
 		if (wi.WayIsInteresting)
-                	buildmap_osm_text_way_finish(p);
+                	buildmap_osm_text_way_finish();
                 continue;
 
         } else if (strncasecmp(p, "nd", 2) == 0) {
