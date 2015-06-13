@@ -21,20 +21,22 @@
  */
 
 
-#define LINE	0
-#define AREA	1
-#define PLACE	2
+#define LINE	1
+#define AREA	2
+#define PLACE	4
+#define ANY	7
 
-typedef struct layer_info {
-    char *osm_name;
+typedef struct {
+    char *osm_vname;
     int  *layerp;
     int  flags;
-} layer_info_t;
+} value_info_t;
 
-typedef struct layer_info_sublist {
-    char *osm_name;
-    layer_info_t *list;
-} layer_info_sublist_t;
+typedef struct {
+    char *osm_tname;
+    value_info_t *value_list;
+    int flags;
+} tag_info_t;
 
 
 /* declare storage for the layer indices */
@@ -58,7 +60,7 @@ BuildMapDictionary DictionarySuffix;
 BuildMapDictionary DictionaryCity;
 
 
-layer_info_t highway_to_layer[] = {
+value_info_t highway_to_layer[] = {
         { 0,                    NULL,           0 },
 	{ "motorway",           &Freeways,      LINE },
 	{ "motorway_link",      &Freeways,      LINE },
@@ -85,7 +87,7 @@ layer_info_t highway_to_layer[] = {
         { 0,                    NULL,           0 },
 };
 
-layer_info_t cycleway_to_layer[] = {
+value_info_t cycleway_to_layer[] = {
         { 0,                    NULL,           0 },
 	{ "lane",               &Trails,        LINE },
 	{ "track",              &Trails,        LINE },
@@ -94,20 +96,20 @@ layer_info_t cycleway_to_layer[] = {
         { 0,                    NULL,           0 },
 };
 
-layer_info_t aeroway_to_layer[] = {
+value_info_t aeroway_to_layer[] = {
         { 0,                    NULL,           0 },
 	{ "runway",             &Airports,      AREA },
 	{ "aerodrome",          &Airports,      AREA },
         { 0,                    NULL,           0 },
 };
 
-layer_info_t landuse_to_layer[] = {
+value_info_t landuse_to_layer[] = {
         { 0,                    NULL,           0 },
         { "reservoir",          &Lakes,         AREA },
         { 0,                    NULL,           0 },
 };
 
-layer_info_t waterway_to_layer[] = {
+value_info_t waterway_to_layer[] = {
         { 0,                    NULL,           0 },
 	{ "river",              &Rivers,        LINE },
 	{ "canal",              &Rivers,        LINE },
@@ -128,7 +130,7 @@ layer_info_t waterway_to_layer[] = {
         { 0,                    NULL,           0 },
 };
 
-layer_info_t railway_to_layer[] = {
+value_info_t railway_to_layer[] = {
 	{ 0,			NULL,           0 },
 	{ "rail",               &Railroads,     LINE },
 	{ "tram",               &Railroads,     LINE },
@@ -149,7 +151,7 @@ layer_info_t railway_to_layer[] = {
 	{ 0,                    NULL,           0 },
 };
 
-layer_info_t natural_to_layer[] = {
+value_info_t natural_to_layer[] = {
         { 0,                    NULL,           0 },
         { "coastline",          &Shore,  	LINE },
         { "water",              &Lakes,         AREA },
@@ -159,57 +161,55 @@ layer_info_t natural_to_layer[] = {
         { 0,                    NULL,           0 },
 };
 
-layer_info_t amenity_to_layer[] = {
+value_info_t amenity_to_layer[] = {
         { 0,                    NULL,           0 },
 	{ "hospital",           &Hospitals,     LINE },
 	{ "pub",                &Drinks,        PLACE },
-	{ "parking",            &Amenity,       AREA },
-	{ "post_office",        &Amenity,       LINE },
+	// { "parking",            &Parking,       AREA },
+	// { "post_office",        &Postoffice,    LINE },
 	{ "fuel",               &Fuel,          PLACE },
 	{ "school",             &Schools,       AREA },
-	{ "supermarket",        &Amenity,       LINE },
-	{ "library",            &Amenity,       LINE },
-	{ "police",             &Amenity,       LINE },
-	{ "fire_station",       &Amenity,       LINE },
+	// { "supermarket",        NULL,	        LINE },
+	// { "library",            NULL,           LINE },
+	// { "police",             &Police,        LINE },
+	// { "fire_station",       NULL,           LINE },
 	{ "restaurant",         &Food,          PLACE },
 	{ "fast_food",          &Food,          PLACE },
-	{ "place_of_worship",   &Amenity,       LINE },
+	// { "place_of_worship",   NULL,           LINE },
 	{ "cafe",               &Cafe,          PLACE },
-	{ "bicycle_parking",    &Amenity,       AREA },
-	{ "public_building",    &Amenity,       AREA },
+	// { "bicycle_parking",    NULL,           AREA },
+	// { "public_building",    NULL,           AREA },
 	{ "grave_yard",         &Parks,         AREA },
 	{ "university",         &Schools,       AREA },
 	{ "college",            &Schools,       AREA },
-	{ "townhall",           &Amenity,       AREA },
+	// { "townhall",           NULL,           AREA },
 	{ "food_court",         &Food,          PLACE },
 	{ "bbq",                &Food,          PLACE },
 	{ "bar",                &Drinks,        PLACE },
 	{ "biergarten",         &Drinks,        PLACE },
-	{ "ferry_terminal",     &Amenity,       AREA },
-	{ "car_sharing",        &Amenity,       AREA },
-	{ "taxi",               &Amenity,       AREA },
+	// { "ferry_terminal",     NULL,           AREA },
+	// { "car_sharing",        NULL,           AREA },
+	// { "taxi",               NULL,           AREA },
 	{ "atm",                &ATM,           PLACE },
-	{ "arts_centre",        &Amenity,       AREA },
-	{ "community_centre",   &Amenity,       AREA },
-	{ "social_centre",      &Amenity,       AREA },
-	{ "courthouse",         &Amenity,       LINE },
-	{ "crematorium",        &Amenity,       LINE },
-	{ "embassy",            &Amenity,       LINE },
-	{ "marketplace",        &Amenity,       AREA },
-	{ "prison",             &Amenity,       AREA },
-	{ "shelter",            &Amenity,       AREA },
-	{ "bicycle parking",    &Amenity,       AREA },
-	{ "public building",    &Amenity,       AREA },
+	// { "arts_centre",        NULL,           AREA },
+	// { "community_centre",   NULL,           AREA },
+	// { "social_centre",      NULL,           AREA },
+	// { "courthouse",         NULL,           LINE },
+	// { "crematorium",        NULL,           LINE },
+	// { "embassy",            NULL,           LINE },
+	// { "marketplace",        NULL,           AREA },
+	// { "prison",             NULL,           AREA },
+	// { "shelter",            NULL,           AREA },
         { 0,                    NULL,           0 },
 };
 
-layer_info_t place_to_layer[] = {
+value_info_t place_to_layer[] = {
         { 0,                    NULL,           0 },
-        { "continent",          NULL,           LINE },
-        { "country",            NULL,           LINE },
-        { "state",              NULL,           LINE },
-        { "region",             NULL,           LINE },
-        { "county",             NULL,           LINE },
+        // { "continent",          NULL,           LINE },
+        // { "country",            NULL,           LINE },
+        // { "state",              NULL,           LINE },
+        // { "region",             NULL,           LINE },
+        // { "county",             NULL,           LINE },
         { "city",               &City,          PLACE },
         { "town",               &Town,          PLACE },
         { "village",            &Village,       PLACE },
@@ -218,38 +218,28 @@ layer_info_t place_to_layer[] = {
         { 0,                    NULL,           0 },
 };
 
-layer_info_t leisure_to_layer[] = {
+value_info_t leisure_to_layer[] = {
         { 0,                    NULL,           0 },
         { "park",               &Parks,         AREA },
         { "common",             &Parks,         AREA },
         { "garden",             &Parks,         AREA },
         { "nature_reserve",     &Parks,         AREA },
-        { "pitch",              &Amenity,       AREA },
-        { "track",              &Amenity,       AREA },
-        { "marina",             &Amenity,       AREA },
-        { "stadium",            &Amenity,       AREA },
         { "golf_course",        &Parks,         AREA },
-        { "sports_centre",      &Amenity,       AREA },
-        { "sports centre",      &Amenity,       AREA },
         { "dog_park",           &Parks,         AREA },
         { "playground",         &Parks,         AREA },
-        { "ice_rink",           &Amenity,       AREA },
-        { "miniature_golf",     &Amenity,       AREA },
-        { "dance",              &Amenity,       AREA },
-        { "swimming_pool",      &Amenity,       AREA },
         { "golf course",        &Parks,         AREA },
         { 0,                    NULL,           0 },
 };
 
-layer_info_t historic_to_layer[] = {
+value_info_t historic_to_layer[] = {
         { 0,                    NULL,           0 },
         { "castle",             &Castle,        PLACE },
-        { "archaeological_site",NULL,           AREA },
-        { "ruins",              NULL,           AREA },
+        // { "archaeological_site",NULL,           AREA },
+        // { "ruins",              NULL,           AREA },
         { 0,                    NULL,           0 },
 };
 
-layer_info_t tourism_to_layer[] = {
+value_info_t tourism_to_layer[] = {
         { 0,                    NULL,           0 },
         { "hotel",              &Hotel,         PLACE },
         { "motel",              &Motel,         PLACE },
@@ -259,21 +249,24 @@ layer_info_t tourism_to_layer[] = {
         { 0,                    NULL,           0 },
 };
 
-layer_info_sublist_t list_info[] = {
-        {0,                     NULL			},
-        {"highway",             highway_to_layer	},
-        {"cycleway",            cycleway_to_layer	},
-        {"waterway",            waterway_to_layer	},
-        {"railway",             railway_to_layer	},
-        {"leisure",             leisure_to_layer	},
-        {"amenity",             amenity_to_layer	},
-        {"tourism",             tourism_to_layer	},
-        {"historic",            historic_to_layer	},
-        {"landuse",             landuse_to_layer	},
-        {"aeroway",             aeroway_to_layer	},
-        {"natural",             natural_to_layer	},
-        {"place",               place_to_layer		},
-        { 0,                    NULL			},
+
+/* set the third column to a specific type only if that table
+ * contains _only_ that type */
+tag_info_t tag_info[] = {
+        {0,                     NULL,			0	},
+        {"highway",             highway_to_layer,	ANY	},
+        {"cycleway",            cycleway_to_layer,	ANY	},
+        {"waterway",            waterway_to_layer,	ANY	},
+        {"railway",             railway_to_layer,	ANY	},
+        {"leisure",             leisure_to_layer,	ANY	},
+        {"amenity",             amenity_to_layer,	ANY	},
+        {"tourism",             tourism_to_layer,	PLACE	},
+        {"historic",            historic_to_layer,	PLACE	},
+        {"landuse",             landuse_to_layer,	ANY	},
+        {"aeroway",             aeroway_to_layer,	ANY	},
+        {"natural",             natural_to_layer,	ANY	},
+        {"place",               place_to_layer,		PLACE	},
+        { 0,                    NULL,			0	},
 };
 
 /**
