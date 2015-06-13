@@ -128,43 +128,52 @@ Food.Sprite: Food
  .Declutter: 450
  .LabelDeclutter: 10
  .LabelFontSize: 10
+ .Group: 1
 
 Cafe.Sprite: Cafe
  .Declutter: 450
  .LabelDeclutter: 10
  .LabelFontSize: 10
+ .Group: 1
 
 Fuel.Sprite: Fuel
  .Declutter: 1300
  .LabelDeclutter: 10
  .LabelFontSize: 10
+ .Group: 1
 
 Drinks.Sprite: Drinks
  .Declutter: 450
  .LabelDeclutter: 10
  .LabelFontSize: 10
+ .Group: 1
 
 ATM.Sprite: ATM
  .Declutter: 450
  .LabelDeclutter: 10
  .LabelFontSize: 10
+ .Group: 1
 
 Hotel.Sprite: Hotel
  .Declutter: 450
  .LabelDeclutter: 10
  .LabelFontSize: 10
+ .Group: 1
 
 Motel.Sprite: Motel
  .Declutter: 450
  .LabelDeclutter: 10
  .LabelFontSize: 10
+ .Group: 1
 
 Guesthouse.Sprite: Guesthouse
  .Declutter: 450
  .LabelDeclutter: 10
  .LabelFontSize: 10
+ .Group: 1
 
 Hostel.Sprite: Hostel
  .Declutter: 450
  .LabelDeclutter: 10
  .LabelFontSize: 10
+ .Group: 1

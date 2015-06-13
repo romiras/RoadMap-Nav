@@ -95,6 +95,7 @@ static RoadMapConfigDescriptor RoadMapConfigSkin =
 
 static char   *RoadMapNavigationMode[ROADMAP_MAX_NAVIGATION_MODES];
 static unsigned int  RoadMapNavigationModeCount = 0;
+static int RoadMapLayerGroupsHidden;
 
 /* ----------------------------------------------------------- */
 /**
@@ -164,6 +165,9 @@ typedef struct roadmap_layer_record {
     int navigation_modes;			/**< bitwise OR of the navigation modes supported */
     RoadMapConfigDescriptor speed;		/**< max speed */
     RoadMapConfigDescriptor sprite;
+
+    RoadMapConfigDescriptor group;		/**< group(s) this layer belongs to.  bitmapped! */
+
 
 } RoadMapLayer;
 
@@ -248,11 +252,25 @@ static RoadMapClass *roadmap_layer_find_class(RoadMapClass *list,
    return class;
 }
 
+void roadmap_layer_set_group_visibility(int group, int hide)
+{
+
+    if (hide)
+	RoadMapLayerGroupsHidden |= group;
+    else
+	RoadMapLayerGroupsHidden &= ~group;
+}
 
 static int roadmap_layer_is_visible (RoadMapLayer *layer)
 {
-   int	d = roadmap_config_get_integer (&layer->declutter),
-        r = roadmap_math_declutter (d);
+   int	d, r;
+
+   d = roadmap_config_get_integer (&layer->group);
+   if (RoadMapLayerGroupsHidden & d)
+	return 0;
+
+   d = roadmap_config_get_integer (&layer->declutter);
+   r = roadmap_math_declutter (d);
    return r;
 }
 
@@ -880,6 +898,10 @@ static void roadmap_layer_load_file (const char *class_file) {
         layer->thickness.category = layernames[i];
         layer->thickness.name     = "Thickness";
         roadmap_config_declare (class_config, &layer->thickness, "1");
+        
+        layer->group.category = layernames[i];
+        layer->group.name     = "Group";
+        roadmap_config_declare (class_config, &layer->group, "0");
         
         layer->declutter.category = layernames[i];
         layer->declutter.name     = "Declutter";

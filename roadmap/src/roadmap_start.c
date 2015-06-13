@@ -726,6 +726,9 @@ static RoadMapAction RoadMapStartActions[] = {
    {"togglelabels", "Show/Hide Street Labels", "Labels", NULL,
       "Show or Hide the names of streets", NULL, roadmap_screen_toggle_labels},
 
+   {"togglepoi", "Show/Hide Points of Interest", "POIs", NULL,
+      "Show or Hide restaurants, hotels, etc.", NULL, roadmap_screen_toggle_POIs},
+
    {"toggleorientation", "Dynamic/Fixed Orientation", "", NULL,
       "Toggle orientation mode dynamic / fixed", NULL,
       roadmap_screen_toggle_orientation_mode},
@@ -968,6 +971,7 @@ static const char *RoadMapStartMenu[] = {
 
       "togglebasemap",
       "togglelabels",
+      "togglepoi",
       "toggleorientation",
       "toggleview",
       "increasehorizon",
