@@ -1,7 +1,7 @@
 Class.Name: All
 Class.Lines: Freeways Ramps Highways Streets Trails Rivers Shore Railroads Boundaries
 Class.Polygons: Lakes Sea Parks Hospitals Airports Stations Schools Malls Nature Amenity
-Class.Places: City Town Village Hamlet Suburbs Food Cafe Drinks Fuel ATM
+Class.Places: City Town Village Hamlet Suburbs Food Cafe Drinks Fuel ATM Hotel Motel Guesthouse Hostel
 Class.NavigationModes: Car Bike Foot Boat
 Navigation.Car: Freeways Ramps Highways Streets
 Navigation.Bike: Streets Trails Shore Parks
@@ -145,6 +145,26 @@ Drinks.Sprite: Drinks
  .LabelFontSize: 10
 
 ATM.Sprite: ATM
+ .Declutter: 450
+ .LabelDeclutter: 10
+ .LabelFontSize: 10
+
+Hotel.Sprite: Hotel
+ .Declutter: 450
+ .LabelDeclutter: 10
+ .LabelFontSize: 10
+
+Motel.Sprite: Motel
+ .Declutter: 450
+ .LabelDeclutter: 10
+ .LabelFontSize: 10
+
+Guesthouse.Sprite: Guesthouse
+ .Declutter: 450
+ .LabelDeclutter: 10
+ .LabelFontSize: 10
+
+Hostel.Sprite: Hostel
  .Declutter: 450
  .LabelDeclutter: 10
  .LabelFontSize: 10
