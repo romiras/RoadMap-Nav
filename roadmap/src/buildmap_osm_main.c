@@ -46,7 +46,6 @@
 #include "buildmap_opt.h"
 #include "buildmap_metadata.h"
 #include "buildmap_layer.h"
-#include "buildmap_osm_common.h"
 #include "buildmap_osm_text.h"
 
 #include "roadmap_osm.h"
@@ -313,7 +312,6 @@ int buildmap_osm_text_process_file(char *fn, char *ofn)
     buildmap_metadata_add_attribute ("Class", "Name",   "All");
     buildmap_metadata_add_attribute ("Data",  "Source", "OSM");
 
-    buildmap_osm_common_find_layers();
     buildmap_debug("reading file %s", fn);
     buildmap_osm_text_read(fn, 0, country_num, division_num);
 

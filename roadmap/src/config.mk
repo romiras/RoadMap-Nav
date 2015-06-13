@@ -129,6 +129,7 @@ LIBGPS = YES
 # support when building the rdm format of the maps.  Users in
 # other areas will likely be building maps from other sources,
 # and will probably need shapefile support.
+# Building maps from OpenStreetMap does not require shapefile support.
 SHAPEFILES = NO
 # SHAPEFILES = YES
 
