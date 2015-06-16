@@ -640,12 +640,12 @@ $(MANUAL): ../README $(addprefix ../doc/, $(DOC_SRC))
 	    $@
 
 uninstall:
-	cd $(pkgdatadir) && rm -rf $(PKGDATAFILES) default basemaps
-	cd $(pkgbindir) && rm -f $(BUILD) $(SCRIPTS) $(DRIVERS)
+	-test -d $(pkgdatadir) && cd $(pkgdatadir) && rm -rf $(PKGDATAFILES) default basemaps
+	-test -d $(pkgbindir) && cd $(pkgbindir) && rm -f $(BUILD) $(SCRIPTS) $(DRIVERS)
 	-test -d $(menudir) && rm -f $(menudir)/roadmap
 	$(MAKE) -C icons uninstall
-	cd $(desktopdir) && rm -f roadmap.desktop
-	cd $(man1dir) && rm -f $(MANPAGES)
+	-test -d $(desktopdir) && cd $(desktopdir) && rm -f roadmap.desktop
+	-test -d $(man1dir) && cd $(man1dir) && rm -f $(MANPAGES)
 	for module in $(RDMODULES) ; \
 	do \
 		if [ -d $$module ] ; then \
