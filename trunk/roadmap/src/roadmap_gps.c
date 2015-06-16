@@ -100,6 +100,9 @@ static int RoadMapGpsProtocol = ROADMAP_GPS_NONE;
 static void *RoadMapGpsLostFixMessage;
 static time_t RoadMapGPSLostFixTime;
 
+static void roadmap_gps_call_all_monitors (void);
+static void roadmap_gps_call_all_listeners (void);
+
 /* Listeners information (navigation data) ----------------------------- */
 
 static char   RoadMapLastKnownStatus = 'A';
@@ -156,7 +159,8 @@ static int roadmap_gps_reception_state (void) {
 
 /**
  * @brief call listeners if we get a new state.
- * State is derived from a few inputs, one of which is a heuristic about good reception.
+ * State is derived from a few inputs, one of which is a heuristic
+ * about good reception.
  * Currently this is the only place in RoadMap where a dilution value is used.
  */
 static void roadmap_gps_update_reception (void) {
@@ -166,7 +170,6 @@ static void roadmap_gps_update_reception (void) {
    if (RoadMapGpsLink.subsystem == ROADMAP_IO_INVALID ||
             RoadMapGpsLatestData == 0) {
       new_state = GPS_RECEPTION_NA;
-
    } else if (RoadMapGpsQuality.dimension == 2) {
       new_state = GPS_RECEPTION_POOR;
    } else if (RoadMapGpsQuality.dimension >= 3) {
@@ -235,7 +238,10 @@ static char roadmap_gps_update_status (char status) {
              RoadMapGpsLostFixMessage = roadmap_messagebox
                         ("GPS Error", "GPS lost satellite fix");
              RoadMapGPSLostFixTime = time(NULL);
-             RoadMapGpsActiveSatelliteCount = 0;
+             // RoadMapGpsActiveSatelliteCount = 0;
+	     RoadMapLastKnownStatus = 'V';
+	     RoadMapGpsLatestData = 0;
+	     roadmap_gps_update_reception();
           }
        }
        RoadMapLastKnownStatus = status;
@@ -400,7 +406,10 @@ static void roadmap_gps_pgrme (void *context, const RoadMapNmeaFields *fields) {
 static void roadmap_gps_gga (void *context, const RoadMapNmeaFields *fields) {
 
    RoadMapGpsQuality.dilution_horizontal = fields->gga.dilution/100.0;
-   RoadMapGpsActiveSatelliteCount = fields->gga.count;
+   if (RoadMapGpsActiveSatelliteCount != fields->gga.count) {
+	RoadMapGpsActiveSatelliteCount = fields->gga.count;
+        roadmap_gps_call_all_monitors ();
+   }
 
    if (fields->gga.quality == ROADMAP_NMEA_QUALITY_INVALID) {
 
@@ -692,12 +701,20 @@ void roadmap_gps_satellites  (int sequence,
                                      int active) {
 
    static int active_count;
+
+   if (sequence < 0) {
+	RoadMapGpsLatestData = 0;
+	roadmap_gps_update_reception();
+	sequence = 0;
+   }
+
    if (sequence == 0) {
 
       /* End of list: propagate the information. */
 
       RoadMapGpsActiveSatelliteCount = active_count;
       roadmap_gps_call_all_monitors ();
+      active_count = 0;
 
    } else {
 
