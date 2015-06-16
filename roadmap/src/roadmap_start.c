@@ -309,7 +309,7 @@ static void roadmap_start_mapinfo (void) {
    roadmap_math_to_floatstring(clat, pos.latitude, MILLIONTHS);
    roadmap_math_to_floatstring(clon, pos.longitude, MILLIONTHS);
 
-   roadmap_log (ROADMAP_WARNING, "%s,%s   %s x %s", clat, clon,
+   roadmap_log (ROADMAP_WARNING, "center: %s,%s   %s x %s", clat, clon,
     	roadmap_message_get('x'), roadmap_message_get('y'));
 
    roadmap_math_screen_edges (&screen);
@@ -319,7 +319,40 @@ static void roadmap_start_mapinfo (void) {
    roadmap_math_to_floatstring(e, screen.east, MILLIONTHS);
 
    /* s, w, n, e */
-   roadmap_log (ROADMAP_WARNING, "%s,%s:%s,%s", s, w, n, e);
+   roadmap_log (ROADMAP_WARNING, "edges %s,%s:%s,%s", s, w, n, e);
+
+
+   {
+	int fips, tileid, i, count, bits = 0, *fipslist = NULL;
+	char *ellipsis = "";
+	char buf[200], *bp;
+	count = roadmap_locator_by_position (&pos, &fipslist);
+	if (count) {
+	    if (count > 5) {
+		count = 5;
+		ellipsis = " ...";
+	    }
+	    bp = buf;
+	    bp += sprintf(bp, "fips: ");
+	    for (i = count; i >= 0; i--) {
+		fips = fipslist[i];
+		if (fips < 0) { // quadtile
+		    bp += sprintf(bp, "0x%x%c", -fips, (i<count)?',':' ');
+		    if (!bits) // assume all the same
+			bits = tileid2bits(-fips);
+		} else {
+		    bp += sprintf(bp, "%d%c", -fips, (i<count)?',':' ');
+		}
+	    }
+	    bp += sprintf(bp, "%s", ellipsis);
+	    roadmap_log (ROADMAP_WARNING, "%s", buf);
+	    tileid = roadmap_osm_latlon2tileid(pos.latitude, pos.longitude, bits),
+	    roadmap_log (ROADMAP_WARNING, "quadtile: %s",
+		roadmap_osm_filename(NULL, 1, tileid, ".rdm"));
+	}
+	free(fipslist);
+   }
+
 
 
    snprintf(map_info, sizeof(map_info),
