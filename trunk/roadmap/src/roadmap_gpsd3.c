@@ -46,10 +46,6 @@
 #include "gps.h"
 #endif
 
-static RoadMapGpsdNavigation RoadmapGpsd2NavigationListener = NULL;
-static RoadMapGpsdSatellite  RoadmapGpsd2SatelliteListener = NULL;
-static RoadMapGpsdDilution   RoadmapGpsd2DilutionListener = NULL;
-
 RoadMapSocket gpsd3_socket;
 #ifdef ROADMAP_USES_LIBGPS
 #if GPSD_API_MAJOR_VERSION == 5
@@ -95,30 +91,9 @@ RoadMapSocket roadmap_gpsd3_connect (const char *name) {
 #endif /* defined(ROADMAP_USES_LIBGPS) && defined(GPSD_API_MAJOR_VERSION) */
 }
 
-void roadmap_gpsd3_subscribe_to_navigation (RoadMapGpsdNavigation navigation) {
-
-   RoadmapGpsd2NavigationListener = navigation;
-}
-
-
-void roadmap_gpsd3_subscribe_to_satellites (RoadMapGpsdSatellite satellite) {
-
-   RoadmapGpsd2SatelliteListener = satellite;
-}
-
-
-void roadmap_gpsd3_subscribe_to_dilution (RoadMapGpsdDilution dilution) {
-
-   RoadmapGpsd2DilutionListener = dilution;
-}
-
 void roadmap_gpsd3_subscriptions(void)
 {
-#ifdef ROADMAP_USES_LIBGPS
-	 roadmap_gpsd3_subscribe_to_navigation (roadmap_gps_navigation);
-	 roadmap_gpsd3_subscribe_to_satellites (roadmap_gps_satellites);
-	 roadmap_gpsd3_subscribe_to_dilution   (roadmap_gps_dilution);
-#else
+#ifndef ROADMAP_USES_LIBGPS
 	 roadmap_gps_nmea();
 #endif
 }
@@ -146,73 +121,124 @@ int roadmap_gpsd3_decode (void *user_context,
 
    int  gps_time = 0;
 
-   int i, j, s;
-   static bool	used[MAXCHANNELS];
+   int i, s;
 #define	MAX_POSSIBLE_SATS	(MAXCHANNELS - 2)
 
    if (gps_unpack(sentence, gpsdp) < 0) {
       roadmap_log(ROADMAP_ERROR, "gpsd error %d", errno);
+      // only roadmap_input can really detect socket errors.  not clear
+      // what this return might be.
+      return 0;
    }
 
-   if (gpsdp->satellites_visible == 0)
+#ifdef THIS_DONT_WORK
+   roadmap_log (ROADMAP_DEBUG, "gpsd set 0x%x online_set %d",
+	(unsigned int)gpsdp->set, gpsdp->set & ONLINE_SET);
+
+   roadmap_log (ROADMAP_DEBUG, "gpsd online %d status %d dev_act %f",
+   	(int)gpsdp->online, gpsdp->status, gpsdp->dev.activated);
+
+    // we get no reports at all while the gps is unplugged, ONLINE_SET
+    // never happens, and "online" is always 0.
+   if (!(gpsdp->set & ONLINE_SET))
+   	return 0;
+   if (!gpsdp->online) {
+      roadmap_gps_satellites (-1, 0, 0, 0, 0, 0);
+      roadmap_gps_navigation ('V', 0, 0, 0, 0, 0, 0);
+      roadmap_log (ROADMAP_WARNING, "gpsd: not online");
       return 0;	// No data
+   }
+#endif
 
-   status = (gpsdp->fix.mode >= MODE_2D) ? 'A' : 'V';
+   if (gpsdp->set & SATELLITE_SET) {
+       if (gpsdp->satellites_visible == 0) {
+	  roadmap_gps_satellites (0, 0, 0, 0, 0, 0);
+	  roadmap_gps_navigation ('V', 0, 0, 0, 0, 0, 0);
+	  roadmap_log (ROADMAP_DEBUG, "gpsd: no satellites");
+	  gpsdp->set &= ~SATELLITE_SET;
+	  return 0;	// No data
+       }
+#if GPSD_API_MAJOR_VERSION == 5
+       static bool     usedflags[MAXCHANNELS];
+       int j;
+       /* See demo app cgps.c in gpsd source distribution */
+       /* Must build bit vector of which satellites are used */
+       for (i = 0; i < MAXCHANNELS; i++) {
+	  usedflags[i] = false;
+	  for (j = 0; j < gpsdp->satellites_used; j++)
+	     if (gpsdp->used[j] == gpsdp->PRN[i])
+	       usedflags[i] = true;
+       }
+     
+     
+       for (i=0, s=1; i<MAX_POSSIBLE_SATS; i++) {
+	  if (i < gpsdp->satellites_visible) {
+	     roadmap_gps_satellites
+		(s,                                // sequence
+		gpsdp->PRN[i],             // id
+		gpsdp->elevation[i],       // elevation
+		gpsdp->azimuth[i],         // azimuth
+		(int)gpsdp->ss[i],         // strength
+		usedflags[i]);           // active
+	    s++;
+	  }
+       }
+#elif GPSD_API_MAJOR_VERSION == 6
+       // for version 6, untested
+       for (i=0, s=1; i<MAX_POSSIBLE_SATS; i++) {
+	  if (i < gpsdp->satellites_visible) {
+	     roadmap_gps_satellites
+		(s,                                // sequence
+		gpsdp->skyview[i]PRN,             // id
+		gpsdp->skyview[i]elevation,       // elevation
+		gpsdp->skyview[i]azimuth,         // azimuth
+		(int)gpsdp->skyview[i]ss,         // strength
+		gpsdp->skyview[i].used);           // active
+	    s++;
+	  }
+       }
+#endif
+ 
+       roadmap_gps_satellites (0, 0, 0, 0, 0, 0);
 
-   if (gpsdp->fix.mode >= MODE_2D) {
-      if (isnan(gpsdp->fix.longitude) == 0) {
-         longitude = 1000000 * gpsdp->fix.longitude;
-      }
-      if (isnan(gpsdp->fix.latitude) == 0) {
-         latitude = 1000000 * gpsdp->fix.latitude;
-      }
-      if (isnan(gpsdp->fix.speed) == 0) {
-         speed = gpsdp->fix.speed;
-      }
-      if (isnan(gpsdp->fix.altitude) == 0) {
-         altitude = gpsdp->fix.altitude;
-      }
-      if (isnan(gpsdp->fix.time) == 0) {
-         gps_time = gpsdp->fix.time;
-      }
-      if (isnan(gpsdp->fix.track) == 0) {
-         steering = gpsdp->fix.track;
-      }
+       gpsdp->set &= ~SATELLITE_SET;
    }
 
-   RoadmapGpsd2NavigationListener
-         (status, gps_time, latitude, longitude, altitude, speed, steering);
+   if (gpsdp->set & (LATLON_SET|SPEED_SET|ALTITUDE_SET|TIME_SET|TRACK_SET)) {
+       status = (gpsdp->fix.mode >= MODE_2D) ? 'A' : 'V';
 
-   /* See demo app cgps.c in gpsd source distribution */
-   /* Must build bit vector of which satellites are used */
-   for (i = 0; i < MAXCHANNELS; i++) {
-      used[i] = false;
-      for (j = 0; j < gpsdp->satellites_used; j++)
-         if (gpsdp->used[j] == gpsdp->PRN[i])
-	    used[i] = true;
+       if (gpsdp->fix.mode >= MODE_2D) {
+	  if (isnan(gpsdp->fix.longitude) == 0) {
+	     longitude = 1000000 * gpsdp->fix.longitude;
+	  }
+	  if (isnan(gpsdp->fix.latitude) == 0) {
+	     latitude = 1000000 * gpsdp->fix.latitude;
+	  }
+	  if (isnan(gpsdp->fix.speed) == 0) {
+	     speed = gpsdp->fix.speed;
+	  }
+	  if (isnan(gpsdp->fix.altitude) == 0) {
+	     altitude = gpsdp->fix.altitude;
+	  }
+	  if (isnan(gpsdp->fix.time) == 0) {
+	     gps_time = gpsdp->fix.time;
+	  }
+	  if (isnan(gpsdp->fix.track) == 0) {
+	     steering = gpsdp->fix.track;
+	  }
+       }
+       roadmap_gps_navigation
+           (status, gps_time, latitude, longitude, altitude, speed, steering);
+
+       /* Provide dilution */
+       if (gpsdp->fix.mode >= MODE_NO_FIX) {
+	  /* No conversion required */
+	  roadmap_gps_dilution(gpsdp->fix.mode, gpsdp->fix.epx, gpsdp->fix.epy, gpsdp->fix.epv);
+       }
+
+       gpsdp->set &= ~(LATLON_SET|SPEED_SET|ALTITUDE_SET|TIME_SET|TRACK_SET);
    }
 
-#warning 'used' not used.  seems fishy.
-
-   for (i=0, s=1; i<MAX_POSSIBLE_SATS; i++) {
-      if (gpsdp->used[i]) {
-         (*RoadmapGpsd2SatelliteListener)
-            (s,				// sequence
-	     gpsdp->PRN[i],		// id
-	     gpsdp->elevation[i],	// elevation
-	     gpsdp->azimuth[i],		// azimuth
-	     (int)gpsdp->ss[i],		// strength
-	     gpsdp->used[i]);		// active
-	 s++;
-      }
-   }
-   (*RoadmapGpsd2SatelliteListener) (0, 0, 0, 0, 0, 0);
-
-   /* Provide dilution */
-   if (gpsdp->fix.mode >= MODE_NO_FIX) {
-      /* No conversion required */
-      RoadmapGpsd2DilutionListener(gpsdp->fix.mode, gpsdp->fix.epx, gpsdp->fix.epy, gpsdp->fix.epv);
-   }
 
    return 1;
 #else
