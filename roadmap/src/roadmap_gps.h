@@ -31,6 +31,7 @@
 #include "roadmap_io.h"
 
 enum {GPS_RECEPTION_NA = 0,
+      GPS_RECEPTION_NO_COMM,
       GPS_RECEPTION_NONE,
       GPS_RECEPTION_POOR,
       GPS_RECEPTION_GOOD

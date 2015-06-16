@@ -132,8 +132,6 @@ static void roadmap_gps_no_periodic_control (RoadMapCallback callback) {}
 
 static void roadmap_gps_call_all_listeners (void);
 
-static void roadmap_gps_got_data(void);
-
 roadmap_gps_periodic_control RoadMapGpsPeriodicAdd =
                                     &roadmap_gps_no_periodic_control;
 
@@ -167,9 +165,10 @@ static void roadmap_gps_update_reception (void) {
 
    int new_state;
 
-   if (RoadMapGpsLink.subsystem == ROADMAP_IO_INVALID ||
-            RoadMapGpsLatestData == 0) {
+   if (RoadMapGpsLink.subsystem == ROADMAP_IO_INVALID) {
       new_state = GPS_RECEPTION_NA;
+   } else if (RoadMapGpsLatestData == 0) {
+      new_state = GPS_RECEPTION_NO_COMM;
    } else if (RoadMapGpsQuality.dimension == 2) {
       new_state = GPS_RECEPTION_POOR;
    } else if (RoadMapGpsQuality.dimension >= 3) {
@@ -189,14 +188,8 @@ static void roadmap_gps_update_reception (void) {
 
       RoadMapGpsReception = new_state;
 
-      if (new_state <= GPS_RECEPTION_NONE) {
-         /* we want listeners to get at least one notification that
-          * gps has gone away.
-          */
-         // perhaps this should happen later, after GPS Timeout has
-         // expired?
-         roadmap_gps_call_all_listeners ();
-      }
+      roadmap_gps_call_all_listeners ();
+      roadmap_gps_call_all_monitors ();
 
       roadmap_state_refresh ();
    }
@@ -254,7 +247,7 @@ static char roadmap_gps_update_status (char status) {
  * @brief Record the time at which we got GPS data, so we know how old our latest data is.
  */
 static void roadmap_gps_got_data(void) {
-   RoadMapGpsLatestData = time(NULL);
+    RoadMapGpsLatestData = time(NULL);
 }
 
 /**
@@ -384,6 +377,7 @@ static void roadmap_gps_pgrmm (void *context, const RoadMapNmeaFields *fields) {
                      "bad datum '%s': 'NAD83' or 'WGS 84' is required",
                      fields->pgrmm.datum);
     }
+   roadmap_gps_got_data();
 }
 
 /**
@@ -396,6 +390,7 @@ static void roadmap_gps_pgrme (void *context, const RoadMapNmeaFields *fields) {
     RoadMapGpsEstimatedError =
         roadmap_math_to_current_unit (fields->pgrme.horizontal,
                                       fields->pgrme.horizontal_unit);
+   roadmap_gps_got_data();
 }
 
 /**
@@ -466,6 +461,8 @@ static void roadmap_gps_rmc (void *context, const RoadMapNmeaFields *fields) {
 
    char status = roadmap_gps_update_status (fields->rmc.status);
 
+   roadmap_gps_got_data();
+
    if (status == 'A') {
 
       RoadMapGpsReceivedTime = fields->rmc.fixtime;
@@ -487,8 +484,6 @@ static void roadmap_gps_rmc (void *context, const RoadMapNmeaFields *fields) {
 
       roadmap_gps_call_all_listeners();
    }
-
-   roadmap_gps_got_data();
 }
 
 /**
@@ -500,6 +495,8 @@ static void roadmap_gps_gsa
                (void *context, const RoadMapNmeaFields *fields) {
 
    int i;
+
+   roadmap_gps_got_data();
 
    RoadMapGpsActiveSatelliteHash = 0;
 
@@ -515,8 +512,6 @@ static void roadmap_gps_gsa
    RoadMapGpsQuality.dilution_horizontal = fields->gsa.dilution_horizontal;
    RoadMapGpsQuality.dilution_vertical   = fields->gsa.dilution_vertical;
 
-   roadmap_gps_got_data();
-
 }
 
 /**
@@ -530,6 +525,8 @@ static void roadmap_gps_gsv
    int i;
    int id;
    int index;
+
+   roadmap_gps_got_data();
 
    for (i = 0, index = (fields->gsv.index - 1) * 4;
         i < 4 && index < fields->gsv.count;
@@ -572,8 +569,6 @@ static void roadmap_gps_gsv
       RoadMapGpsActiveSatelliteCount = active_count;
       roadmap_gps_call_all_monitors ();
    }
-
-   roadmap_gps_got_data();
 }
 
 /**
@@ -644,6 +639,8 @@ void roadmap_gps_navigation (char status,
                                     int speed,      // knots
                                     int steering) {
 
+   roadmap_gps_got_data();
+
    status = roadmap_gps_update_status (status);
 
    if (status == 'A') {
@@ -675,8 +672,6 @@ void roadmap_gps_navigation (char status,
       roadmap_gps_call_all_listeners();
 
    }
-
-   roadmap_gps_got_data();
 }
 
 /**
@@ -718,6 +713,8 @@ void roadmap_gps_satellites  (int sequence,
 
    } else {
 
+      roadmap_gps_got_data();
+
       int index = sequence - 1;
 
       if (index == 0) {
@@ -757,6 +754,7 @@ void roadmap_gps_dilution (int dimension,
                                   double horizontal,
                                   double vertical) {
 
+   roadmap_gps_got_data();
    RoadMapGpsQuality.dimension = dimension;
    RoadMapGpsQuality.dilution_position   = position;
    RoadMapGpsQuality.dilution_horizontal = horizontal;
@@ -774,6 +772,8 @@ static RoadMapDynamicString  RoadmapGpsObjectId;
 static void roadmap_gps_object_listener (RoadMapDynamicString id,
                                          const RoadMapGpsPosition *position) {
 
+   roadmap_gps_got_data();
+
    RoadMapGpsReceivedPosition = *position;
 
    (void)roadmap_gps_update_status ('A');
@@ -781,7 +781,6 @@ static void roadmap_gps_object_listener (RoadMapDynamicString id,
 
    (*RoadMapGpsNextObjectListener) (id, position);
 
-   roadmap_gps_got_data();
 }
 
 
