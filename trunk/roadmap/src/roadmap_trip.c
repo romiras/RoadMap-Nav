@@ -81,6 +81,9 @@ static RoadMapConfigDescriptor RoadMapConfigTripShowRouteLines =
 static RoadMapConfigDescriptor RoadMapConfigTripRouteLineColor =
                         ROADMAP_CONFIG_ITEM("Trip", "Route Connect Color");
 
+static RoadMapConfigDescriptor RoadMapConfigTripRouteLineThickness =
+                        ROADMAP_CONFIG_ITEM("Trip", "Route Connect Thickness");
+
 static RoadMapConfigDescriptor RoadMapConfigFocusName =
                         ROADMAP_CONFIG_ITEM("Focus", "Name");
 
@@ -2531,6 +2534,9 @@ void roadmap_trip_display (void)
                 RoadMapTripRouteLinesPen = roadmap_canvas_create_pen ("Map.RouteLines");
                 roadmap_canvas_set_foreground
                     (roadmap_config_get (&RoadMapConfigTripRouteLineColor));
+		roadmap_canvas_set_thickness
+		    (roadmap_config_get_integer
+			(&RoadMapConfigTripRouteLineThickness));
             } else {
                 roadmap_canvas_select_pen (RoadMapTripRouteLinesPen);
             }
@@ -3648,6 +3654,8 @@ void roadmap_trip_initialize (void)
         ("preferences", &RoadMapConfigTripShowRouteLines, "yes", "no", NULL);
     roadmap_config_declare
         ("preferences", &RoadMapConfigTripRouteLineColor,  "red");
+    roadmap_config_declare
+        ("preferences", &RoadMapConfigTripRouteLineThickness,  "2");
 
     roadmap_config_declare_enumeration
         ("preferences", &RoadMapConfigBackupFiles , "yes", "no", NULL);
