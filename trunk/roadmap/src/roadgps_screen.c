@@ -93,6 +93,15 @@ typedef struct {
 static RoadGpsObject *RoadGpsSatellites = NULL;
 static int            RoadGpsSatelliteSize  = 0;
 static int            RoadGpsSatelliteCount = 0;
+static int            RoadGpsReception = GPS_RECEPTION_NA;
+
+char *GPSReception[] = {
+   "Not Available",
+   "No Communication",
+   "None",
+   "Poor",
+   "Good",
+};
 
 static RoadMapGpsPosition RoadGpsPosition;
 static RoadMapGpsPrecision RoadGpsPrecision;
@@ -341,63 +350,72 @@ static void roadgps_screen_draw_position (void) {
      if (RoadGpsSatellites[i].status == 'A') 
         satcount++;
 
-
-  point.x = RoadGpsFrame.latitude_offset_x;
-  point.y = RoadGpsFrame.latitude_offset_y;
-  roadmap_canvas_select_pen (RoadGpsLabels);
-  roadmap_canvas_draw_string (&point, ROADMAP_CANVAS_LEFT, "Latitude:");
-  point.y = point.y+RoadGpsFrame.label_height;
-
-  roadgps_screen_to_coord(data,1,RoadGpsPosition.latitude);
-  roadmap_canvas_select_pen (RoadGpsValues);
-  roadmap_canvas_draw_string
-      (&point, ROADMAP_CANVAS_LEFT, data);
-
-  point.x = RoadGpsFrame.longitude_offset_x;
-  point.y = RoadGpsFrame.longitude_offset_y;
-
-  roadmap_canvas_select_pen (RoadGpsLabels);
-  roadmap_canvas_draw_string
-      (&point, ROADMAP_CANVAS_LEFT, "Longitude:");
-  point.y = point.y+RoadGpsFrame.label_height;
-
-  roadgps_screen_to_coord(data,0,RoadGpsPosition.longitude);
-  roadmap_canvas_select_pen (RoadGpsValues);
-  roadmap_canvas_draw_string
-      (&point, ROADMAP_CANVAS_LEFT, data);
-
-  point.y = point.y+RoadGpsFrame.label_height;
-  roadmap_canvas_select_pen (RoadGpsLabels);
-  roadmap_canvas_draw_string
-      (&point, ROADMAP_CANVAS_LEFT, "Altitude:");
-  sprintf(data,"%d%s",RoadGpsPosition.altitude,roadmap_math_distance_unit());
-  point.y = point.y+RoadGpsFrame.label_height;
-  roadmap_canvas_select_pen (RoadGpsValues);
-  roadmap_canvas_draw_string
-      (&point, ROADMAP_CANVAS_LEFT, data);
-
-  point.y = point.y+RoadGpsFrame.label_height;
-  roadmap_canvas_select_pen (RoadGpsLabels);
-  roadmap_canvas_draw_string
-      (&point, ROADMAP_CANVAS_LEFT, "Speed:");
-  sprintf(data,"%d%s",
-     roadmap_math_knots_to_speed_unit(RoadGpsPosition.speed),
-     roadmap_math_speed_unit());
-  point.y = point.y+RoadGpsFrame.label_height;
-  roadmap_canvas_select_pen (RoadGpsValues);
-  roadmap_canvas_draw_string
-      (&point, ROADMAP_CANVAS_LEFT, data);
-
-  point.x = RoadGpsFrame.centers[0].x-RoadGpsFrame.radius[0];
-  point.y = RoadGpsFrame.centers[0].y+RoadGpsFrame.radius[0]+
-            RoadGpsFrame.label_height-10;
-  roadmap_canvas_select_pen (RoadGpsLabels);
   fix = RoadGpsPrecision.dimension;
   if (fix < 1) fix = 1;
-  else if (fix > 3) fix = 3;
-  sprintf(data,"%d active satellites, %s fix", satcount, fixes[fix-1]);
-  roadmap_canvas_draw_string
-      (&point, ROADMAP_CANVAS_LEFT, data);
+  if (fix > 3) fix = 3;
+
+  if (fix > 1) {
+      point.x = RoadGpsFrame.latitude_offset_x;
+      point.y = RoadGpsFrame.latitude_offset_y;
+      roadmap_canvas_select_pen (RoadGpsLabels);
+      roadmap_canvas_draw_string (&point, ROADMAP_CANVAS_LEFT, "Latitude:");
+      point.y = point.y+RoadGpsFrame.label_height;
+
+      roadgps_screen_to_coord(data,1,RoadGpsPosition.latitude);
+      roadmap_canvas_select_pen (RoadGpsValues);
+      roadmap_canvas_draw_string
+	  (&point, ROADMAP_CANVAS_LEFT, data);
+
+      point.x = RoadGpsFrame.longitude_offset_x;
+      point.y = RoadGpsFrame.longitude_offset_y;
+
+      roadmap_canvas_select_pen (RoadGpsLabels);
+      roadmap_canvas_draw_string
+	  (&point, ROADMAP_CANVAS_LEFT, "Longitude:");
+      point.y = point.y+RoadGpsFrame.label_height;
+
+      roadgps_screen_to_coord(data,0,RoadGpsPosition.longitude);
+      roadmap_canvas_select_pen (RoadGpsValues);
+      roadmap_canvas_draw_string
+	  (&point, ROADMAP_CANVAS_LEFT, data);
+
+      if (fix > 2) {
+	  point.y = point.y+RoadGpsFrame.label_height;
+	  roadmap_canvas_select_pen (RoadGpsLabels);
+	  roadmap_canvas_draw_string
+	      (&point, ROADMAP_CANVAS_LEFT, "Altitude:");
+	  sprintf(data,"%d%s",RoadGpsPosition.altitude,roadmap_math_distance_unit());
+	  point.y = point.y+RoadGpsFrame.label_height;
+	  roadmap_canvas_select_pen (RoadGpsValues);
+	  roadmap_canvas_draw_string
+	      (&point, ROADMAP_CANVAS_LEFT, data);
+
+	  point.y = point.y+RoadGpsFrame.label_height;
+	  roadmap_canvas_select_pen (RoadGpsLabels);
+	  roadmap_canvas_draw_string
+	      (&point, ROADMAP_CANVAS_LEFT, "Speed:");
+	  sprintf(data,"%d%s",
+	     roadmap_math_knots_to_speed_unit(RoadGpsPosition.speed),
+	     roadmap_math_speed_unit());
+	  point.y = point.y+RoadGpsFrame.label_height;
+	  roadmap_canvas_select_pen (RoadGpsValues);
+	  roadmap_canvas_draw_string
+	      (&point, ROADMAP_CANVAS_LEFT, data);
+      }
+
+  }
+  point.x = RoadGpsFrame.centers[0].x; // -RoadGpsFrame.radius[0];
+  point.y = RoadGpsFrame.centers[0].y+RoadGpsFrame.radius[0]+
+	    RoadGpsFrame.label_height-10;
+  roadmap_canvas_select_pen (RoadGpsLabels);
+  if (RoadGpsReception > GPS_RECEPTION_NO_COMM) {
+      sprintf(data,"%d active , %s fix", satcount, fixes[fix-1]);
+  } else if (RoadGpsReception == GPS_RECEPTION_NO_COMM) {
+      sprintf(data,"No data from GPS");
+  } else {
+      sprintf(data,"No GPS");
+  }
+  roadmap_canvas_draw_string (&point, ROADMAP_CANVAS_CENTER, data);
 
   if (RoadMapGpsReceivedTime != 0) {
      point.y = point.y+RoadGpsFrame.label_height;
@@ -405,7 +423,7 @@ static void roadgps_screen_draw_position (void) {
      strftime(data, sizeof(data),
                 "  %Y/%m/%d %H:%M:%S", localtime(&RoadMapGpsReceivedTime));
      roadmap_canvas_draw_string
-      (&point, ROADMAP_CANVAS_LEFT, data);
+      (&point, ROADMAP_CANVAS_CENTER, data);
   }
 
 }
@@ -540,6 +558,7 @@ static void roadgps_screen_listener
                    const RoadMapGpsPrecision *dilution,
                    const RoadMapGpsPosition *position) {
 
+  RoadGpsReception = reception;
   
   RoadGpsPosition.latitude = position->latitude;
   RoadGpsPosition.longitude = position->longitude;
@@ -567,6 +586,8 @@ static void roadgps_screen_monitor
                 int count) {
 
    int i;
+
+   RoadGpsReception = reception;
 
    if (RoadGpsSatelliteSize < count) {
 
