@@ -242,6 +242,16 @@ int roadmap_gpsd3_decode (void *user_context,
 
    return 1;
 #else
+   // fprintf(stderr, "%s\n", sentence);
+   if (!strncmp(sentence, "{\"class\":",9)) /* } */ {
+      // try to detect: {"class":"DEVICE","path":"/dev/ttyUSB1","activated":0}
+      roadmap_log (ROADMAP_DEBUG, "gpsd: found 'class'");
+      if (strstr(sentence, "\"activated\":0}")) {
+	  roadmap_log (ROADMAP_DEBUG, "gpsd: not online");
+	  roadmap_gps_satellites (-1, 0, 0, 0, 0, 0);
+      }
+      return 0;
+   }
    return roadmap_nmea_decode (user_context, decoder_context, sentence);
 #endif
 }
