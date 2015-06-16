@@ -1640,12 +1640,12 @@ void roadmap_math_trip_set_distance(char which, int distance)
     distance_far = roadmap_math_to_trip_distance_tenths (distance);
 
     if (distance_far > 0) {
-        roadmap_message_set (which, "%d.%d %s",
+        roadmap_message_set (which, "%d.%d %s", // 'x', 'y', 'Y', 'D', 'W'
                              distance_far/10,
                              distance_far%10,
                              roadmap_math_trip_unit ());
     } else {
-        roadmap_message_set (which, "%d %s",
+        roadmap_message_set (which, "%d %s", // 'x', 'y', 'Y', 'D', 'W'
                              distance,
                              roadmap_math_distance_unit ());
     }
