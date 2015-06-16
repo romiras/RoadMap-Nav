@@ -65,10 +65,10 @@ S Start
 A GreenTrianglePointer
 
 S RoutePoint
-A Circle-Pointer
+A Donut-Circle-Pointer
 
 S SecondaryRoutePoint
-A Small-Circle-Pointer
+A Donut-Small-Circle-Pointer
 
 S PersonalLandmark
 A 5PointStar
@@ -293,11 +293,36 @@ L 1,-7 1,-16
 L 1,-16 -1,-16
 L -1,-16 -1,-7
 
+S Donut-Circle-Pointer
+F green 1
+D 0,0 7
+F white 1
+D 0,0 3
+F black 1
+C 0,0 7
+C 0,0 3
+C 0,0 1
+L 1,-7 1,-16
+L 1,-16 -1,-16
+L -1,-16 -1,-7
+
 S Small-Circle-Pointer
 F green 1
 D 0,0 6
 F black 1
 C 0,0 6
+L 1,-6 1,-16
+L 1,-16 -1,-16
+L -1,-16 -1,-6
+
+S Donut-Small-Circle-Pointer
+F green 1
+D 0,0 6
+F white 1
+D 0,0 2
+F black 1
+C 0,0 6
+C 0,0 2
 L 1,-6 1,-16
 L 1,-16 -1,-16
 L -1,-16 -1,-6
