@@ -60,6 +60,7 @@
 #include "roadmap_gpx.h"
 #include "roadmap_track.h"
 #include "roadmap_landmark.h"
+#include "roadmap_voice.h"
 #ifdef HAVE_NAVIGATE_PLUGIN
 #include "roadmap_tripdb.h"
 #endif
@@ -236,6 +237,7 @@ static RoadMapTripFocal *RoadMapTripLastSetPoint = NULL;
 waypoint *RoadMapTripDest = NULL;
 static waypoint *RoadMapTripStart = NULL;
 static waypoint *RoadMapTripNext = NULL;
+static waypoint *lastRoadMapTripNext;
 
 /* This is the name of the waypoint used to set the WaypointFocus
  * focal point.
@@ -1997,7 +1999,8 @@ static waypoint * roadmap_trip_choose_best_next (const RoadMapPosition *pos)
  * @param suppress_dist
  * @param next
  */
-static void roadmap_trip_set_directions (int dist_to_next, int suppress_dist, waypoint *next)
+static void roadmap_trip_set_directions (int dist_to_next,
+	int suppress_dist, waypoint *next)
 {
     static waypoint *last_next;
     static char *desc;
@@ -2073,6 +2076,7 @@ void roadmap_trip_route_start (void)
     }
 
     RoadMapTripNext = RoadMapTripStart;
+    lastRoadMapTripNext = NULL;
     roadmap_trip_set_departure (1);
     roadmap_trip_activate ();
     roadmap_trip_set_directions(0, 0, NULL);
@@ -2097,6 +2101,7 @@ void roadmap_trip_route_resume (void)
 
     if (RoadMapTripGps->has_value) {
         RoadMapTripNext = roadmap_trip_choose_best_next (&RoadMapTripGps->map);
+	lastRoadMapTripNext = NULL;
         roadmap_trip_set_departure (0);
         roadmap_trip_activate ();
         roadmap_trip_set_directions(0, 0, NULL);
@@ -2235,6 +2240,25 @@ void roadmap_trip_show_2ndnextpoint(void) {
     roadmap_screen_refresh ();
 }
 
+int announce_threshold_tenths[] = {
+ // 100mi 50mi 20mi 10mi 5mi 1mi .3mi  or
+ // 100km 50km 20km 10km 5km 1km .3km
+    1000, 500, 200, 100, 50, 10, 3, 0
+};
+
+int roadmap_trip_new_threshold(int distance)
+{
+    int i;
+    int *thresh = announce_threshold_tenths;
+    int distance_far = roadmap_math_to_trip_distance_tenths (distance);
+
+    for (i = 0; thresh[i]; i++) {
+	if (distance_far > thresh[i]) {
+	    return thresh[i];
+	}
+    }
+    return 0;
+}
 /**
  * @brief send messages to the user indicating current state
  *
@@ -2258,6 +2282,7 @@ void roadmap_trip_format_messages (void)
     int waypoint_size;
     static RoadMapPosition lastgpsmap = {-1, -1};
     static waypoint *within_waypoint = NULL;
+    static int distance_announce_threshold;
 
     if (! RoadMapRouteInProgress || RoadMapCurrentRoute == NULL) {
 
@@ -2330,6 +2355,8 @@ void roadmap_trip_format_messages (void)
             roadmap_log (ROADMAP_DEBUG, "attained waypoint %s, distance %d",
                          RoadMapTripNext->shortname, distance_to_next);
 
+// maybe announce "at waypoint"
+
             within_waypoint = RoadMapTripNext;
             need_newgoal = 1;
             getting_close = 0;
@@ -2390,6 +2417,14 @@ void roadmap_trip_format_messages (void)
 
         roadmap_math_trip_set_distance ('W', distance_to_next);
 
+    }
+
+    if (lastRoadMapTripNext != RoadMapTripNext ||
+	    distance_to_next < distance_announce_threshold) {
+	roadmap_voice_announce ("Waypoint");
+	distance_announce_threshold =
+		roadmap_trip_new_threshold(distance_to_next);
+	lastRoadMapTripNext = RoadMapTripNext;
     }
 
     lastgpsmap = gps->map;

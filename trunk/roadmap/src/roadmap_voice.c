@@ -56,6 +56,7 @@ static RoadMapConfigDescriptor RoadMapVoiceMute =
                         ROADMAP_CONFIG_ITEM("Voice", "Mute");
 
 static struct roadmap_voice_config RoadMapVoiceText[] = {
+    {ROADMAP_CONFIG_ITEM("Voice", "Waypoint"), "flite" _EXE " -t 'Next way point in %W'"},
     {ROADMAP_CONFIG_ITEM("Voice", "Approach"), "flite" _EXE " -t 'Approaching %N'"},
     {ROADMAP_CONFIG_ITEM("Voice", "Current Street"), "flite" _EXE " -t 'On %N'"},
     {ROADMAP_CONFIG_ITEM("Voice", "Next Intersection"), "flite" _EXE " -t 'Next intersection: %N'"},
@@ -100,6 +101,7 @@ struct voice_translation {
  */
 static struct voice_translation RoadMapVoiceTranslate1[] = {
     {"Blvd", "boulevard"},
+    {"Blvd", "boulevard"},
     {"Cres", "crescent"},
     {"Expy", "expressway"},
     {"FMRd", "farm road"},
@@ -142,6 +144,11 @@ static struct voice_translation RoadMapVoiceTranslate1[] = {
     {"Rd",   "road"},
     {"Sq",   "square"},
     {"St",   "street"},
+
+    {"Km",   "kilometers"},
+    {"Mi",   "miles"},
+    {"ft",   "feet"},
+    {"m",    "meters"},
 
     {"N",    "north"},
     {"W",    "west"},
