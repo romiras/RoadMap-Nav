@@ -176,17 +176,6 @@ static void roadmap_voice_launch (const char *name, const char *arguments) {
        }
     }
 
-    if ((RoadMapVoiceCurrentCommand != NULL) &&
-        (RoadMapVoiceCurrentArguments != NULL) &&
-        (strcmp (name, RoadMapVoiceCurrentCommand) == 0) &&
-        (strcmp (arguments, RoadMapVoiceCurrentArguments) == 0)) {
-        
-        /* Do not repeat the same message again. */
-
-        RoadMapVoiceInUse = 0;
-        roadmap_log(ROADMAP_DEBUG, "voice now idle");
-        return;
-    }
 
     roadmap_log(ROADMAP_DEBUG, "activating message %s", arguments);
 
@@ -360,11 +349,12 @@ static int roadmap_voice_expand (const char *input, char *output, int size) {
 }
 
 
-void roadmap_voice_announce (const char *title) {
+void roadmap_voice_announce (const char *title, int force) {
 
     int   i;
     char  text[1024];
     char  expanded[1024];
+    static char *prev;
     char *final;
     char *arguments;
 
@@ -404,6 +394,14 @@ void roadmap_voice_announce (const char *title) {
     } else {
         final = text;
     }
+
+    /* don't say it twice, unless forced */
+    if (!force && prev && strcmp (final, prev) == 0) {
+	    return;
+    }
+
+    if (prev) free(prev);
+    prev = strdup(final);
 
     arguments = strchr (final, ' ');
 
