@@ -565,7 +565,7 @@ int roadmap_display_activate (const char *title,
 
 
     if (street_has_changed) {
-        roadmap_voice_announce (sign->title);
+        roadmap_voice_announce (sign->title, 0);
     }
 
     if (message_has_changed) {

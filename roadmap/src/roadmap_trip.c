@@ -2087,6 +2087,7 @@ void roadmap_trip_route_start (void)
  */
 void roadmap_trip_route_resume (void)
 {
+    lastRoadMapTripNext = NULL;
     if (RoadMapCurrentRoute == NULL) {
         /* convenient side effect.  if there _is_ a route, the code
          * below forces GPS to be centered.  so may as well do that
@@ -2101,7 +2102,6 @@ void roadmap_trip_route_resume (void)
 
     if (RoadMapTripGps->has_value) {
         RoadMapTripNext = roadmap_trip_choose_best_next (&RoadMapTripGps->map);
-	lastRoadMapTripNext = NULL;
         roadmap_trip_set_departure (0);
         roadmap_trip_activate ();
         roadmap_trip_set_directions(0, 0, NULL);
@@ -2421,7 +2421,7 @@ void roadmap_trip_format_messages (void)
 
     if (lastRoadMapTripNext != RoadMapTripNext ||
 	    distance_to_next < distance_announce_threshold) {
-	roadmap_voice_announce ("Waypoint");
+	roadmap_voice_announce ("Waypoint", 1);
 	distance_announce_threshold =
 		roadmap_trip_new_threshold(distance_to_next);
 	lastRoadMapTripNext = RoadMapTripNext;
