@@ -145,7 +145,7 @@ int roadmap_gpsd3_decode (void *user_context,
    if (!gpsdp->online) {
       roadmap_gps_satellites (-1, 0, 0, 0, 0, 0);
       roadmap_gps_navigation ('V', 0, 0, 0, 0, 0, 0);
-      roadmap_log (ROADMAP_WARNING, "gpsd: not online");
+      roadmap_log (ROADMAP_DEBUG, "gpsd: not online");
       return 0;	// No data
    }
 #endif
@@ -242,16 +242,29 @@ int roadmap_gpsd3_decode (void *user_context,
 
    return 1;
 #else
+   static int active, old_active = -1;
    // fprintf(stderr, "%s\n", sentence);
    if (!strncmp(sentence, "{\"class\":",9)) /* } */ {
       // try to detect: {"class":"DEVICE","path":"/dev/ttyUSB1","activated":0}
       roadmap_log (ROADMAP_DEBUG, "gpsd: found 'class'");
       if (strstr(sentence, "\"activated\":0}")) {
 	  roadmap_log (ROADMAP_DEBUG, "gpsd: not online");
-	  roadmap_gps_satellites (-1, 0, 0, 0, 0, 0);
+	  active = 0;
+      } else if (strstr(sentence, "\"activated\":")) { // anything but '0'
+	  roadmap_log (ROADMAP_DEBUG, "gpsd: online");
+	  active = 1;
       }
-      return 0;
+   } else if (*sentence == '$') {
+      roadmap_log (ROADMAP_DEBUG, "gpsd: online with NMEA");
+      active = 1;
    }
-   return roadmap_nmea_decode (user_context, decoder_context, sentence);
+   if (active)
+      return roadmap_nmea_decode (user_context, decoder_context, sentence);
+
+   if (old_active != active) {
+      roadmap_gps_satellites (active ? 0:-1, 0, 0, 0, 0, 0);
+      old_active = active;
+   }
+   return 0;
 #endif
 }
