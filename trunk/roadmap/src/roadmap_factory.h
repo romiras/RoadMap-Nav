@@ -66,14 +66,15 @@ void roadmap_factory (const char          *name,
                       const char          *menu[],
                       const char          *toolbar[]);
 
-void roadmap_factory_keymap (RoadMapAction *actions,
-                             const char    *shortcuts[]);
+int roadmap_factory_keymap (RoadMapAction *actions,
+                             const char    *shortcuts[], int ncuts);
 
 void roadmap_factory_popup (const char *title,
                             const RoadMapGuiPoint *position);
 
 void roadmap_factory_usage (const char *section, const RoadMapAction *action);
 void roadmap_factory_initialize (void);
+void roadmap_factory_load (RoadMapAction *actions);
 void roadmap_factory_shutdown (void);
 
 #endif /* INCLUDE__ROADMAP_FACTORY__H */

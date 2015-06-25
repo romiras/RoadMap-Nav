@@ -1245,7 +1245,6 @@ static char const *RoadMapStartKeyBinding[] = {
    "Y"               ROADMAP_MAPPED_TO "savesscreenshot",
    /* Z Unused. */
    "F11"             ROADMAP_MAPPED_TO "full",
-   NULL
 };
 
 
@@ -1738,7 +1737,11 @@ void roadmap_start (int argc, char **argv) {
    roadmap_osm_initialize();
 
    roadmap_factory_initialize();
-   roadmap_factory_keymap (RoadMapStartActions, RoadMapStartKeyBinding);
+   /* load default bindings first */
+   roadmap_factory_keymap (RoadMapStartActions, RoadMapStartKeyBinding,
+   	sizeof(RoadMapStartKeyBinding)/sizeof(*RoadMapStartKeyBinding));
+   /* then bindings from files */
+   roadmap_factory_load (RoadMapStartActions);
 
    roadmap_option (argc, argv, 1, roadmap_start_usage);
 

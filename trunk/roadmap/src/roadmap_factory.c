@@ -38,6 +38,7 @@
 #include "roadmap_help.h"
 #include "roadmap_path.h"
 #include "roadmap_input.h"
+#include "roadmap_scan.h"
 #include "roadmap_math.h"
 #include "roadmap_lang.h"
 #include "roadmap_start.h"
@@ -172,6 +173,8 @@ struct RoadMapFactoryKeyMap {
  * @brief
  */
 static struct RoadMapFactoryKeyMap *RoadMapFactoryBindings = NULL;
+static int RoadMapFactoryBindingsAlloced = 0;
+static int RoadMapFactoryBindingsMax = 0;
 
 /**
  * @brief
@@ -193,25 +196,38 @@ static struct RoadMapFactoryPopup *RoadMapFactoryPopupList = NULL;
  * @brief
  * @param key
  */
+static struct RoadMapFactoryKeyMap *roadmap_factory_keyboard_find (char *key)
+{
+
+   struct RoadMapFactoryKeyMap *binding;
+   int i;
+
+   if (roadmap_start_return_to_map()) return NULL;
+
+   if (RoadMapFactoryBindings == NULL) return NULL;
+
+   for (i = 0; i < RoadMapFactoryBindingsMax; ++i) {
+      binding = &RoadMapFactoryBindings[i];
+      /* interesting:  key bindings are case-insensitive */
+      if (strcasecmp (binding->key, key) == 0) {
+	  return binding;
+      }
+   }
+   return NULL;
+}
+
 static void roadmap_factory_keyboard (char *key) {
 
    const struct RoadMapFactoryKeyMap *binding;
 
-   if (roadmap_start_return_to_map()) return;
+   binding = roadmap_factory_keyboard_find (key);
+   if (binding == NULL) return;
 
-   if (RoadMapFactoryBindings == NULL) return;
-
-   for (binding = RoadMapFactoryBindings; binding->key != NULL; ++binding) {
-
-      if (strcasecmp (binding->key, key) == 0) {
-         if (binding->action != NULL) {
-            RoadMapCallback callback = binding->action->callback;
-            if (callback != NULL) {
-               (*callback) ();
-               break;
-            }
-         }
-      }
+   if (binding->action != NULL) {
+       RoadMapCallback callback = binding->action->callback;
+       if (callback != NULL) {
+	   (*callback) ();
+       }
    }
 }
 
@@ -851,95 +867,118 @@ void roadmap_factory (const char           *name,
    roadmap_plugin_actions_menu(roadmap_factory_handle_plugin_actions_menu);
 }
 
+static char *RoadMapFactoryKeyMapFile;
+static int RoadMapFactoryKeyMapLine;
+
+static void roadmap_factory_key_syntax(char *msg)
+{
+      roadmap_log(ROADMAP_WARNING,
+                      "%s, line %d: %s",
+                      RoadMapFactoryKeyMapFile,
+                      RoadMapFactoryKeyMapLine,
+                      msg);
+}
+
 /**
  * @brief
  * @param actions
  * @param shortcuts
  */
-void roadmap_factory_keymap (RoadMapAction  *actions,
-                             const char     *shortcuts[]) {
+int roadmap_factory_keymap (RoadMapAction  *actions,
+                             const char     *shortcuts[],
+			     int ncuts) {
 
    int i;
 
-   if (RoadMapFactoryBindings != NULL) {
-      roadmap_log (ROADMAP_FATAL, "RoadMap factory was called twice");
-   }
+   if (ncuts <= 0)
+         return 0;
 
-   /* Count how many shortcuts we have to process. */
-   for (i = 0; shortcuts[i] != NULL; ++i) ;
+   /* Augment the keyboard mapping table. */
 
-   /* Create the keyboard mapping table. */
+   /* assume that all the these bindings are new, not duplicates */
+   RoadMapFactoryBindingsAlloced += ncuts;
+   RoadMapFactoryBindings = (struct RoadMapFactoryKeyMap *)
+   	realloc(RoadMapFactoryBindings, sizeof(*RoadMapFactoryBindings) *
+		    RoadMapFactoryBindingsAlloced);
+   roadmap_check_allocated(RoadMapFactoryBindings);
 
-   if (i > 0) {
+   for (i = 0; i < ncuts; ++i) {
 
-      int j = 0;
+      char *text;
+      char *separator;
+      char *p;
+      RoadMapAction *this_action;
+      struct RoadMapFactoryKeyMap *binding;
+      int length;
 
-      RoadMapFactoryBindings = 
-         (struct RoadMapFactoryKeyMap *)
-             calloc (i+1, sizeof(struct RoadMapFactoryKeyMap));
-      roadmap_check_allocated(RoadMapFactoryBindings);
 
-      for (i = 0; shortcuts[i] != NULL; ++i) {
+      if (!*shortcuts[i]) continue;
+      if (*shortcuts[i] == '#') continue;
 
-         char *text;
-         char *separator;
-         RoadMapAction *this_action;
+      text = strdup (shortcuts[i]);
+      roadmap_check_allocated(text);
 
-         text = strdup (shortcuts[i]);
-         roadmap_check_allocated(text);
 
-         separator = strstr (text, ROADMAP_MAPPED_TO);
-         if (separator != NULL) {
-
-            char *p;
-
-            /* Separate the name of the key from the name of the action. */
-
-            for (p = separator; *p <= ' '; --p) *p = 0;
-
-            p = separator + strlen(ROADMAP_MAPPED_TO);
-            while (*p <= ' ') ++p;
-
-            this_action = roadmap_factory_find_action (actions, p);
-
-            if (this_action != NULL) {
-
-               int length = strlen(text);
-
-               if (length > RoadMapFactoryKeyLength) {
-                  RoadMapFactoryKeyLength = length;
-               }
-               /* copy key binding strings to the action, for
-                * help/tip usage.  but don't attach "Special-"
-                * bindings, since they're platform specific. 
-                * this should probably change to allow including
-                * the special keys for some specified (at build
-                * time?  at run-time?) platform.
-                */
-               if (strncmp(text, "Special-", 8) != 0) {
-                   if (this_action->key) {
-                      char keys[128];
-                      snprintf(keys, 128, "%s, %s", this_action->key, text);
-                      /* this leaks if more than two keys for one
-                       * action.  oh well.
-                       */
-                      this_action->key = strdup(keys);
-                   } else {
-                      this_action->key = text;
-                   }
-               }
-               RoadMapFactoryBindings[j].key = text;
-               RoadMapFactoryBindings[j].action = this_action;
-               ++j;
-            } else {
-               free(text);
-            }
-         }
+      separator = strstr (text, ROADMAP_MAPPED_TO);
+      if (separator == NULL) {
+         roadmap_factory_key_syntax("no separator found");
+	 free(text);
+         continue;
       }
-      RoadMapFactoryBindings[j].key = NULL;
 
-      roadmap_main_set_keyboard (roadmap_factory_keyboard);
+
+      /* Separate the name of the key from the name of the action. */
+      for (p = separator; *p <= ' '; --p) *p = 0;
+      p = separator + strlen(ROADMAP_MAPPED_TO);
+      while (*p <= ' ') ++p;
+
+      length = strlen(p);
+      if (p[length-1] == '\n') p[length-1] = '\0';
+      this_action = roadmap_factory_find_action (actions, p);
+
+      if (this_action == NULL) {
+	 free(text);
+	 continue;
+      }
+
+      length = strlen(text);
+      if (length > RoadMapFactoryKeyLength) {
+	 RoadMapFactoryKeyLength = length;
+      }
+      /* copy key binding strings to the action, for
+       * help/tip usage.  but don't attach "Special-"
+       * bindings, since they're platform specific. 
+       * this should probably change to allow including
+       * the special keys for some specified (at build
+       * time?  at run-time?) platform.
+       */
+      if (strncmp(text, "Special-", 8) != 0) { // not Special-
+	  if (this_action->key) {
+	     char keys[128];
+	     snprintf(keys, 128, "%s, %s", this_action->key, text);
+	     /* this leaks if more than two keys for one
+	      * action.  oh well.
+	      */
+	     this_action->key = strdup(keys);
+	  } else {
+	     this_action->key = text;
+	  }
+      }
+      /* this search turns this into an O(n^^2) operation.  but it's
+       * only keybindings */
+      binding = roadmap_factory_keyboard_find (text);
+      if (binding) { /* the binding already exists, replace it */
+	  binding->action = this_action;
+      } else {
+	  RoadMapFactoryBindings[RoadMapFactoryBindingsMax].key = text;
+	  RoadMapFactoryBindings[RoadMapFactoryBindingsMax].action = this_action;
+	  RoadMapFactoryBindingsMax++;
+      }
    }
+
+   roadmap_main_set_keyboard (roadmap_factory_keyboard);
+
+   return 1;
 }
 
 /**
@@ -1013,11 +1052,64 @@ void roadmap_factory_usage (const char *section, const RoadMapAction *action) {
    }
 }
 
+static void roadmap_factory_load_file (RoadMapAction *actions, const char *path)
+{
+   FILE *file;
+   char  line[1024];
+   const char *lines[] = { line };
+
+   if ((file = roadmap_file_fopen (path, "roadmap.keys", "r")) == NULL) {
+      roadmap_log (ROADMAP_ERROR, "cannot open file 'roadmap.keys' in %s", path);
+      return;
+   }
+
+   RoadMapFactoryKeyMapFile = roadmap_path_join(path, "roadmap.keys");
+   RoadMapFactoryKeyMapLine = 1;
+
+
+   while (!feof(file)) {
+      if (fgets (line, sizeof(line), file) == NULL)
+	    break;
+      if (roadmap_factory_keymap (actions, lines, 1) == 0)
+            break;
+      RoadMapFactoryKeyMapLine++;
+   }
+
+   fclose (file);
+
+   free(RoadMapFactoryKeyMapFile);
+}
+
+
+void roadmap_factory_load (RoadMapAction *actions)
+{
+   const char *cursor;
+
+   for (cursor = roadmap_scan ("config", "roadmap.keys");
+        cursor != NULL;
+        cursor = roadmap_scan_next ("config", "roadmap.keys", cursor)) {
+      roadmap_factory_load_file (actions, cursor);
+   }
+
+   for (cursor = roadmap_scan ("user", "roadmap.keys");
+        cursor != NULL;
+        cursor = roadmap_scan_next ("user", "roadmap.keys", cursor)) {
+
+      roadmap_factory_load_file (actions, cursor);
+   }
+   
+   if (RoadMapFactoryBindings  == NULL) {
+      roadmap_log (ROADMAP_WARNING,
+         "roadmap_factory_load: no key roadmap.keys found");
+   }
+
+}
 /**
  * @brief initialize
  */
 void roadmap_factory_initialize (void)
 {
+   RoadMapFactoryKeyMapFile = "internal bindings";
 }
 
 /**
@@ -1025,9 +1117,9 @@ void roadmap_factory_initialize (void)
  */
 void roadmap_factory_shutdown (void)
 {
-   RoadMapFactoryBindings = NULL;
    RoadMapFactoryMenuPopupCount = 0;
    RoadMapFactoryBindings = NULL;
+   RoadMapFactoryBindingsMax = 0;
    RoadMapFactoryKeyLength = 0;
    RoadMapFactoryPopupList = NULL;
 }
