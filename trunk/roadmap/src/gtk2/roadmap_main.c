@@ -158,16 +158,15 @@ static gint roadmap_main_key_pressed (GtkWidget *w, GdkEventKey *event) {
    char *key = NULL;
    char regular_key[2];
 
+   // fprintf(stderr, "got 0x%x\n", event->keyval);
+
+
    switch (event->keyval) {
 
-      case GDK_Left:
-      case GDK_KP_Left:   key = "LeftArrow";           break;
-      case GDK_Right:
-      case GDK_KP_Right:  key = "RightArrow";          break;
-      case GDK_Up:
-      case GDK_KP_Up:     key = "UpArrow";             break;
-      case GDK_Down:
-      case GDK_KP_Down:   key = "DownArrow";           break;
+      case GDK_Left:   key = "LeftArrow";           break;
+      case GDK_Right:  key = "RightArrow";          break;
+      case GDK_Up:     key = "UpArrow";             break;
+      case GDK_Down:   key = "DownArrow";           break;
 
       case GDK_Return: key = "Enter";                 break;
 
@@ -182,6 +181,10 @@ static gint roadmap_main_key_pressed (GtkWidget *w, GdkEventKey *event) {
       case GDK_KP_Page_Down: key = "Special-PageDown";     break; // square
       case GDK_KP_Home:      key = "Special-Home";         break; // X
       case GDK_KP_End:       key = "Special-End";          break; // checkmark
+      case GDK_KP_Left:      key = "Special-LeftArrow";    break; // joy left
+      case GDK_KP_Right:     key = "Special-RightArrow";   break; // joy right
+      case GDK_KP_Up:        key = "Special-UpArrow";      break; // joy up
+      case GDK_KP_Down:      key = "Special-DownArrow";    break; // joy down
 
       case 0xffbe:     key = "F1";          break;
       case 0xffbf:     key = "F2";          break;
