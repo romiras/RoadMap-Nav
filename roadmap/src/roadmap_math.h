@@ -123,6 +123,7 @@ void roadmap_math_bbox_around_point
          double distance, char *unitstring);
 
 int  roadmap_math_distance_convert (const char *string, int *was_explicit);
+int  roadmap_math_to_trip_units (int distance);
 int  roadmap_math_to_trip_distance (int distance);
 int  roadmap_math_to_trip_distance_tenths (int distance);
 

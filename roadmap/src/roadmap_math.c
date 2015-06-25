@@ -1617,21 +1617,29 @@ char *roadmap_math_speed_unit (void) {
     return RoadMapContext->units->speed;
 }
 
+/* takes miles/kms, returns feet/meters */
+int roadmap_math_to_trip_units (int distance) {
+    
+    return distance * RoadMapContext->units->to_trip_unit;
+}
 
+/* takes feet/meters, returns miles/kms */
 int roadmap_math_to_trip_distance (int distance) {
     
     return distance / RoadMapContext->units->to_trip_unit;
 }
 
+/* takes feet or meters, and returns tenths of miles or km. */
 int roadmap_math_to_trip_distance_tenths (int distance) {
     
     return (10 * distance) / RoadMapContext->units->to_trip_unit;
 }
 
-/**
- * @brief set some distance into the message API's buffers
+/** * @brief set some distance into the message API's buffers
  * @param which indicate which distance to set
- * @param distance the value to use
+ * @param distance the value to use, in feet or meters
+ * the return buffer will be ascii, in either miles/km, with decimal,
+ * or in feet/meters.
  */
 void roadmap_math_trip_set_distance(char which, int distance)
 {

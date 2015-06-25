@@ -2154,7 +2154,7 @@ void roadmap_trip_route_stop (void)
  * @brief this displays an arrow pointing to the next point in the trip
  * @return
  */
-static int roadmap_trip_next_point_state(void)
+static int roadmap_trip_next_point_angle(void)
 {
     int angle;
 
@@ -2169,6 +2169,12 @@ static int roadmap_trip_next_point_state(void)
     angle = roadmap_math_azymuth (&RoadMapTripGps->map, &RoadMapTripNext->pos);
     angle -= RoadMapTripGps->gps.steering + roadmap_math_get_orientation();
 
+    return angle;
+}
+
+static int roadmap_trip_next_point_state(void)
+{
+    int angle = roadmap_trip_next_point_angle();
     return ROADMAP_STATE_ENCODE_STATE (angle, 0);
 }
 
@@ -2176,7 +2182,7 @@ static int roadmap_trip_next_point_state(void)
  * @brief this displays an arrow pointing to the 2nd next point in the trip
  * @return
  */
-static int roadmap_trip_2nd_point_state(void)
+static int roadmap_trip_2nd_point_angle(void)
 {
     waypoint *tmp;
     int angle;
@@ -2197,6 +2203,32 @@ static int roadmap_trip_2nd_point_state(void)
     angle = roadmap_math_azymuth (&RoadMapTripGps->map, &tmp->pos);
     angle -= RoadMapTripGps->gps.steering + roadmap_math_get_orientation();
 
+    return angle;
+}
+
+static char *directions[] = {
+    "ahead",
+    "ahead right",
+    "right",
+    "back right",
+    "back",
+    "back left",
+    "left",
+    "ahead left",
+};
+static char *roadmap_trip_angle_to_direction(int angle)
+{
+    /* each direction represents 45 degrees (out of 360).
+     * the "ahead" pie-shaped segment is between -22.5 and 22.5 degrees.
+     */
+    while (angle > 360)  angle -= 360;
+    while (angle < 0) angle += 360;
+    return directions[(angle * 10 + 225) / 450];
+}
+
+static int roadmap_trip_2nd_point_state(void)
+{
+    int angle = roadmap_trip_2nd_point_angle();
     return ROADMAP_STATE_ENCODE_STATE (angle, 0);
 }
 
@@ -2240,25 +2272,41 @@ void roadmap_trip_show_2ndnextpoint(void) {
     roadmap_screen_refresh ();
 }
 
-int announce_threshold_tenths[] = {
- // 100mi 50mi 20mi 10mi 5mi 1mi .3mi  or
- // 100km 50km 20km 10km 5km 1km .3km
-    1000, 500, 200, 100, 50, 10, 3, 0
-};
-
-int roadmap_trip_new_threshold(int distance)
+/* takes distance in feet/meters, returns new thresholds in feet/meters*/
+static void roadmap_trip_new_threshold(int distance,
+		int *lesserp, int *greaterp)
 {
     int i;
-    int *thresh = announce_threshold_tenths;
-    int distance_far = roadmap_math_to_trip_distance_tenths (distance);
+    double u, delta;
+    int low, high;
+    double threshmul[] = { 2.5, 2., 2. };
+#define STARTING_THRESHOLD .2
 
-    for (i = 0; thresh[i]; i++) {
-	if (distance_far > thresh[i]) {
-	    return thresh[i];
-	}
+    // we want distance reports at
+    // 1000, 500, 200, 100, 50, 20, 10, 5, 2, 1, .5, .2
+    // the multipliers to get between these values are 2.5, 2, and 2.
+    // also, when approaching a waypoint, we want to announce that
+    // we're nearing it _on_ these mileages, not just past them.  i.e.,
+    // if the threshold is 2 miles, we don't want to cross the threshold
+    // and then announce "in 1.9 miles".  so we add a delta or 5% to
+    // all the threshold values
+
+    u = roadmap_math_to_trip_units (1);  // 5280 feet, or 1000 meters 
+    delta = u * .05;
+    high = (u * STARTING_THRESHOLD ) + delta;    // start at .2 mile or .2 km
+    low = 0;
+
+    for (i = 0; i < 10; i ++) {
+	if (high > distance)
+	    break;
+	low = high;
+	high = ((high - delta) * threshmul[i % 3]) + delta;
     }
-    return 0;
+
+    *lesserp = low;
+    *greaterp = high;
 }
+
 /**
  * @brief send messages to the user indicating current state
  *
@@ -2272,6 +2320,8 @@ int roadmap_trip_new_threshold(int distance)
  *              (set only when a trip is active).
  *      Y       Distance to the next waypoint which includes directions, unless the GPS is
  *              "at" that waypoint.  (set only when a trip is active).
+ *	1	Angle from current travel to next waypoint.
+ *	2	Angle from current travel to second next waypoint.
  */
 void roadmap_trip_format_messages (void)
 {
@@ -2282,7 +2332,9 @@ void roadmap_trip_format_messages (void)
     int waypoint_size;
     static RoadMapPosition lastgpsmap = {-1, -1};
     static waypoint *within_waypoint = NULL;
-    static int distance_announce_threshold;
+    static int distance_threshold_lesser;
+    static int distance_threshold_greater;
+    static int getting_close;
 
     if (! RoadMapRouteInProgress || RoadMapCurrentRoute == NULL) {
 
@@ -2294,6 +2346,9 @@ void roadmap_trip_format_messages (void)
 
         roadmap_message_unset ('X');
         roadmap_message_unset ('Y');
+
+        roadmap_message_unset ('1');
+        roadmap_message_unset ('2');
         lastgpsmap.latitude = -1;
         return;
     }
@@ -2306,6 +2361,9 @@ void roadmap_trip_format_messages (void)
 
         roadmap_message_set ('X', "??");
         roadmap_message_set ('Y', "?? %s", roadmap_math_trip_unit());
+
+        roadmap_message_set ('1', "??");
+        roadmap_message_set ('2', "??");
         lastgpsmap.latitude = -1;
         return;
     }
@@ -2333,7 +2391,6 @@ void roadmap_trip_format_messages (void)
 
     } else {
 
-        static int getting_close;
         int need_newgoal = 0;
 
         if (within_waypoint != NULL) {
@@ -2354,8 +2411,6 @@ void roadmap_trip_format_messages (void)
 
             roadmap_log (ROADMAP_DEBUG, "attained waypoint %s, distance %d",
                          RoadMapTripNext->shortname, distance_to_next);
-
-// maybe announce "at waypoint"
 
             within_waypoint = RoadMapTripNext;
             need_newgoal = 1;
@@ -2420,10 +2475,19 @@ void roadmap_trip_format_messages (void)
     }
 
     if (lastRoadMapTripNext != RoadMapTripNext ||
-	    distance_to_next < distance_announce_threshold) {
+	    distance_to_next < distance_threshold_lesser ||
+	    distance_to_next > distance_threshold_greater) {
+	char *dir;
+
+	dir = roadmap_trip_angle_to_direction(roadmap_trip_next_point_angle());
+	roadmap_message_set('1', dir);
+	dir = roadmap_trip_angle_to_direction(roadmap_trip_2nd_point_angle());
+	roadmap_message_set('2', dir);
+
 	roadmap_voice_announce ("Waypoint", 1);
-	distance_announce_threshold =
-		roadmap_trip_new_threshold(distance_to_next);
+
+	roadmap_trip_new_threshold(distance_to_next,
+		&distance_threshold_lesser, &distance_threshold_greater);
 	lastRoadMapTripNext = RoadMapTripNext;
     }
 
