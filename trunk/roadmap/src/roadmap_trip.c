@@ -797,6 +797,8 @@ static void roadmap_trip_add_waypoint_dialog (const char *name, RoadMapPosition 
 #define WAYPOINT_ACTION_MOVE_BACK 1
 #define WAYPOINT_ACTION_MOVE_AHEAD 2
 #define WAYPOINT_ACTION_EDIT 3
+#define WAYPOINT_ACTION_FOCUS_PREV 4
+#define WAYPOINT_ACTION_FOCUS_NEXT 5
 
 static int roadmap_trip_waypoint_manage_dialog_populate (void *which);
 
@@ -811,6 +813,29 @@ static void roadmap_trip_waypoint_manage_action
     waypoint *neighbor;
     
     switch(action) {
+    case WAYPOINT_ACTION_FOCUS_NEXT:
+        if (which != ROUTE_WAYPOINTS)
+            return;
+        if (waypointp == RoadMapTripDest)
+            return;
+        neighbor = (waypoint *)ROADMAP_LIST_NEXT(&waypointp->Q);
+	goto select_neighbor;
+
+    case WAYPOINT_ACTION_FOCUS_PREV:
+        if (which != ROUTE_WAYPOINTS)
+            return;
+        if (waypointp == RoadMapTripStart)
+            return;
+        neighbor = (waypoint *)ROADMAP_LIST_PREV(&waypointp->Q);
+
+    select_neighbor:
+	if (!neighbor)
+	    return;
+	roadmap_trip_set_selected_place(which, neighbor);
+	roadmap_trip_set_focus_waypoint (neighbor);
+	roadmap_screen_refresh ();
+	break;
+
     case WAYPOINT_ACTION_MOVE_BACK:
         if (which != ROUTE_WAYPOINTS)
             return;
@@ -2479,6 +2504,9 @@ void roadmap_trip_format_messages (void)
 	    distance_to_next > distance_threshold_greater) {
 	char *dir;
 
+if (distance_to_next < 200) 
+fprintf(stderr, "getting_close %d, within_waypoint %p\n", getting_close, within_waypoint);
+
 	dir = roadmap_trip_angle_to_direction(roadmap_trip_next_point_angle());
 	roadmap_message_set('1', dir);
 	dir = roadmap_trip_angle_to_direction(roadmap_trip_2nd_point_angle());
@@ -3548,6 +3576,26 @@ void roadmap_trip_delete_last_place(void)
         (RoadMapTripSelectedPlace->wpt,
                 RoadMapTripSelectedPlace->type, WAYPOINT_ACTION_DELETE);
 
+}
+
+void roadmap_trip_view_next_routepoint (void) {
+
+    if (RoadMapTripSelectedPlace == NULL)
+        return;
+
+    roadmap_trip_waypoint_manage_action
+        (RoadMapTripSelectedPlace->wpt,
+                RoadMapTripSelectedPlace->type,  WAYPOINT_ACTION_FOCUS_NEXT);
+}
+
+void roadmap_trip_view_prev_routepoint (void) {
+
+    if (RoadMapTripSelectedPlace == NULL)
+        return;
+
+    roadmap_trip_waypoint_manage_action
+        (RoadMapTripSelectedPlace->wpt,
+                RoadMapTripSelectedPlace->type,  WAYPOINT_ACTION_FOCUS_PREV);
 }
 
 void roadmap_trip_move_routepoint_ahead (void) {

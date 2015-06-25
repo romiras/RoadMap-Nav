@@ -8,6 +8,9 @@
 setasdestination
 addaswaypoint
 -
+routeviewnext
+routeviewprevious
+-
 address
 intersection
 position
@@ -31,4 +34,7 @@ addtriplandmark
 -
 routepointahead
 routepointback
+-
+routeviewnext
+routeviewprevious
 

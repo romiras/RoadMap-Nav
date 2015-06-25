@@ -907,6 +907,14 @@ static RoadMapAction RoadMapStartActions[] = {
       "Reorder the route, moving this point earlier in the route", NULL,
       roadmap_trip_move_routepoint_back },
 
+   {"routeviewnext", "Select next waypoint", "Next", NULL,
+      "View the next waypoint in the route", NULL,
+	roadmap_trip_view_next_routepoint  },
+
+   {"routeviewprevious", "Select previous waypoint", "Previous", NULL,
+      "View the previous waypoint in the route", NULL,
+	roadmap_trip_view_prev_routepoint  },
+
    {"full", "Full Screen", "Full", "F",
       "Toggle the window full screen mode (if window manager permits)", NULL,
       roadmap_main_toggle_full_screen},
@@ -1133,6 +1141,9 @@ static const char *RoadMapStartMenu[] = {
 
       "routepointahead",
       "routepointback",
+
+      "routeviewnext",
+      "routeviewprevious",
 #endif
 
    ROADMAP_MENU "Help",
