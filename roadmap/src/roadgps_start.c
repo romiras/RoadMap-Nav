@@ -106,8 +106,6 @@ static const char *RoadGpsStartKeyBinding[] = {
    "Q"            ROADMAP_MAPPED_TO "quit",
    "R"            ROADMAP_MAPPED_TO "record",
    "S"            ROADMAP_MAPPED_TO "stop",
-
-   NULL
 };
 
 
@@ -261,7 +259,8 @@ void roadmap_start (int argc, char **argv) {
 
    roadmap_config_load ();
 
-   roadmap_factory_keymap (RoadGpsStartActions, RoadGpsStartKeyBinding);
+   roadmap_factory_keymap (RoadGpsStartActions, RoadGpsStartKeyBinding,
+   	sizeof(RoadGpsStartKeyBinding)/sizeof(*RoadGpsStartKeyBinding));
 
    roadmap_option (argc, argv, 1, roadgps_start_usage);
 
