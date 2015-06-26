@@ -987,10 +987,12 @@ int roadmap_factory_keymap (RoadMapAction  *actions,
 static void roadmap_factory_show_keymap (void) {
 
    const struct RoadMapFactoryKeyMap *binding;
+   int i;
 
    printf ("\nKEYMAP:\n");
 
-   for (binding = RoadMapFactoryBindings; binding->key != NULL; ++binding) {
+   for (i = 0; i < RoadMapFactoryBindingsMax; ++i) {
+      binding = &RoadMapFactoryBindings[i];
 
       const RoadMapAction *action = binding->action;
 
