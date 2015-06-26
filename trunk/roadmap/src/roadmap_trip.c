@@ -1165,7 +1165,7 @@ static void roadmap_trip_waypoint_manage_dialog_worker (void *which) {
         roadmap_dialog_add_button
             ("Edit", roadmap_trip_waypoint_manage_dialog_edit);
         roadmap_dialog_add_button
-            ("Okay", roadmap_trip_dialog_cancel);
+            ("Done", roadmap_trip_dialog_cancel);
 	roadmap_dialog_add_button
 	    ("Destination", roadmap_trip_set_nav_destination);
 	roadmap_dialog_add_button
@@ -1391,7 +1391,7 @@ void roadmap_trip_route_manage_dialog (void)
         roadmap_dialog_add_button ("Delete", roadmap_trip_route_manage_dialog_delete);
         roadmap_dialog_add_button ("Edit", roadmap_trip_route_manage_dialog_edit);
         roadmap_dialog_add_button ("None", roadmap_trip_route_manage_dialog_none);
-        roadmap_dialog_add_button ("Okay", roadmap_trip_dialog_cancel);
+        roadmap_dialog_add_button ("Done", roadmap_trip_dialog_cancel);
 
         roadmap_dialog_complete (0);    /* No need for a keyboard. */
     }
@@ -1417,7 +1417,7 @@ void roadmap_trip_lost_route_manage_dialog (void) {
         roadmap_dialog_add_button ("Restore",
                                    roadmap_trip_route_manage_dialog_restore);
 
-        roadmap_dialog_add_button ("Okay", roadmap_trip_dialog_cancel);
+        roadmap_dialog_add_button ("Done", roadmap_trip_dialog_cancel);
 
         roadmap_dialog_complete (0);    /* No need for a keyboard. */
     }
@@ -3414,7 +3414,7 @@ static void roadmap_trip_waypoint_selection_dialog (void) {
 
         roadmap_dialog_new_list ("Names", ".Places");
         roadmap_dialog_add_button
-            ("Okay", roadmap_trip_dialog_cancel);
+            ("Done", roadmap_trip_dialog_cancel);
 
         roadmap_dialog_complete (0);    /* No need for a keyboard. */
     }
