@@ -79,7 +79,7 @@ Lakes.Color: LightBlue
  .Declutter: 1300
  .Thickness: 1
  .Speed: 1
-Parks.Color: green
+Parks.Color: lightgreen
  .Declutter: 600
  .Thickness: 1
  .Speed: 30
@@ -91,7 +91,7 @@ Boundaries.Color: darkgreen
  .Thickness: 2
  .Declutter: 2147483647
  .Speed: 1
-Nature.Color: green
+Nature.Color: lightgreen
  .Declutter: 600
  .Thickness: 1
  .Speed: 1
