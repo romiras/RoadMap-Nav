@@ -152,11 +152,13 @@ L 8,11 0,-3 -8,11
 # visibility on low-contrast displays
 S OutlinedBlueDart
 F white 1
-P 11,19 0,-3 -11,19 0,13 11,19
+P 11,19 0,-3 -11,19 0,13
 F darkblue 1
-P 0,1 6,14 0,10 0,1
+P 0,1 6,14 0,10
 F aqua 1
-P 0,1 -6,14 0,10 0,1
+P 0,1 -6,14 0,10
+F white 1
+L 0,1 0,10
 F black 2
 L 11,19 0,-3 -11,19 0,13 11,19
 
@@ -168,7 +170,7 @@ L 0,1 6,13 0,10 -6,13 0,1
 
 S PurpleTriangle
 F Purple 1
-P 0,-10 -9,5 9,5 0,-10
+P 0,-10 -9,5 9,5
 
 S CrossHair
 F white 3
@@ -219,7 +221,7 @@ D 0,0 3
 
 S GreenTrianglePointer
 F green 2
-P 0,-9 -8,4 8,4 0,-9
+P 0,-9 -8,4 8,4
 F black 1
 L 0,-9 -8,4 8,4 0,-9
 L 1,-8 1,-16
@@ -242,7 +244,7 @@ S GreenSquare
 F black 1
 L 5,5 5,-5 -5,-5 -5,5 5,5
 F green 1
-P 4,4 4,-4 -4,-4 -4,4 4,4
+P 4,4 4,-4 -4,-4 -4,4
 
 S PurpleChevron
 F purple 2
@@ -366,35 +368,24 @@ F white 1
 L 0,8 9,13 0,-13
 L 0,8 -9,13 0,-13
 
-S XBigGreenDart
-F green 1
-P -9,13 0,8 9,13 0,-13
-F black 2
-L 0,8 9,13 0,-13
-L 0,8 -9,13 0,-13
-
 S BigGreenDart
 F green 1
 P 0,8 9,13 0,-13
 F lightgreen 1
 P 0,8 -9,13 0,-13
+F white 1
+L 0,8 0,-13
 F black 2
 L 0,8 9,13 0,-13
 L 0,8 -9,13 0,-13
-
-S xxBigGreenDart
-F black 1
-P -13,13 0,12 13,13 0,-17
-F white 1
-P -11,13 0,10 11,13 0,-15
-F green 1
-P -9,13  0,8   9,13 0,-13
 
 S BigYellowDart
 F gold 1
 P 0,8 9,13 0,-13
 F yellow 1
 P 0,8 -9,13 0,-13
+F white 1
+L 0,8 0,-13
 F black 2
 L 0,8 9,13 0,-13
 L 0,8 -9,13 0,-13
@@ -404,6 +395,8 @@ F red 1
 P 0,8 9,13 0,-13
 F salmon 1
 P 0,8 -9,13 0,-13
+F white 1
+L 0,8 0,-13
 F black 2
 L 0,8 9,13 0,-13
 L 0,8 -9,13 0,-13
@@ -564,8 +557,8 @@ F black 2
 C 0,0 15
 F white 1
 C 0,0 16
-P -5,-8 6,-8 2,8 -9,8 -5,-8
-P 6,-8 5,7 8,7  6,-8
+P -5,-8 6,-8 2,8 -9,8
+P 6,-8 5,7 8,7 
 F black 1
 L -5,-8 6,-8 2,8 -9,8 -5,-8
 L 5,7 8,7  6,-8
@@ -616,7 +609,7 @@ L -6,7 6,7
 
 S Money
 F lightgreen 1
-P -7,-4 7,-4 7,4 -7,4 -7,-4
+P -7,-4 7,-4 7,4 -7,4
 F black 1
 L -7,-4 7,-4 7,4 -7,4 -7,-4
 D 0,0 1
