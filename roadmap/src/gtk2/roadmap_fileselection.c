@@ -143,6 +143,13 @@ void roadmap_fileselection_new (const char *title,
         if (current_directory[0] != 0) {
             chdir (current_directory);
         }
+
+	/* these buttons could be useful (rename, delete, new folder), but
+	 * they cause less space for the filename lists, which is at a
+	 * premium.  i tend to manipulate files outside of roadmap anyway.
+	 */
+	gtk_file_selection_hide_fileop_buttons (GTK_FILE_SELECTION(item->dialog));
+
     }
     
     item->mode = mode;
