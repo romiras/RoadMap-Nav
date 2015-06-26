@@ -100,14 +100,14 @@ P -20 100
 E Direction_Next
 A nextpoint
 
-# # The Direction_2nd object points to waypoint after the next. 
-# # relative to the current direction of travel.  This can be
-# # useful to see which way the route will go at the next turning.
-# N Direction_2nd
-# S get_direction_2nd
-# P -20 140
-# E Direction_2nd
-# A 2ndpoint
+# The Direction_2nd object points to waypoint after the next. 
+# relative to the current direction of travel.  This can be
+# useful to see which way the route will go at the next turning.
+N Direction_2nd
+S get_direction_2nd
+P -20 140
+E Direction_2nd
+A 2ndpoint
 
 # The Direction_Dest object points to the route's last waypoint,
 # relative to the direction of travel.
