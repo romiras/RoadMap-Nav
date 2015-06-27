@@ -2246,9 +2246,10 @@ static char *roadmap_trip_angle_to_direction(int angle)
     /* each direction represents 45 degrees (out of 360).
      * the "ahead" pie-shaped segment is between -22.5 and 22.5 degrees.
      */
+    angle += 22;  // close enough
     while (angle > 360)  angle -= 360;
     while (angle < 0) angle += 360;
-    return directions[(angle * 10 + 225) / 450];
+    return directions[angle / 45];
 }
 
 static int roadmap_trip_2nd_point_state(void)
