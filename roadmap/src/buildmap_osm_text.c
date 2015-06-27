@@ -1212,7 +1212,7 @@ buildmap_osm_text_read(char *fn, int tileid, int country_num, int division_num)
     time_t	t[10];
     int		passid, NumNodes, NumWays;
     struct stat st;
-    wayid_t interesting_way;
+    wayid_t interesting_way = 0;
     int		in_relation;
     int		need_xml_header = 1;
     int		need_osm_header = 1;
