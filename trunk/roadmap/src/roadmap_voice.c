@@ -56,11 +56,18 @@ static RoadMapConfigDescriptor RoadMapVoiceMute =
                         ROADMAP_CONFIG_ITEM("Voice", "Mute");
 
 static struct roadmap_voice_config RoadMapVoiceText[] = {
-    {ROADMAP_CONFIG_ITEM("Voice", "Waypoint"), "flite" _EXE " -t 'Next is %W %1, pointing %2'|flite" _EXE " -t 'Destination %D %1'"},
-    {ROADMAP_CONFIG_ITEM("Voice", "Approach"), "flite" _EXE " -t 'Approaching %N'"},
-    {ROADMAP_CONFIG_ITEM("Voice", "Current Street"), "flite" _EXE " -t 'On %N'"},
-    {ROADMAP_CONFIG_ITEM("Voice", "Next Intersection"), "flite" _EXE " -t 'Next intersection: %N'"},
-    {ROADMAP_CONFIG_ITEM("Voice", "Selected Street"), "flite" _EXE " -t 'Selected %N'"},
+    {ROADMAP_CONFIG_ITEM("Voice", "AtWaypoint"), "flite" _EXE 
+	" -t 'At waypoint, next is %1'"},
+    {ROADMAP_CONFIG_ITEM("Voice", "Waypoint"), "flite" _EXE 
+	" -t 'Next is %W %1, pointing %2'|flite" _EXE " -t 'Destination %D %1'"},
+    {ROADMAP_CONFIG_ITEM("Voice", "Approach"), "flite" _EXE 
+	" -t 'Approaching %N'"},
+    {ROADMAP_CONFIG_ITEM("Voice", "Current Street"), "flite" _EXE 
+	" -t 'On %N'"},
+    {ROADMAP_CONFIG_ITEM("Voice", "Next Intersection"), "flite" _EXE
+	" -t 'Next intersection: %N'"},
+    {ROADMAP_CONFIG_ITEM("Voice", "Selected Street"), "flite" _EXE
+	" -t 'Selected %N'"},
     {ROADMAP_CONFIG_ITEM_EMPTY, NULL}
 };
 
@@ -252,10 +259,11 @@ static void roadmap_voice_complete (void *data) {
 static int roadmap_voice_expand (const char *input, char *output, int size) {
 
     int length;
-    int acronym_length;
-    const char *acronym;
+    int abbrev_length;
+    const char *abbrev;
     struct voice_translation *cursor;
-    const char *acronym_found;
+    const char *abbrev_found;
+    int abbrev_at_start;
     struct voice_translation *cursor_found;
 
     for (;;) {
@@ -264,17 +272,17 @@ static int roadmap_voice_expand (const char *input, char *output, int size) {
           return 0;
        }
     
-       acronym = input;
-       acronym_length = 0;
-       acronym_found = input + strlen(input);
+       abbrev = input;
+       abbrev_length = 0;
+       abbrev_found = input + strlen(input);
        cursor_found  = NULL;
     
        for (cursor = RoadMapVoiceTranslate1; cursor->from != NULL; ++cursor) {
         
-          acronym = strstr (input, cursor->from);
-          if (acronym != NULL) {
-             if (acronym < acronym_found) {
-                acronym_found = acronym;
+          abbrev = strstr (input, cursor->from);
+          if (abbrev != NULL) {
+             if (abbrev < abbrev_found) {
+                abbrev_found = abbrev;
                 cursor_found  = cursor;
              }
           }
@@ -282,23 +290,23 @@ static int roadmap_voice_expand (const char *input, char *output, int size) {
     
        for (cursor = RoadMapVoiceTranslate2; cursor->from != NULL; ++cursor) {
         
-          acronym = strstr (input, cursor->from);
-          if (acronym != NULL) {
-             if (acronym < acronym_found) {
-                acronym_found = acronym;
+          abbrev = strstr (input, cursor->from);
+          if (abbrev != NULL) {
+             if (abbrev < abbrev_found) {
+                abbrev_found = abbrev;
                 cursor_found  = cursor;
-             } else if (acronym == acronym_found) {
+             } else if (abbrev == abbrev_found) {
 
                 int count = 0;
                 int word_end = strlen(cursor->from);
 
-                if (acronym[word_end] == ' ') {
-                   while (isalpha(acronym[++word_end])) ++count;
+                if (abbrev[word_end] == ' ') {
+                   while (isalpha(abbrev[++word_end])) ++count;
                 }
 
                 if (count > 2) {
                    /* Chance are this is a prefix. */
-                   acronym_found = acronym;
+                   abbrev_found = abbrev;
                    cursor_found  = cursor;
                 }
              }
@@ -310,26 +318,27 @@ static int roadmap_voice_expand (const char *input, char *output, int size) {
           return 1;
        }
 
-       acronym = acronym_found;
+       abbrev = abbrev_found;
+       abbrev_at_start = (abbrev_found == input);
        cursor  = cursor_found;
-       acronym_length = strlen(cursor->from);
+       abbrev_length = strlen(cursor->from);
     
-       length = acronym - input;
+       length = abbrev - input;
         
        if (length > size) return 0;
     
-       /* Copy the unexpanded part, up to the acronym that was found. */
+       /* Copy the unexpanded part, up to the abbreviation that was found. */
        strncpy (output, input, length);
        output += length;
        size -= length;
 
        if (size <= 0) return 0;
     
-       if ((acronym_length != 0) &&
-             (acronym[acronym_length] == 0 ||
-              (! isalnum(acronym[acronym_length])))) {
-        
-          /* This is a valid acronym: translate it. */
+       if (abbrev_length != 0 &&
+              !isalnum(abbrev[abbrev_length]) &&
+	      (!abbrev_at_start && !isalnum(abbrev[-1]))
+	    ) {
+          /* This is a valid abbreviation: translate it. */
           length = strlen(cursor->to);
           strncpy (output, cursor->to, size);
           output += length;
@@ -338,13 +347,13 @@ static int roadmap_voice_expand (const char *input, char *output, int size) {
           if (size <= 0) return 0;
 
        } else {
-          /* This is not a valid acronym: leave it unchanged. */
-          strncpy (output, acronym, acronym_length);
-          output += acronym_length;
-          size   -= acronym_length;
+          /* This is not a valid abbreviation: leave it unchanged. */
+          strncpy (output, abbrev, abbrev_length);
+          output += abbrev_length;
+          size   -= abbrev_length;
        }
         
-       input = acronym + acronym_length;
+       input = abbrev + abbrev_length;
     }
 }
 
