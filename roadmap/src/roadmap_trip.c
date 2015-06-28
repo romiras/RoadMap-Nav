@@ -2416,10 +2416,23 @@ void roadmap_trip_format_messages (void)
         roadmap_message_unset ('W');
 
     } else {
+	/* we're still mid-route.  if we've gotten within
+	 * "waypoint_size" of the waypoint, we're there, and can move
+	 * on to the next.  if we've gotten within twice that, we're
+	 * close enough to consider ourselves "close".  if we've been
+	 * "close", but aren't anymore, we can move on if we're closer
+	 * to the departure vector than the arrival vector.  if we've
+	 * never gotten close, we keep the current waypoint -- which
+	 * is normal if we're still approaching, and unavoidably
+	 * incorrect if we're now moving away.  that's what the
+	 * "resumeroute" command is for, to resynchronize us when
+	 * we know we're doing the right thing, but missed the last
+	 * waypoint.
+	 */
 
         int need_newgoal = 0;
 
-        if (within_waypoint != NULL) {
+        if (within_waypoint) {
             /* We really attained the waypoint, and may have now
              * left its minimal vicinity.  If so, update on-screen
              * directions.
@@ -2444,12 +2457,17 @@ void roadmap_trip_format_messages (void)
 
         } else if (distance_to_next < waypoint_size * 2) {
 
-            /* We're within the 2x vicinity.  Do nothing yet. */
+            /* We're within the 2x vicinity.  Do nothing yet, but
+	     * note that we got this close.
+	     */
             getting_close = 1;
 
         } else if (getting_close) {
 
-            /* If we got close (within 2x), but never quite there. */
+	    /* we were close (with 2x of waypoint_size, but never
+	     * quite got there.  if it looks like we're going the
+	     * right way, switch to the next waypoint.
+	     */
             waypoint *goal = RoadMapTripNext;
             int distance = roadmap_math_distance (&gps->map, &goal->pos);
 
@@ -2488,7 +2506,7 @@ void roadmap_trip_format_messages (void)
             RoadMapTripNext = roadmap_trip_next(RoadMapTripNext);
         }
 
-        if (within_waypoint != NULL) {
+        if (within_waypoint) {
             roadmap_trip_set_directions (distance_to_directions,
                 (within_waypoint->description != NULL), within_waypoint);
         } else {
@@ -2505,15 +2523,15 @@ void roadmap_trip_format_messages (void)
 	    distance_to_next > distance_threshold_greater) {
 	char *dir;
 
-if (distance_to_next < 200) 
-fprintf(stderr, "getting_close %d, within_waypoint %p\n", getting_close, within_waypoint);
-
 	dir = roadmap_trip_angle_to_direction(roadmap_trip_next_point_angle());
 	roadmap_message_set('1', dir);
 	dir = roadmap_trip_angle_to_direction(roadmap_trip_2nd_point_angle());
 	roadmap_message_set('2', dir);
 
-	roadmap_voice_announce ("Waypoint", 1);
+	if (within_waypoint)
+	    roadmap_voice_announce ("AtWaypoint", 0);
+	else
+	    roadmap_voice_announce ("Waypoint", 1);
 
 	roadmap_trip_new_threshold(distance_to_next,
 		&distance_threshold_lesser, &distance_threshold_greater);
