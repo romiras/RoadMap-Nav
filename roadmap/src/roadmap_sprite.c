@@ -853,9 +853,11 @@ void roadmap_sprite_draw_with_text
           textseq = textsequence;
    } else if (sprite->textseq.object_count) {
        textseq = &sprite->textseq;
+#if 0
        if (text_bbox)
           roadmap_sprite_scale_bbox(text_bbox, &sprite->text_bbox, scale);
        text_bbox = &sprite->text_bbox;
+#endif
    }
 
    if (bbox) roadmap_sprite_scale_bbox(bbox, &sprite->bbox, scale);
@@ -883,7 +885,7 @@ void roadmap_sprite_draw_with_text
          static RoadmapSpriteDrawingSequence textpoly[1];
          roadmap_sprite_box_sequence (sprite, textpoly, text_bbox);
          roadmap_sprite_place
-            (textpoly, location, -roadmap_math_get_orientation(), scale);
+            (textpoly, location, -roadmap_math_get_orientation(), 100);
          roadmap_canvas_draw_multiple_polygons
             (textpoly->object_count,
              textpoly->obj.objects, RoadMapSpritePoints, 1, RoadMapSpriteFastDraw);
@@ -914,7 +916,7 @@ void roadmap_sprite_draw_with_text
          static RoadmapSpriteDrawingSequence textrect[1];
          roadmap_sprite_box_sequence (sprite, textrect, text_bbox);
          roadmap_sprite_place
-            (textrect, location, -roadmap_math_get_orientation(), scale);
+            (textrect, location, -roadmap_math_get_orientation(), 100);
          roadmap_canvas_draw_multiple_lines
             (textrect->object_count,
              textrect->obj.objects, RoadMapSpritePoints, RoadMapSpriteFastDraw);
@@ -938,7 +940,7 @@ void roadmap_sprite_draw_with_text
          int i;
  
          roadmap_sprite_place
-            (textseq, location, -roadmap_math_get_orientation(), scale);
+            (textseq, location, -roadmap_math_get_orientation(), 100);
  
          for (i = textseq->object_count - 1; i >= 0; i--) {
             const char *t;
