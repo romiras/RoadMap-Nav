@@ -255,7 +255,7 @@ F purple 2
 L -4,4 0,-4 4,4
 
 S PurpleCross
-F purple 1
+F purple 2
 L -3,0 3,0
 L 0,-3 0,3
 
