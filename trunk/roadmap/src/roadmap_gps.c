@@ -231,9 +231,9 @@ static char roadmap_gps_update_status (char status) {
              RoadMapGpsLostFixMessage = roadmap_messagebox
                         ("GPS Error", "GPS lost satellite fix");
              RoadMapGPSLostFixTime = time(NULL);
-             // RoadMapGpsActiveSatelliteCount = 0;
+             //RoadMapGpsActiveSatelliteCount = 0;
 	     RoadMapLastKnownStatus = 'V';
-	     RoadMapGpsLatestData = 0;
+	     //RoadMapGpsLatestData = 0;
 	     roadmap_gps_update_reception();
           }
        }
@@ -616,6 +616,12 @@ void roadmap_gps_nmea (void) {
    }
 }
 
+void roadmap_gps_device_inactive(void)
+{
+   RoadMapGpsLatestData = 0;
+   roadmap_gps_update_reception();
+}
+
 /* End of NMEA protocol support ---------------------------------------- */
 
 
@@ -696,12 +702,6 @@ void roadmap_gps_satellites  (int sequence,
                                      int active) {
 
    static int active_count;
-
-   if (sequence < 0) {
-	RoadMapGpsLatestData = 0;
-	roadmap_gps_update_reception();
-	sequence = 0;
-   }
 
    if (sequence == 0) {
 
@@ -1103,8 +1103,13 @@ void roadmap_gps_open (void) {
       RoadMapGpsRetryPending = 0;
    }
 
+#if 0
+   // this causes the system to think it's connected to a device when
+   // it may not be.  it's definitely not needed for gpsd3.  not sure
+   // about raw serial.  other cases should be fixed as they're found.
    /* Give time for the whole system to initialize itself.  */
    roadmap_gps_got_data();
+#endif
 
    /*
     * Don't remove the keepalive, even if it isn't necessary for the connection :
