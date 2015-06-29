@@ -131,20 +131,20 @@ int roadmap_gpsd3_decode (void *user_context,
       return 0;
    }
 
-#ifdef THIS_DONT_WORK
+#ifdef SADLY_THIS_DOESNT_WORK
+    // sigh.  we get no reports at all while the gps is unplugged,
+    // ONLINE_SET never happens, and "online" is always 0.
+
    roadmap_log (ROADMAP_DEBUG, "gpsd set 0x%x online_set %d",
 	(unsigned int)gpsdp->set, gpsdp->set & ONLINE_SET);
 
    roadmap_log (ROADMAP_DEBUG, "gpsd online %d status %d dev_act %f",
    	(int)gpsdp->online, gpsdp->status, gpsdp->dev.activated);
 
-    // we get no reports at all while the gps is unplugged, ONLINE_SET
-    // never happens, and "online" is always 0.
    if (!(gpsdp->set & ONLINE_SET))
    	return 0;
    if (!gpsdp->online) {
-      roadmap_gps_satellites (-1, 0, 0, 0, 0, 0);
-      roadmap_gps_navigation ('V', 0, 0, 0, 0, 0, 0);
+      roadmap_gps_device_inactive();
       roadmap_log (ROADMAP_DEBUG, "gpsd: not online");
       return 0;	// No data
    }
@@ -242,29 +242,32 @@ int roadmap_gpsd3_decode (void *user_context,
 
    return 1;
 #else
+   int ret = 0;
    static int active, old_active = -1;
    // fprintf(stderr, "%s\n", sentence);
+   /* i'm sure the gpsd folks would scold me.  when in NMEA mode, gpsd
+    * still emits json to indicate when the devices are
+    * activated/deactivated.  this tells us whether there's really a
+    * device giving us data or not.  so we "parse" the json, even
+    * though the gpsd docs say not to look at the wire protocol.
+    */
    if (!strncmp(sentence, "{\"class\":",9)) /* } */ {
       // try to detect: {"class":"DEVICE","path":"/dev/ttyUSB1","activated":0}
-      roadmap_log (ROADMAP_DEBUG, "gpsd: found 'class'");
       if (strstr(sentence, "\"activated\":0}")) {
-	  roadmap_log (ROADMAP_DEBUG, "gpsd: not online");
+	  // roadmap_log (ROADMAP_DEBUG, "gpsd: not online");
 	  active = 0;
+	  if (old_active)
+	     roadmap_gps_device_inactive();
       } else if (strstr(sentence, "\"activated\":")) { // anything but '0'
-	  roadmap_log (ROADMAP_DEBUG, "gpsd: online");
+	  // roadmap_log (ROADMAP_DEBUG, "gpsd: online");
 	  active = 1;
       }
-   } else if (*sentence == '$') {
-      roadmap_log (ROADMAP_DEBUG, "gpsd: online with NMEA");
+   } else if (*sentence == '$') { // then it's really NMEA, e.g. "$GPGGA"
+      // roadmap_log (ROADMAP_DEBUG, "gpsd: online with NMEA");
+      ret = roadmap_nmea_decode (user_context, decoder_context, sentence);
       active = 1;
    }
-   if (active)
-      return roadmap_nmea_decode (user_context, decoder_context, sentence);
-
-   if (old_active != active) {
-      roadmap_gps_satellites (active ? 0:-1, 0, 0, 0, 0, 0);
-      old_active = active;
-   }
-   return 0;
+   old_active = active;
+   return ret;
 #endif
 }

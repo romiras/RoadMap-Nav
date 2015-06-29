@@ -132,6 +132,8 @@ void roadmap_gps_open   (void);
 void roadmap_gps_input  (RoadMapIO *io);
 int  roadmap_gps_active (void);
 
+void roadmap_gps_device_inactive(void);
+
 int  roadmap_gps_estimated_error (void);
 int  roadmap_gps_speed_accuracy  (void);
 
