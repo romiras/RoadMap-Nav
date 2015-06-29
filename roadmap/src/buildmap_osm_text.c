@@ -847,7 +847,6 @@ buildmap_osm_text_way_finish(void)
 
 		/* this code looks like buildmap_osm_text_node_finish() */
 		point = buildmap_point_add(lon, lat);
-		buildmap_osm_text_point_add(ni.NodeId, point);
 
 		if (wi.WayName && wi.WayTourism) {
 		    if (wi.WayLayer) {
