@@ -774,7 +774,7 @@ void roadmap_display_periodic(void) {
         }
     }
 
-    if (need_time_update ||
+    if (need_time_update || roadmap_message_changed() ||
             (RoadMapDisplayDeadline && now > RoadMapDisplayDeadline)) {
         roadmap_message_set ('T', thentime);
         RoadMapDisplayDeadline = 0;
