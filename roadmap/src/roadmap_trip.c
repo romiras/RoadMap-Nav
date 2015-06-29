@@ -2358,6 +2358,7 @@ void roadmap_trip_format_messages (void)
     int waypoint_size;
     static RoadMapPosition lastgpsmap = {-1, -1};
     static waypoint *within_waypoint = NULL;
+    static waypoint *say_within = NULL;
     static int distance_threshold_lesser;
     static int distance_threshold_greater;
     static int getting_close;
@@ -2414,6 +2415,7 @@ void roadmap_trip_format_messages (void)
             (distance_to_next, (distance_to_next < waypoint_size),
                 RoadMapTripNext);
         roadmap_message_unset ('W');
+	within_waypoint = NULL;
 
     } else {
 	/* we're still mid-route.  if we've gotten within
@@ -2452,6 +2454,7 @@ void roadmap_trip_format_messages (void)
                          RoadMapTripNext->shortname, distance_to_next);
 
             within_waypoint = RoadMapTripNext;
+	    say_within = within_waypoint;
             need_newgoal = 1;
             getting_close = 0;
 
@@ -2504,6 +2507,8 @@ void roadmap_trip_format_messages (void)
         /* We've decided we're ready for the next waypoint. */
         if (need_newgoal) {
             RoadMapTripNext = roadmap_trip_next(RoadMapTripNext);
+	    distance_to_next = distance_to_directions =
+        	roadmap_math_distance (&gps->map, &RoadMapTripNext->pos);
         }
 
         if (within_waypoint) {
@@ -2518,24 +2523,29 @@ void roadmap_trip_format_messages (void)
 
     }
 
-    if (lastRoadMapTripNext != RoadMapTripNext ||
-	    distance_to_next < distance_threshold_lesser ||
-	    distance_to_next > distance_threshold_greater) {
-	char *dir;
+    if (roadmap_voice_idle()) {
+	if (lastRoadMapTripNext != RoadMapTripNext ||
+		distance_to_next < distance_threshold_lesser ||
+		distance_to_next > distance_threshold_greater) {
+	    char *dir;
 
-	dir = roadmap_trip_angle_to_direction(roadmap_trip_next_point_angle());
-	roadmap_message_set('1', dir);
-	dir = roadmap_trip_angle_to_direction(roadmap_trip_2nd_point_angle());
-	roadmap_message_set('2', dir);
+	    dir = roadmap_trip_angle_to_direction(roadmap_trip_next_point_angle());
+	    roadmap_message_set('1', dir);
+	    dir = roadmap_trip_angle_to_direction(roadmap_trip_2nd_point_angle());
+	    roadmap_message_set('2', dir);
 
-	if (within_waypoint)
-	    roadmap_voice_announce ("AtWaypoint", 0);
-	else
-	    roadmap_voice_announce ("Waypoint", 1);
+	    if (within_waypoint ) {
+		if (say_within == within_waypoint)
+		    roadmap_voice_announce ("AtWaypoint", 1);
+		say_within = 0;
+	    } else {
+		roadmap_voice_announce ("Waypoint", 1);
+		lastRoadMapTripNext = RoadMapTripNext;
+	    }
 
-	roadmap_trip_new_threshold(distance_to_next,
-		&distance_threshold_lesser, &distance_threshold_greater);
-	lastRoadMapTripNext = RoadMapTripNext;
+	    roadmap_trip_new_threshold(distance_to_next,
+		    &distance_threshold_lesser, &distance_threshold_greater);
+	}
     }
 
     lastgpsmap = gps->map;
