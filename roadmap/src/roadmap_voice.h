@@ -24,6 +24,7 @@
 #ifndef INCLUDE__ROADMAP_VOICE__H
 #define INCLUDE__ROADMAP_VOICE__H
 
+int roadmap_voice_idle (void);
 void roadmap_voice_announce (const char *title, int force);
 
 void roadmap_voice_mute   (void);
