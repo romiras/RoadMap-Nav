@@ -31,5 +31,6 @@ void roadmap_message_unset  (int parameter);
 int  roadmap_message_format (char *text, int length, const char *format);
 
 int roadmap_message_time_in_use(void);
+int roadmap_message_changed(void);
 
 #endif // INCLUDE__ROADMAP_MESSAGE__H

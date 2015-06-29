@@ -42,10 +42,18 @@
 static char *RoadMapMessageParameters[128] = {NULL};
 
 static int RoadMapMessagesUseTime;
+static int RoadMapMessageChanged;
 
 int roadmap_message_time_in_use(void) {
 
     return RoadMapMessagesUseTime;
+}
+
+int roadmap_message_changed(void) {
+    if (!RoadMapMessageChanged) return 0;
+
+    RoadMapMessageChanged = 0;
+    return 1;
 }
 
 int roadmap_message_format (char *text, int length, const char *format) {
@@ -131,6 +139,9 @@ int roadmap_message_format (char *text, int length, const char *format) {
  *	x	Distance from one side of the screen to the other.<tr>
  *	y	Distance from the top to the bottom of the screen.</table>
  *
+ *	1	Angle (in vague english) to the next waypoint
+ *	2	Angle (in vague english) to the one after that waypoint
+ *
  * @param parameter indicates which message to set
  * @param format this and the next parameters are printf-style
  */
@@ -138,6 +149,7 @@ void roadmap_message_set (int parameter, const char *format, ...) {
     
     va_list ap;
     char    value[256];
+    int changed = 0;
     
     if (parameter <= 0) {
         roadmap_log (ROADMAP_ERROR, "invalid parameter code %d", parameter);
@@ -147,8 +159,15 @@ void roadmap_message_set (int parameter, const char *format, ...) {
     va_start(ap, format);
     vsnprintf(value, sizeof(value), format, ap);
     va_end(ap);
+
+    if ((RoadMapMessageParameters[parameter] == NULL) != (value[0] == 0)) {
+	changed = 1;
+    }
     
     if (RoadMapMessageParameters[parameter] != NULL) {
+	if (strcmp(RoadMapMessageParameters[parameter], value) != 0) {
+	    changed = 1;
+	}
         free (RoadMapMessageParameters[parameter]);
     }
     if (value[0] == 0) {
@@ -156,6 +175,8 @@ void roadmap_message_set (int parameter, const char *format, ...) {
     } else {
         RoadMapMessageParameters[parameter] = strdup (value);
     }
+
+    if (changed) RoadMapMessageChanged = 1;
 }
 
 char *roadmap_message_get (int parameter) {
@@ -175,5 +196,6 @@ void roadmap_message_unset (int parameter) {
     if (RoadMapMessageParameters[parameter] != NULL) {
         free (RoadMapMessageParameters[parameter]);
         RoadMapMessageParameters[parameter] = NULL;
+	RoadMapMessageChanged = 1;
     }
 }
