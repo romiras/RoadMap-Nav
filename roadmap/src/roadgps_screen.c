@@ -342,13 +342,13 @@ static void roadgps_screen_draw_position (void) {
   char data[100];
 
   RoadMapGuiPoint point;
-  int satcount, i, fix;
+  int actcount, i, fix;
 
-  satcount = 0;
+  actcount = 0;
 
   for (i = 0; i < RoadGpsSatelliteCount; ++i) 
      if (RoadGpsSatellites[i].status == 'A') 
-        satcount++;
+        actcount++;
 
   fix = RoadGpsPrecision.dimension;
   if (fix < 1) fix = 1;
@@ -409,7 +409,8 @@ static void roadgps_screen_draw_position (void) {
 	    RoadGpsFrame.label_height-10;
   roadmap_canvas_select_pen (RoadGpsLabels);
   if (RoadGpsReception > GPS_RECEPTION_NO_COMM) {
-      sprintf(data,"%d active , %s fix", satcount, fixes[fix-1]);
+      sprintf(data,"%d/%d active , %s fix", actcount,
+	    RoadGpsSatelliteCount, fixes[fix-1]);
   } else if (RoadGpsReception == GPS_RECEPTION_NO_COMM) {
       sprintf(data,"No data from GPS");
   } else {
