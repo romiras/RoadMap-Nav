@@ -153,13 +153,71 @@ static void roadmap_main_activate (GtkWidget *widget, gpointer data) {
 }
 
 
+static char *arrows[] = {
+    "Special-LeftArrow",
+    "Special-RightArrow",
+    "Special-UpArrow",
+    "Special-DownArrow"
+};
+static int arrows_down, keybits, first_key, numkeys;
+
+static void arrow_keys_timeout(void) {
+
+   char *newkey;
+
+   roadmap_main_remove_periodic(arrow_keys_timeout);
+   if (!keybits) return;
+
+   if (keybits == 15) {
+	newkey = "Special-All-Arrows";
+   } else if (numkeys >= 1) {  /* use the first pressed */
+	newkey = arrows[first_key];
+   } else {
+	arrows_down = first_key = keybits = numkeys = 0;
+	return;
+   }
+   if (newkey != NULL && RoadMapMainInput != NULL) {
+      (*RoadMapMainInput) (newkey);
+   }
+   arrows_down = first_key = keybits = numkeys = 0;
+}
+
+
+/* the OLPC XO has a game-key button that produces arrow events.  it
+ * can produce more than one event at a time.  this code lets us
+ * define more more unique key event:  all arrows down at once.
+ * otherwise, the KP_<arrow> keys simply map to "Special-<arrow>".
+ */
+static void special_keypad_arrow_treatment(int keyval)
+{
+    int key;
+
+    switch (keyval) {
+      case GDK_KP_Left:      key = 0;	break;
+      case GDK_KP_Right:     key = 1;	break;
+      case GDK_KP_Up:        key = 2;	break;
+      case GDK_KP_Down:      key = 3;	break;
+    }
+
+    /* don't count the same arrow twice */
+    if ((keybits & (1<<key)) == 0)
+	numkeys++;
+
+    /* first arrow key down starts the timer */
+    if (!arrows_down) {
+	first_key = key;
+	roadmap_main_set_periodic (100, arrow_keys_timeout);
+	arrows_down = 1;
+    }
+
+    /* keep track of what's down */
+    keybits |= (1 << key);
+}
+
 static gint roadmap_main_key_pressed (GtkWidget *w, GdkEventKey *event) {
 
    char *key = NULL;
    char regular_key[2];
-
-   // fprintf(stderr, "got 0x%x\n", event->keyval);
-
 
    switch (event->keyval) {
 
@@ -181,10 +239,13 @@ static gint roadmap_main_key_pressed (GtkWidget *w, GdkEventKey *event) {
       case GDK_KP_Page_Down: key = "Special-PageDown";     break; // square
       case GDK_KP_Home:      key = "Special-Home";         break; // X
       case GDK_KP_End:       key = "Special-End";          break; // checkmark
-      case GDK_KP_Left:      key = "Special-LeftArrow";    break; // joy left
-      case GDK_KP_Right:     key = "Special-RightArrow";   break; // joy right
-      case GDK_KP_Up:        key = "Special-UpArrow";      break; // joy up
-      case GDK_KP_Down:      key = "Special-DownArrow";    break; // joy down
+
+      case GDK_KP_Left:
+      case GDK_KP_Right:
+      case GDK_KP_Up:
+      case GDK_KP_Down:
+	    special_keypad_arrow_treatment(event->keyval);
+	    return TRUE;
 
       case 0xffbe:     key = "F1";          break;
       case 0xffbf:     key = "F2";          break;

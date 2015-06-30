@@ -1213,6 +1213,13 @@ static char const *RoadMapStartKeyBinding[] = {
    "Special-PageDown" ROADMAP_MAPPED_TO "zoomout",     // square   
    "Special-Home"     ROADMAP_MAPPED_TO "resumeroute", // X        
    "Special-End"      ROADMAP_MAPPED_TO "destination", // checkmark
+   "Special-LeftArrow"     ROADMAP_MAPPED_TO "left",  // joy button left
+   "Special-RightArrow"    ROADMAP_MAPPED_TO "right",  // joy button right
+   "Special-UpArrow"       ROADMAP_MAPPED_TO "up",  // joy button up
+   "Special-DownArrow"     ROADMAP_MAPPED_TO "down",  // joy button down
+   "Special-All-Arrows"    ROADMAP_MAPPED_TO "resumeroute", // joy button all
+
+   "Special-All-Arrows"     ROADMAP_MAPPED_TO "resumeroute", // mash the joy button down
 
    /* These binding are for regular keyboards (case unsensitive !): */
    "+"               ROADMAP_MAPPED_TO "zoomin",
