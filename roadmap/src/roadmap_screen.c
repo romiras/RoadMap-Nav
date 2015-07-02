@@ -445,7 +445,7 @@ static void roadmap_screen_draw_line (const RoadMapPosition *from,
                   if (length_sq > longest) {
                      longest = length_sq;
                      if (angle) {
-                        *angle = roadmap_math_azymuth(&last_midposition, &midposition);
+		        *angle = 180 - roadmap_math_angle(&point0, &point1);
                      }
                      middle->x = (point1.x + point0.x) / 2;
                      middle->y = (point1.y + point0.y) / 2;
@@ -499,7 +499,7 @@ static void roadmap_screen_draw_line (const RoadMapPosition *from,
                if (length_sq > longest) {
                   longest = length_sq;
                   if (angle) {
-                     *angle = roadmap_math_azymuth(&last_midposition, to);
+		     *angle = 180 - roadmap_math_angle(&point0, &point1);
                   }
                   middle->x = (point1.x + point0.x) / 2;
                   middle->y = (point1.y + point0.y) / 2;
@@ -565,7 +565,7 @@ static void roadmap_screen_draw_line (const RoadMapPosition *from,
                                    (&point1, &point0, MATH_DIST_SQUARED);
 
             if (angle) {
-               *angle = roadmap_math_azymuth(from, to);
+               *angle = 180 - roadmap_math_angle(&point0, &point1);
             }
             middle->x = (point1.x + point0.x) / 2;
             middle->y = (point1.y + point0.y) / 2;
