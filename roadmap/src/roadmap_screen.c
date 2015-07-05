@@ -418,6 +418,21 @@ static void roadmap_screen_draw_line (const RoadMapPosition *from,
 
          roadmap_shape_get_position (i, &midposition);
 
+	 /* the checks in this routine only really work if the screen
+	  * is upright (i.e., north up), because
+	  * roadmap_math_line/point_is_visible(),
+	  * roadmap_math_get_visible_coordinates() and
+	  * roadmap_math_find_screen_intersection() routines _assume_
+	  * the screen is up.  the quick/easy fix is probably to
+	  * double the apparent size of the screen when it's not
+	  * upright, and let the graphics engine do the appropriate
+	  * clipping.
+	  *
+	  * enlarging the apparent size a bit would also help when
+	  * upgright -- we get rounded line ends (sausage fingers) at
+	  * the screen edge, where the line hasn't really ended -- it
+	  * should really continue off-screen.
+	  */
          if (roadmap_math_line_is_visible (&last_midposition, &midposition) && 
              roadmap_math_get_visible_coordinates
                         (&last_midposition, &midposition, &point0, &point1)) {
