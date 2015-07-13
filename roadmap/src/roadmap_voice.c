@@ -156,6 +156,12 @@ static struct voice_translation RoadMapVoiceTranslate1[] = {
     {"Sq",   "square"},
     {"St",   "street"},
 
+    /* special cases so we don't say "1 miles" */
+    {" 1 Km",   " 1 kilometer"},
+    {" 1 Mi",   " 1 mile"},
+    {" 1 ft",   " 1 foot"},
+    {" 1 m",   " 1 meter"},
+
     {"Km",   "kilometers"},
     {"Mi",   "miles"},
     {"ft",   "feet"},
@@ -338,9 +344,9 @@ static int roadmap_voice_expand (const char *input, char *output, int size) {
 
        if (size <= 0) return 0;
     
-       if (abbrev_length != 0 &&
-              !isalnum(abbrev[abbrev_length]) &&
-	      (!abbrev_at_start && !isalnum(abbrev[-1]))
+       /* the "1 Mi" --> "1 miles" conversions need special code here */
+       if ((!isalnum(abbrev[abbrev_length]) || !strncmp(abbrev," 1 ",3)) &&
+	      (!abbrev_at_start && (!isalnum(abbrev[-1]) || !isalnum(abbrev[0])))
 	    ) {
           /* This is a valid abbreviation: translate it. */
           length = strlen(cursor->to);
