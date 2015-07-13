@@ -2919,6 +2919,11 @@ static int alpha_waypoint_cmp( RoadMapListItem *a, RoadMapListItem *b)
 	return strcasecmp(((waypoint *)a)->shortname, ((waypoint *)b)->shortname);
 }
 
+static int alpha_routename_cmp( RoadMapListItem *a, RoadMapListItem *b)
+{
+	return strcasecmp(((route_head *)a)->rte_name, ((route_head *)b)->rte_name);
+}
+
 /**
  * @brief
  * @param name
@@ -2997,6 +3002,8 @@ static int roadmap_trip_load_file (const char *name, int silent, int merge) {
     }
 
     roadmap_list_sort(&RoadMapTripWaypointHead, alpha_waypoint_cmp);
+    roadmap_list_sort(&RoadMapTripRouteHead, alpha_routename_cmp);
+    roadmap_list_sort(&RoadMapTripTrackHead, alpha_routename_cmp);
 
     RoadMapCurrentRoute = NULL;
 
