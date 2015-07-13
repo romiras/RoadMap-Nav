@@ -56,18 +56,20 @@ static RoadMapConfigDescriptor RoadMapVoiceMute =
                         ROADMAP_CONFIG_ITEM("Voice", "Mute");
 
 static struct roadmap_voice_config RoadMapVoiceText[] = {
-    {ROADMAP_CONFIG_ITEM("Voice", "AtWaypoint"), "flite" _EXE 
-	" -t 'At waypoint, next is %2'"},
-    {ROADMAP_CONFIG_ITEM("Voice", "Waypoint"), "flite" _EXE 
-	" -t 'Next is %W %1, second is %2'|flite" _EXE " -t 'Destination %D %1'"},
-    {ROADMAP_CONFIG_ITEM("Voice", "Approach"), "flite" _EXE 
-	" -t 'Approaching %N'"},
-    {ROADMAP_CONFIG_ITEM("Voice", "Current Street"), "flite" _EXE 
-	" -t 'On %N'"},
-    {ROADMAP_CONFIG_ITEM("Voice", "Next Intersection"), "flite" _EXE
-	" -t 'Next intersection: %N'"},
-    {ROADMAP_CONFIG_ITEM("Voice", "Selected Street"), "flite" _EXE
-	" -t 'Selected %N'"},
+    {ROADMAP_CONFIG_ITEM("Voice", "AtWaypoint"),
+	"flite" _EXE " -t 'At waypoint, next is %2'"},
+    {ROADMAP_CONFIG_ITEM("Voice", "Waypoint"), 
+	"flite" _EXE " -t 'Next is %W %1, second is %2'|"
+	"flite" _EXE " -t 'Next is %W %1'|"
+	"flite" _EXE " -t 'Destination %D %1'"},
+    {ROADMAP_CONFIG_ITEM("Voice", "Approach"),
+	"flite" _EXE " -t 'Approaching %N'"},
+    {ROADMAP_CONFIG_ITEM("Voice", "Current Street"),
+	"flite" _EXE " -t 'On %N'"},
+    {ROADMAP_CONFIG_ITEM("Voice", "Next Intersection"),
+	"flite" _EXE " -t 'Next intersection: %N'"},
+    {ROADMAP_CONFIG_ITEM("Voice", "Selected Street"),
+	"flite" _EXE " -t 'Selected %N'"},
     {ROADMAP_CONFIG_ITEM_EMPTY, NULL}
 };
 
