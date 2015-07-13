@@ -2305,28 +2305,41 @@ static void roadmap_trip_new_threshold(int distance,
     int i;
     double u, delta;
     int low, high;
-    double threshmul[] = { 2.5, 2., 2. };
-#define STARTING_THRESHOLD .2
+    double threshmul[] = { 2., 2.5, 2. };
 
-    // we want distance reports at
-    // 1000, 500, 200, 100, 50, 20, 10, 5, 2, 1, .5, .2
-    // the multipliers to get between these values are 2.5, 2, and 2.
-    // also, when approaching a waypoint, we want to announce that
-    // we're nearing it _on_ these mileages, not just past them.  i.e.,
-    // if the threshold is 2 miles, we don't want to cross the threshold
-    // and then announce "in 1.9 miles".  so we add a delta or 5% to
-    // all the threshold values
+    /* we want distance reports at
+     * 1000, 500, 200, 100, 50, 20, 10, 5, 2, 1, [.5], .2
+     * the multipliers to get between these values are 2.5, 2, and 2.
+     * also, when approaching a waypoint, we want to announce that
+     * we're nearing it _on_ these mileages, not just past them.  i.e.,
+     * if the threshold is 2 miles, we don't want to cross the threshold
+     * and then announce "in 1.9 miles".  so we add a delta or 5% to
+     * all the threshold values
+     *
+     * .5 is an exception:  because announcements at all of 1.0, .5,
+     * and .2 are too many, we check .2 by itself, then start looping
+     * for 1.0 and above.
+     * 
+     * think of high and low as the upper and lower edges of a
+     * distance band.  we're trying to place our current distance into
+     * one of those bands.
+     */
 
     u = roadmap_math_to_trip_units (1);  // 5280 feet, or 1000 meters 
     delta = u * .05;
-    high = (u * STARTING_THRESHOLD ) + delta;    // start at .2 mile or .2 km
-    low = 0;
+    high = (u * 0.2 ) + delta;    // start at .2 mile or .2 km
 
-    for (i = 0; i < 10; i ++) {
-	if (high > distance)
-	    break;
+    if (high > distance) {  // current distance is less than .2+delta
+	low = 0;
+    } else { // current distance is more than .2+delta
 	low = high;
-	high = ((high - delta) * threshmul[i % 3]) + delta;
+	high = ((u * 1.0)) + delta;   // first band to check is .2 to 1.0
+	for (i = 0; i < 10; i ++) {
+	    if (high > distance)
+		break;
+	    low = high;
+	    high = ((high - delta) * threshmul[i % 3]) + delta;
+	}
     }
 
     *lesserp = low;
