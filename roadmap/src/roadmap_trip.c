@@ -2523,8 +2523,22 @@ void roadmap_trip_format_messages (void)
 
     }
 
+/*
+    notes:  
+	    if triggered by threshold:
+		suppress .5 mile announce, if possible.
+		suppress announce if less than 
+
+	    if next has comment, announce miles and comment instead
+	    of "Waypoint" announcement.  this is %X, but the voice
+	    announcement currently need the program included as well.
+ */
     if (roadmap_voice_idle()) {
-	if (lastRoadMapTripNext != RoadMapTripNext ||
+	int waypoint_changed;
+	static time_t said_time;
+	
+	waypoint_changed = (lastRoadMapTripNext != RoadMapTripNext);
+	if (waypoint_changed ||
 		distance_to_next < distance_threshold_lesser ||
 		distance_to_next > distance_threshold_greater) {
 	    char *dir1, *dir2;
@@ -2544,7 +2558,11 @@ void roadmap_trip_format_messages (void)
 		    roadmap_voice_announce ("AtWaypoint", 1);
 		say_within = 0;
 	    } else {
-		roadmap_voice_announce ("Waypoint", 1);
+		time_t now = time(NULL);
+		if (waypoint_changed || (now - said_time > 10)) {
+		    roadmap_voice_announce ("Waypoint", 1);
+		    said_time = now;
+		}
 		lastRoadMapTripNext = RoadMapTripNext;
 	    }
 
