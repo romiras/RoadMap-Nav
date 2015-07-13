@@ -2038,7 +2038,8 @@ static void roadmap_trip_set_directions (int dist_to_next,
 
     if (next == NULL) {
         roadmap_message_unset ('Y'); /* distance to the next waypoint which includes directions */
-        roadmap_message_unset ('X'); /* directions at next waypoint */
+        roadmap_message_unset ('z'); /* directions at very next waypoint */
+        roadmap_message_unset ('Z'); /* directions at next waypoint */
         last_next = NULL;
     }
 
@@ -2047,6 +2048,11 @@ static void roadmap_trip_set_directions (int dist_to_next,
         last_next = next;
 
         rest_of_distance = 0;
+	if (next->description) /* directions at very next waypoint */
+            roadmap_message_set ('z', "%s", next->description);
+	else
+            roadmap_message_unset ('z');
+
         while (next->description == NULL && next != RoadMapTripDest) {
             waypoint *tmp = roadmap_trip_next(next);
             rest_of_distance += roadmap_math_distance (&next->pos, &tmp->pos);
@@ -2055,11 +2061,10 @@ static void roadmap_trip_set_directions (int dist_to_next,
 
         desc = next->description;
         if (desc == NULL) {
-            // desc = "Arrive at destination";
             desc = "Arrive";
         }
 
-        roadmap_message_set ('X', "%s", desc); /* directions at next waypoint */
+        roadmap_message_set ('Z', "%s", desc); /* directions at next waypoint with directions */
     }
 
     if (suppress_dist) {
@@ -2355,7 +2360,8 @@ static void roadmap_trip_new_threshold(int distance,
  *      D       Distance to the destination (set only when a trip is active).
  *      S       Speed.
  *      W       Distance to the next waypoint (set only when a trip is active).
- *      X       Directions to be followed when the next waypoint (with directions) is reached.
+ *	z	Description at the next waypoint. (set only when a trip is active)
+ *      Z       Directions to be followed when the next waypoint which has directions is reached.
  *              (set only when a trip is active).
  *      Y       Distance to the next waypoint which includes directions, unless the GPS is
  *              "at" that waypoint.  (set only when a trip is active).
@@ -2384,7 +2390,8 @@ void roadmap_trip_format_messages (void)
         roadmap_message_unset ('D');
         roadmap_message_unset ('W');
 
-        roadmap_message_unset ('X');
+        roadmap_message_unset ('z');
+        roadmap_message_unset ('Z');
         roadmap_message_unset ('Y');
 
         roadmap_message_unset ('1');
@@ -2399,7 +2406,8 @@ void roadmap_trip_format_messages (void)
         roadmap_message_set ('D', "?? %s", roadmap_math_trip_unit());
         roadmap_message_set ('W', "?? %s", roadmap_math_distance_unit ());
 
-        roadmap_message_set ('X', "??");
+        roadmap_message_set ('z', "??");
+        roadmap_message_set ('Z', "??");
         roadmap_message_set ('Y', "?? %s", roadmap_math_trip_unit());
 
         roadmap_message_set ('1', "??");
@@ -2536,16 +2544,7 @@ void roadmap_trip_format_messages (void)
 
     }
 
-/*
-    notes:  
-	    if triggered by threshold:
-		suppress .5 mile announce, if possible.
-		suppress announce if less than 
-
-	    if next has comment, announce miles and comment instead
-	    of "Waypoint" announcement.  this is %X, but the voice
-	    announcement currently need the program included as well.
- */
+    /* now take care of voice things */
     if (roadmap_voice_idle()) {
 	int waypoint_changed;
 	static time_t said_time;

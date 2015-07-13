@@ -129,8 +129,9 @@ int roadmap_message_format (char *text, int length, const char *format) {
  *	S	Speed.<tr>
  *	T	Current time, format HH:MM.<tr>
  *	W	Distance to the next waypoint (set only when a trip is active).<tr>
- *	X	Directions to be followed when the next waypoint (with directions) is reached.
- *		(set only when a trip is active).<tr>
+ *	z	Description at the next waypoint. (set only when a trip is active)<tr>
+ *	Z	Description (usually directions to be followed), if any, at the next 
+ *		waypoint with a non-null description.  (set only when a trip is active).<tr>
  *	Y	Distance to the next waypoint which includes directions, unless the GPS is
  *		"at" that waypoint.  (set only when a trip is active).<tr>
  *	#	the street number range to the selected or current street block.<tr>
