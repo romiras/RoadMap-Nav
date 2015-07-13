@@ -107,9 +107,11 @@ January 2009
      | %S | Speed.
      | %T | Current time, format HH:MM.
      | %W | Distance to the next waypoint (set only when a trip is active).
-     | %X | Directions to be followed when the next waypoint (with
-     |    | directions) is reached. (set only when a trip is active).
-     | %Y | Distance to the next waypoint which includes directions, unless
+     | %z | Description attached to next waypoint, if it has a description.
+     |    | (set only when a trip is active).
+     | %Z | Description attached to next waypoint that has a description
+     |    | (usually directions). (set only when a trip is active).
+     | %Y | Distance to the next waypoint which has a description, unless
      |    | the GPS is "at" that waypoint.  (set only when a trip is active).
      | %# | the street number range to the selected or current street block.
      | %s | Total number of satellites.

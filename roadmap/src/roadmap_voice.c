@@ -57,8 +57,10 @@ static RoadMapConfigDescriptor RoadMapVoiceMute =
 
 static struct roadmap_voice_config RoadMapVoiceText[] = {
     {ROADMAP_CONFIG_ITEM("Voice", "AtWaypoint"),
+	"flite" _EXE " -t 'At waypoint, %z'|"
 	"flite" _EXE " -t 'At waypoint, next is %2'"},
     {ROADMAP_CONFIG_ITEM("Voice", "Waypoint"), 
+	"flite" _EXE " -t 'Next is %W %1, %z'|"
 	"flite" _EXE " -t 'Next is %W %1, second is %2'|"
 	"flite" _EXE " -t 'Next is %W %1'|"
 	"flite" _EXE " -t 'Destination %D %1'"},

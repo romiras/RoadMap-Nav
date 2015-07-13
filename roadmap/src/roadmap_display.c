@@ -806,7 +806,7 @@ void roadmap_display_initialize (void) {
     roadmap_config_declare
         ("preferences", &RoadMapConfigDisplayBottomLeft, "%S");
     roadmap_config_declare
-        ("preferences", &RoadMapConfigDisplayTopRight, "In %Y, %X|%X");
+        ("preferences", &RoadMapConfigDisplayTopRight, "In %Y, %Z|%Z");
     roadmap_config_declare
         ("preferences", &RoadMapConfigDisplayTopLeft, "");
 
