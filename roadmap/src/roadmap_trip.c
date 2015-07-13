@@ -2527,12 +2527,17 @@ void roadmap_trip_format_messages (void)
 	if (lastRoadMapTripNext != RoadMapTripNext ||
 		distance_to_next < distance_threshold_lesser ||
 		distance_to_next > distance_threshold_greater) {
-	    char *dir;
+	    char *dir1, *dir2;
 
-	    dir = roadmap_trip_angle_to_direction(roadmap_trip_next_point_angle());
-	    roadmap_message_set('1', dir);
-	    dir = roadmap_trip_angle_to_direction(roadmap_trip_2nd_point_angle());
-	    roadmap_message_set('2', dir);
+	    dir1 = roadmap_trip_angle_to_direction(roadmap_trip_next_point_angle());
+	    roadmap_message_set('1', dir1);
+	    dir2 = roadmap_trip_angle_to_direction(roadmap_trip_2nd_point_angle());
+	    if (dir2 == dir1) {
+		/* suppress the second direction if they're the same */
+		roadmap_message_unset('2');
+	    } else {
+		roadmap_message_set('2', dir2);
+	    }
 
 	    if (within_waypoint ) {
 		if (say_within == within_waypoint)
