@@ -1258,17 +1258,23 @@ static char const *RoadMapStartKeyBinding[] = {
 static void roadmap_start_set_unit (void) {
 
    const char *unit = roadmap_config_get (&RoadMapConfigGeneralUnit);
+   static int error_logged;
 
    if (strcmp (unit, "imperial") == 0) {
 
       roadmap_math_use_imperial();
+      error_logged = 0;
 
    } else if (strcmp (unit, "metric") == 0) {
 
       roadmap_math_use_metric();
+      error_logged = 0;
 
    } else {
-      roadmap_log (ROADMAP_ERROR, "%s is not a supported unit", unit);
+      if (!error_logged) {
+	 roadmap_log (ROADMAP_ERROR, "%s is not a supported unit", unit);
+	 error_logged = 1;
+      }
       roadmap_math_use_imperial();
    }
 }
@@ -1415,6 +1421,7 @@ void roadmap_start_fatal (const char *text) {
 static void roadmap_start_periodic (void) {
 
    roadmap_spawn_check ();
+   roadmap_start_set_unit ();
 
    if (RoadMapStartGpsRefresh) {
         RoadMapStartGpsRefresh = 0;
