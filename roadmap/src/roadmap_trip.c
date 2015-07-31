@@ -1928,6 +1928,16 @@ int roadmap_trip_get_orientation (void) {
     return 0;
 }
 
+/* returns most recent speed, in knots */
+int roadmap_trip_get_speed (void) {
+
+    if (RoadMapTripFocus != NULL) {
+        return RoadMapTripFocus->gps.speed;
+    }
+
+    return 0;
+}
+
 /**
  * @brief
  * @return
@@ -2307,44 +2317,62 @@ void roadmap_trip_show_2ndnextpoint(void) {
 static void roadmap_trip_new_threshold(int distance,
 		int *lesserp, int *greaterp)
 {
-    int i;
-    double u, delta;
+    double u;
     int low, high;
-    double threshmul[] = { 2., 2.5, 2. };
+    double *threshp;
 
     /* we want distance reports at
-     * 1000, 500, 200, 100, 50, 20, 10, 5, 2, 1, [.5], .2
-     * the multipliers to get between these values are 2.5, 2, and 2.
-     * also, when approaching a waypoint, we want to announce that
-     * we're nearing it _on_ these mileages, not just past them.  i.e.,
-     * if the threshold is 2 miles, we don't want to cross the threshold
-     * and then announce "in 1.9 miles".  so we add a delta or 5% to
-     * all the threshold values
+     * 1000km or mi, 500km or mi, 200, 100, 50, 20, 10, 5, 2, 1, .5,
+     * .2, .1, .05km or mi.  the last one corresponds to is 50m or 264
+     * feet.  when approaching a waypoint, we want to announce
+     * that we're nearing it _on_ these mileages, not just past them. 
+     * i.e., if the threshold is 2 miles, we don't want to cross the
+     * threshold and then announce "in 1.9 miles".  so we add a small
+     * delta % to all the threshold values
      *
-     * .5 is an exception:  because announcements at all of 1.0, .5,
-     * and .2 are too many, we check .2 by itself, then start looping
-     * for 1.0 and above.
+     * at higher speeds, the very small thresholds are too close
+     * together, so we skip some of them, but using a different threshold
+     * list for high and low speeds.
      * 
      * think of high and low as the upper and lower edges of a
      * distance band.  we're trying to place our current distance into
      * one of those bands.
      */
+     
+    /* the thresholds represent either miles or kilometers. */
+    double slow_thresh[] = {
+         .05,     .12,     .22,
+         .52,    1.05,    2.05,
+        5.05,   10.05,   20.05,
+        50.05,  100.05, 200.05,
+       500.05, 1000.05, 0
+    };
+
+    /* as above, but we leave out some thresholds because they'll come
+     * too fast at a higher speed */
+    double fast_thresh[] = {
+	                   .22,   
+	         1.05,    2.05,
+        5.05,   10.05,   20.05,
+        50.05,  100.05, 200.05,
+       500.05, 1000.05, 0
+    };
 
     u = roadmap_math_to_trip_units (1);  // 5280 feet, or 1000 meters 
-    delta = u * .05;
-    high = (u * 0.2 ) + delta;    // start at .2 mile or .2 km
 
-    if (high > distance) {  // current distance is less than .2+delta
-	low = 0;
-    } else { // current distance is more than .2+delta
+    low = 0.;
+    if (roadmap_trip_get_speed() > 30) /* knots */
+	threshp = fast_thresh;
+    else
+	threshp = slow_thresh;
+
+    while (1) {
+	high = *threshp * u;
+	if (high > distance)
+	    break;
+	if (*++threshp == 0.0)
+	    break;
 	low = high;
-	high = ((u * 1.0)) + delta;   // first band to check is .2 to 1.0
-	for (i = 0; i < 10; i ++) {
-	    if (high > distance)
-		break;
-	    low = high;
-	    high = ((high - delta) * threshmul[i % 3]) + delta;
-	}
     }
 
     *lesserp = low;
