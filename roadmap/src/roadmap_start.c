@@ -366,10 +366,16 @@ static void roadmap_start_mapinfo (void) {
    roadmap_messagebox_wait ("Map Parameters", map_info);
 }
 
+static void roadmap_start_move_gps_selected (void)
+{
+    roadmap_trip_move_gps ();
+    roadmap_screen_refresh();
+}
+
 static void roadmap_start_create_waypoint (void)
 {
 #ifdef HAVE_TRIP_PLUGIN
-    roadmap_trip_create_selection_waypoint (); /* trip_create_selection_waypoint (); */
+    roadmap_trip_create_selection_waypoint ();
 #else
     roadmap_trip_create_selection_waypoint ();
 #endif
@@ -379,7 +385,7 @@ static void roadmap_start_create_waypoint (void)
 static void roadmap_start_create_gps_waypoint (void)
 {
 #ifdef HAVE_TRIP_PLUGIN
-    roadmap_trip_create_gps_waypoint (); /* trip_create_gps_waypoint (); */
+    roadmap_trip_create_gps_waypoint ();
 #else
     roadmap_trip_create_gps_waypoint ();
 #endif
@@ -848,6 +854,10 @@ static RoadMapAction RoadMapStartActions[] = {
    {"addaswaypoint", "New place from selected...", "Place", "W",
       "Create new place using last selected street or place", NULL,
       roadmap_start_create_waypoint},
+
+   {"movegps", "Move GPS to selected...", NULL, NULL,
+      "For debugging, move the GPS location to selection", NULL,
+      roadmap_start_move_gps_selected},
 
    {"editroutepoints", "Route Waypoints...", NULL, NULL,
       "Edit current route's waypoints", NULL,

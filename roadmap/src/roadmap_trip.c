@@ -1777,6 +1777,23 @@ void roadmap_trip_add_waypoint ( const char *name, RoadMapPosition * position, i
     roadmap_screen_refresh ();
 }
 
+void roadmap_trip_move_gps (void) {
+
+    RoadMapGpsPosition gps_position;
+
+    if (RoadMapTripLastSetPoint == NULL ||
+            !RoadMapTripLastSetPoint->has_value) {
+        return;
+    }
+    gps_position.longitude = RoadMapTripLastSetPoint->map.longitude;
+    gps_position.latitude = RoadMapTripLastSetPoint->map.latitude;
+    gps_position.altitude = 0;   /* current units */
+    gps_position.speed = 0;      /* knots */
+    gps_position.steering = 0;   /* degrees */
+
+    roadmap_trip_set_gps (time(NULL), &gps_position);
+}
+
 void roadmap_trip_create_selection_waypoint (void) {
 
     const char *name;
