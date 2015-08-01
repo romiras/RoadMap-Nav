@@ -2967,7 +2967,13 @@ static int alpha_waypoint_cmp( RoadMapListItem *a, RoadMapListItem *b)
 
 static int alpha_routename_cmp( RoadMapListItem *a, RoadMapListItem *b)
 {
-	return strcasecmp(((route_head *)a)->rte_name, ((route_head *)b)->rte_name);
+	char *n1, *n2;
+	// deal with null names.
+	n1 = ((route_head *)a)->rte_name;
+	n2 = ((route_head *)b)->rte_name;
+	if (!n1) n1 = "";
+	if (!n2) n2 = "";
+	return strcasecmp(n1, n2);
 }
 
 /**
