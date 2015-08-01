@@ -206,7 +206,7 @@ static void special_keypad_arrow_treatment(int keyval)
     /* first arrow key down starts the timer */
     if (!arrows_down) {
 	first_key = key;
-	roadmap_main_set_periodic (100, arrow_keys_timeout);
+	roadmap_main_set_periodic (200, arrow_keys_timeout);
 	arrows_down = 1;
     }
 
