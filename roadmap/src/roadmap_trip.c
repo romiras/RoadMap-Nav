@@ -2358,7 +2358,7 @@ static void roadmap_trip_new_threshold(int distance,
      
     /* the thresholds represent either miles or kilometers. */
     double slow_thresh[] = {
-         .05,     .12,     .22,
+         .05,     .12,
          .52,    1.05,    2.05,
         5.05,   10.05,   20.05,
         50.05,  100.05, 200.05,
@@ -2366,9 +2366,11 @@ static void roadmap_trip_new_threshold(int distance,
     };
 
     /* as above, but we leave out some thresholds because they'll come
-     * too fast at a higher speed */
+     * too fast at a higher speed, and the closes threshold is set to
+     * .3 rather than .2, because .2km is too close when moving fast.
+     */
     double fast_thresh[] = {
-	                   .22,   
+                           .32,
 	         1.05,    2.05,
         5.05,   10.05,   20.05,
         50.05,  100.05, 200.05,
@@ -2378,7 +2380,7 @@ static void roadmap_trip_new_threshold(int distance,
     u = roadmap_math_to_trip_units (1);  // 5280 feet, or 1000 meters 
 
     low = 0.;
-    if (roadmap_trip_get_speed() > 30) /* knots */
+    if (roadmap_trip_get_speed() > 35) /* knots */
 	threshp = fast_thresh;
     else
 	threshp = slow_thresh;
@@ -2465,7 +2467,7 @@ void roadmap_trip_format_messages (void)
 	    lastgpsmap = gps->map;
 
     distance_to_destination = roadmap_math_distance (&gps->map, &RoadMapTripDest->pos);
-    roadmap_math_trip_set_distance('D', distance_to_destination);
+    roadmap_math_trip_set_distance('D', ((distance_to_destination / 10) * 10));
 
     roadmap_log (ROADMAP_DEBUG, "GPS: distance to destination = %d %s",
                  distance_to_destination, roadmap_math_distance_unit ());
@@ -2585,7 +2587,7 @@ void roadmap_trip_format_messages (void)
                 0, RoadMapTripNext);
         }
 
-        roadmap_math_trip_set_distance ('W', distance_to_next);
+        roadmap_math_trip_set_distance ('W', ((distance_to_next / 10) * 10));
 
     }
 
@@ -2616,7 +2618,7 @@ void roadmap_trip_format_messages (void)
 		say_within = 0;
 	    } else {
 		time_t now = time(NULL);
-		if (waypoint_changed || (now - said_time > 10)) {
+		if (waypoint_changed || (now - said_time > 8)) {
 		    roadmap_voice_announce ("Waypoint", 1);
 		    said_time = now;
 		}
