@@ -284,8 +284,8 @@ void roadmap_coord_dialog (void) {
 
       roadmap_dialog_add_button ("Back", roadmap_coord_before);
       roadmap_dialog_add_button ("Next", roadmap_coord_after);
-      roadmap_dialog_add_button ("OK", roadmap_coord_ok);
       roadmap_dialog_add_button ("Cancel", roadmap_coord_cancel);
+      roadmap_dialog_add_button ("OK", roadmap_coord_ok);
 
       roadmap_dialog_complete (roadmap_preferences_use_keyboard());
 
