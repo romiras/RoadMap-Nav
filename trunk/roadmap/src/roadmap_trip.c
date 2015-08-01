@@ -2215,11 +2215,8 @@ static int roadmap_trip_next_point_angle(void)
 {
     int angle;
 
-    if (!RoadMapRouteInProgress || RoadMapCurrentRoute == NULL || !RoadMapTripGps->has_value) {
-        return -1;
-    }
-
-    if (RoadMapTripNext == RoadMapTripDest) {
+    if (!RoadMapRouteInProgress || RoadMapCurrentRoute == NULL ||
+    		!RoadMapTripGps->has_value) {
         return -1;
     }
 
@@ -2244,17 +2241,15 @@ static int roadmap_trip_2nd_point_angle(void)
     waypoint *tmp;
     int angle;
 
-    if (! RoadMapRouteInProgress || RoadMapCurrentRoute == NULL || !RoadMapTripGps->has_value) {
+    if (! RoadMapRouteInProgress || RoadMapCurrentRoute == NULL ||
+    		!RoadMapTripGps->has_value) {
         return -1;
     }
 
     if (RoadMapTripNext == RoadMapTripDest) {
-        return -1;
-    }
-
-    tmp = roadmap_trip_next(RoadMapTripNext);
-    if (tmp == RoadMapTripDest) {
-        return -1;
+	tmp = RoadMapTripNext;
+    } else {
+	tmp = roadmap_trip_next(RoadMapTripNext);
     }
 
     angle = roadmap_math_azymuth (&RoadMapTripGps->map, &tmp->pos);
