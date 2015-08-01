@@ -157,12 +157,11 @@ static struct voice_translation RoadMapVoiceTranslate1[] = {
     {"St",   "street"},
 
     /* special cases so we don't say "1 miles" */
-    {" 1 Km",   " 1 kilometer"},
     {" 1 Mi",   " 1 mile"},
     {" 1 ft",   " 1 foot"},
     {" 1 m",   " 1 meter"},
 
-    {"Km",   "K"},
+    {"Km",   "K"},   // "kilometer[s]" is much too mouthy.  say "K" instead.
     {"Mi",   "miles"},
     {"ft",   "feet"},
     {"m",    "meters"},
