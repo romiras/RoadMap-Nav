@@ -33,6 +33,7 @@
 void  roadmap_trip_set_point (const char *name, RoadMapPosition *position);
 void  roadmap_trip_add_waypoint
     (const char *name, RoadMapPosition *position, int where);
+void roadmap_trip_move_gps (void);
 void  roadmap_trip_create_selection_waypoint(void);
 void  roadmap_trip_create_gps_waypoint(void);
 
