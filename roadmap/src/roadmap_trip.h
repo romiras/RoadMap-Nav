@@ -131,17 +131,13 @@ int roadmap_trip_move_last_place_callback
 void roadmap_trip_replace_with_google_route(void);
 #endif
 
+#ifdef HAVE_NAVIGATE_PLUGIN
 void roadmap_trip_set_selection_as (const char *name);
 
-#ifdef HAVE_NAVIGATE_PLUGIN
 void roadmap_trip_set_selection (int lon, int lat);
-#endif
 
-void roadmap_trip_enable (int status);
 void roadmap_trip_refresh (void);
 void roadmap_trip_refresh_needed(void);
-void roadmap_trip_set_modified(int modified);
-void roadmap_trip_unset_route_focii (void);
 
 /* Add Waypoint dialog */
 #define TRIP_PLACE_PERSONAL_MARK         0
@@ -154,9 +150,9 @@ void roadmap_trip_unset_route_focii (void);
 #define TRIP_NUM_PLACEMENTS           3
 #define TRIP_NUM_ROUTE_PLACEMENTS     6
 
-
 void roadmap_trip_departure_waypoint(void);
 void roadmap_trip_destination_waypoint(void);
-
 RoadMapPosition *roadmap_trip_get_position (const char *name);
+#endif // HAVE_NAVIGATE_PLUGIN
+
 #endif // INCLUDE__ROADMAP_TRIP__H
