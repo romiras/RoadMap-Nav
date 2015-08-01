@@ -48,8 +48,8 @@
 
 #include "roadmap_trigonometry.h"
 
-#define ROADMAP_BASE_IMPERIAL 0
-#define ROADMAP_BASE_METRIC   1
+#define ROADMAP_SYSTEM_IMPERIAL 0
+#define ROADMAP_SYSTEM_METRIC   1
 
 #define MIN_ZOOM_IN     2
 #define MAX_ZOOM_OUT    0x10000
@@ -67,6 +67,7 @@ static RoadMapConfigDescriptor RoadMapConfigGeneralZoom =
 
 typedef struct {
     
+    int    id;
     double unit_per_latitude;
     double unit_per_longitude;
     double speed_per_knot;
@@ -82,6 +83,7 @@ typedef struct {
 
 static RoadMapUnits RoadMapMetricSystem = {
 
+    ROADMAP_SYSTEM_METRIC,
     0.11112, /* Meters per latitude. */
     0.0,     /* Meters per longitude (dynamic). */
     1.852,   /* Kmh per knot. */
@@ -94,6 +96,7 @@ static RoadMapUnits RoadMapMetricSystem = {
 
 static RoadMapUnits RoadMapImperialSystem = {
 
+    ROADMAP_SYSTEM_IMPERIAL,
     0.36464, /* Feet per latitude. */
     0.0,     /* Feet per longitude (dynamic). */
     1.151,   /* Mph per knot. */
@@ -1600,6 +1603,11 @@ int roadmap_math_distance_convert(const char *string, int *was_explicit)
 }
 
 
+int roadmap_math_units_system() {
+
+    return RoadMapContext->units->id;
+}
+
 char *roadmap_math_distance_unit (void) {
     
     return RoadMapContext->units->length;
@@ -1643,23 +1651,25 @@ int roadmap_math_to_trip_distance_tenths (int distance) {
  */
 void roadmap_math_trip_set_distance(char which, int distance)
 {
-    int distance_far;
+    int tenths;
+    int system = roadmap_math_units_system();
 
-    distance_far = roadmap_math_to_trip_distance_tenths (distance);
+    tenths = roadmap_math_to_trip_distance_tenths (distance);
 
-    if (distance_far > 0) {
-        if (distance_far % 10 == 0) {   // "2.0 miles"
+    if ((system == ROADMAP_SYSTEM_IMPERIAL && tenths > 0) ||  // say ".1 miles"
+	    (system == ROADMAP_SYSTEM_METRIC && tenths > 5)) {  // say "500 meters"
+        if (tenths % 10 == 0) {   // "2.0 miles"
             roadmap_message_set (which, "%d %s", // 'x', 'y', 'Y', 'D', 'W'
-                             distance_far/10,
+                             tenths/10,
                              roadmap_math_trip_unit ());
-        } else if (distance_far / 10 == 0) {   // "0.2 miles"
+        } else if (tenths / 10 == 0) {   // "0.2 miles"
             roadmap_message_set (which, ".%d %s", // 'x', 'y', 'Y', 'D', 'W'
-                             distance_far%10,
+                             tenths%10,
                              roadmap_math_trip_unit ());
         } else {
             roadmap_message_set (which, "%d.%d %s", // 'x', 'y', 'Y', 'D', 'W'
-                             distance_far/10,
-                             distance_far%10,
+                             tenths/10,
+                             tenths%10,
                              roadmap_math_trip_unit ());
         }
     } else {

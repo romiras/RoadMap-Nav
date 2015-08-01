@@ -112,6 +112,7 @@ long roadmap_math_screen_distance
        (const RoadMapGuiPoint *point1, const RoadMapGuiPoint *point2,
        int squared);
 
+int   roadmap_math_units_system(void);
 char *roadmap_math_distance_unit (void);
 char *roadmap_math_trip_unit     (void);
 char *roadmap_math_speed_unit    (void);
