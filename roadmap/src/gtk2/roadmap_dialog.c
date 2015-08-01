@@ -644,8 +644,12 @@ void roadmap_dialog_add_button (const char *label, RoadMapDialogCallback callbac
    g_signal_connect (button, "clicked",
                      (GCallback) roadmap_dialog_action, child);
 
+   GTK_WIDGET_SET_FLAGS (button, GTK_CAN_DEFAULT);
+
    gtk_box_pack_start (GTK_BOX(GTK_DIALOG(dialog->w)->action_area),
                        button, TRUE, FALSE, 0);
+
+   gtk_widget_grab_default (button);
 }
 
 /**

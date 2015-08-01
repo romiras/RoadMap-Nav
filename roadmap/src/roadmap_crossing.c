@@ -255,8 +255,8 @@ void roadmap_crossing_dialog (void) {
 
       roadmap_dialog_add_button ("Back", roadmap_crossing_before);
       roadmap_dialog_add_button ("Next", roadmap_crossing_after);
-      roadmap_dialog_add_button ("OK", roadmap_crossing_ok);
       roadmap_dialog_add_button ("Cancel", roadmap_crossing_cancel);
+      roadmap_dialog_add_button ("OK", roadmap_crossing_ok);
 
       roadmap_dialog_complete (roadmap_preferences_use_keyboard());
 

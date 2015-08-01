@@ -282,8 +282,8 @@ static void roadmap_address_dialog (RoadMapAddressDialog *context) {
 
       roadmap_dialog_add_button ("Back", roadmap_address_before);
       roadmap_dialog_add_button ("Next", roadmap_address_after);
-      roadmap_dialog_add_button ("OK", roadmap_address_ok);
       roadmap_dialog_add_button ("Cancel", roadmap_address_cancel);
+      roadmap_dialog_add_button ("OK", roadmap_address_ok);
 
       roadmap_dialog_complete (roadmap_preferences_use_keyboard());
 
