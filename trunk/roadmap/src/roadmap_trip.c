@@ -270,7 +270,7 @@ static RoadMapPosition RoadMapTripDefaultPosition =
  * @brief
  * @param modified
  */
-void roadmap_trip_set_modified(int modified)
+static void roadmap_trip_set_modified(int modified)
 {
 	RoadMapTripModified = modified;
 }
@@ -343,7 +343,7 @@ static void roadmap_trip_set_route_focii (void) {
 /**
  * @brief
  */
-void roadmap_trip_unset_route_focii (void)
+static void roadmap_trip_unset_route_focii (void)
 {
     /* waypoints */
     RoadMapTripDest = NULL;
@@ -1087,6 +1087,7 @@ static int roadmap_trip_waypoint_manage_dialog_populate (void *which) {
     return 1;
 }
 
+#ifdef HAVE_NAVIGATE_PLUGIN
 /**
  * @brief function called from roadmap_trip_waypoint_select_navigation_waypoint
  *   and roadmap_trip_waypoint_manage_dialog_worker
@@ -1096,7 +1097,7 @@ static int roadmap_trip_waypoint_manage_dialog_populate (void *which) {
  */
 static void roadmap_trip_set_nav_departure (const char *name, void *data)
 {
-    roadmap_log (ROADMAP_DEBUG, "roadmap_trip_departure_waypoint");
+    roadmap_log (ROADMAP_DEBUG, "roadmap_trip_set_nav_departure");
     roadmap_trip_set_point ("Departure",
 	    &RoadMapTripSelectedPlace->wpt->pos);
     roadmap_dialog_hide (name);
@@ -1112,12 +1113,13 @@ static void roadmap_trip_set_nav_departure (const char *name, void *data)
  */
 static void roadmap_trip_set_nav_destination (const char *name, void *data)
 {
-    roadmap_log (ROADMAP_DEBUG, "roadmap_trip_destination_waypoint");
+    roadmap_log (ROADMAP_DEBUG, "roadmap_trip_set_nav_destination");
     roadmap_trip_set_point ("Destination",
 	    &RoadMapTripSelectedPlace->wpt->pos);
     roadmap_dialog_hide (name);
     roadmap_screen_refresh ();
 }
+#endif // HAVE_NAVIGATE_PLUGIN
 
 /**
  * @brief function to manage the Trip waypoint dialog
@@ -1166,10 +1168,12 @@ static void roadmap_trip_waypoint_manage_dialog_worker (void *which) {
             ("Edit", roadmap_trip_waypoint_manage_dialog_edit);
         roadmap_dialog_add_button
             ("Done", roadmap_trip_dialog_cancel);
+#ifdef HAVE_NAVIGATE_PLUGIN
 	roadmap_dialog_add_button
 	    ("Destination", roadmap_trip_set_nav_destination);
 	roadmap_dialog_add_button
 	    ("Departure", roadmap_trip_set_nav_departure);
+#endif // HAVE_NAVIGATE_PLUGIN
 
         roadmap_dialog_new_hidden ("Names", ".which");
 
@@ -4031,7 +4035,7 @@ void roadmap_trip_set_selection (const int lon, const int lat)
 		}
 	return NULL;
 }
-#endif
+#endif // HAVE_NAVIGATE_PLUGIN
 
 /**
  * @brief indicate that refresh is needed
@@ -4090,12 +4094,14 @@ void roadmap_trip_waypoint_select_navigation_waypoint (void *which, int destinat
         roadmap_dialog_add_button
             ("Show", roadmap_trip_dialog_cancel);
 
+#ifdef HAVE_NAVIGATE_PLUGIN
 	if (destination)
 		roadmap_dialog_add_button
 			("Destination", roadmap_trip_set_nav_destination);
 	else
 		roadmap_dialog_add_button
 			("Departure", roadmap_trip_set_nav_departure);
+#endif // HAVE_NAVIGATE_PLUGIN
 
         roadmap_dialog_new_hidden ("Names", ".which");
 
@@ -4105,6 +4111,7 @@ void roadmap_trip_waypoint_select_navigation_waypoint (void *which, int destinat
     roadmap_trip_waypoint_manage_dialog_populate (which);
 }
 
+#ifdef HAVE_NAVIGATE_PLUGIN
 /**
  * @brief Pop up a dialog to select a departure from the list of Personal waypoints
  * Calls the (static) worker function roadmap_trip_waypoint_select_navigation_waypoint
@@ -4124,6 +4131,7 @@ void roadmap_trip_destination_waypoint (void)
 {
    roadmap_trip_waypoint_select_navigation_waypoint(PERSONAL_WAYPOINTS, 1);
 }
+#endif // HAVE_NAVIGATE_PLUGIN
 #endif
 
 /**
