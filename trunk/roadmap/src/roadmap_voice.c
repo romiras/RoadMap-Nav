@@ -162,7 +162,7 @@ static struct voice_translation RoadMapVoiceTranslate1[] = {
     {" 1 ft",   " 1 foot"},
     {" 1 m",   " 1 meter"},
 
-    {"Km",   "kilometers"},
+    {"Km",   "K"},
     {"Mi",   "miles"},
     {"ft",   "feet"},
     {"m",    "meters"},
