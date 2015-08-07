@@ -470,6 +470,7 @@ int roadmap_line_long (int index, int *line_id, RoadMapArea *area, int *cfcc) {
    return 1;
 }
 
+#ifdef HAVE_NAVIGATE_PLUGIN
 /**
  * @brief determine the layer that some line is in
  * @param line the line whose layer we want to query
@@ -604,3 +605,5 @@ int roadmap_line_get_fips(int line)
 		return -1;
 	return fl[0];
 }
+
+#endif // HAVE_NAVIGATE_PLUGIN
