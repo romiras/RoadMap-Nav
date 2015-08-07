@@ -27,23 +27,26 @@
  *
  * Lines have two endpoints, nothing in between.
  *
- * A line A-B should not be in a RoadMap map if it is a street that intersects with street C-D.
+ * A line A-B should not be in a RoadMap map if it is a street that
+ * intersects with street C-D.
  *
  *     A ---- C ------ B
  *            |
  *           /
  *         D
- * In this case, A-B should not be a line in the map, but A-C, C-B and C-D should be.
+ * In this case, A-B should not be a line in the map, but A-C, C-B and
+ * C-D should be.
  *
  * There are two higher level concepts also in RoadMap : streets and shapes.
  *
- * A street is something you'll recognize in real life : it has a name, and consists of
- * some pieces that aren't even always adjacent.
+ * A street is something you'll recognize in real life :  it has a
+ * name, and consists of some pieces that aren't even always adjacent.
  *
- * A shape is a RoadMap concept to represent the curves followed by a non-straight line.
+ * A shape is a RoadMap concept to represent the curves followed by a
+ * non-straight line.
  *
- * Lines are basic elements for navigation : they're interesting because we know there's
- * nothing between the two endpoints.
+ * Lines are basic elements for navigation :  they're interesting
+ * because we know there's nothing between the two endpoints.
  */
 
 #ifndef INCLUDED__ROADMAP_LINE__H
