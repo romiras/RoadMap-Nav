@@ -304,6 +304,8 @@ int roadmap_line_in_square (int square, int layer, int *first, int *last) {
       return 0;   /* This square is empty. */
    }
 
+   layer = roadmap_locator_layer_to_db(layer);
+
    if (layer <= 0 || layer > RoadMapLineActive->LineBySquare1[square].count) {
        return 0;
    }
@@ -328,6 +330,8 @@ int roadmap_line_in_square2 (int square, int layer, int *first, int *last) {
    if (square < 0) {
       return 0;   /* This square is empty. */
    }
+
+   layer = roadmap_locator_layer_to_db(layer);
 
    if (layer <= 0 || layer > RoadMapLineActive->LineBySquare2[square].count) {
        return 0;
@@ -465,7 +469,8 @@ int roadmap_line_long (int index, int *line_id, RoadMapArea *area, int *cfcc) {
 
    *line_id = RoadMapLineActive->LongLines[index].line;
    *area = RoadMapLineActive->LongLines[index].area;
-   *cfcc = RoadMapLineActive->LongLines[index].layer;
+   *cfcc = roadmap_locator_layer_to_roadmap(
+    		RoadMapLineActive->LongLines[index].layer );
 
    return 1;
 }

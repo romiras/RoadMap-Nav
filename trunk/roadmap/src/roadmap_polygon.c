@@ -40,6 +40,7 @@
 #include "roadmap_db_polygon.h"
 
 #include "roadmap_polygon.h"
+#include "roadmap_locator.h"
 
 static char *RoadMapPolygonType = "RoadMapPolygonContext";
 
@@ -260,6 +261,12 @@ int  roadmap_polygon_lines2 (int polygon, int **listp)
    return count;
 }
 
+struct roadmap_polygon_version {
+    int (*category)(int polygon);
+    void (*edges)(int polygon, RoadMapArea *edges);
+    int (*lines)(int polygon, int **listp);
+};
+
 struct roadmap_polygon_version roadmap_polygon_versions[] = {
     {
 	roadmap_polygon_category1,
@@ -271,4 +278,27 @@ struct roadmap_polygon_version roadmap_polygon_versions[] = {
 	roadmap_polygon_lines2
     }
 };
+
+int roadmap_polygon_category(int polygon) {
+
+    int layer = (roadmap_polygon_versions[roadmap_polygon_db_version].category)
+                (polygon);
+
+    return roadmap_locator_layer_to_roadmap(layer);
+
+}
+
+void roadmap_polygon_edges(int polygon, RoadMapArea *edges) {
+
+    (roadmap_polygon_versions[roadmap_polygon_db_version].edges)
+                (polygon, edges);
+
+}
+
+int roadmap_polygon_lines(int polygon, int **listp) {
+
+    return (roadmap_polygon_versions[roadmap_polygon_db_version].lines)
+                (polygon, listp);
+
+}
 
