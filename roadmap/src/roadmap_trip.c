@@ -4090,7 +4090,6 @@ void roadmap_trip_set_selection (const int lon, const int lat)
 		}
 	return NULL;
 }
-#endif // HAVE_NAVIGATE_PLUGIN
 
 /**
  * @brief indicate that refresh is needed
@@ -4100,7 +4099,6 @@ void roadmap_trip_refresh_needed(void)
 	RoadMapTripRefresh = 1;
 }
 
-#if 1
 /*
  * Stuff to add menu items in the navigate menu
  * These could be integrated with the existing Trip UI.
@@ -4149,14 +4147,12 @@ void roadmap_trip_waypoint_select_navigation_waypoint (void *which, int destinat
         roadmap_dialog_add_button
             ("Show", roadmap_trip_dialog_cancel);
 
-#ifdef HAVE_NAVIGATE_PLUGIN
 	if (destination)
 		roadmap_dialog_add_button
 			("Destination", roadmap_trip_set_nav_destination);
 	else
 		roadmap_dialog_add_button
 			("Departure", roadmap_trip_set_nav_departure);
-#endif // HAVE_NAVIGATE_PLUGIN
 
         roadmap_dialog_new_hidden ("Names", ".which");
 
@@ -4166,7 +4162,6 @@ void roadmap_trip_waypoint_select_navigation_waypoint (void *which, int destinat
     roadmap_trip_waypoint_manage_dialog_populate (which);
 }
 
-#ifdef HAVE_NAVIGATE_PLUGIN
 /**
  * @brief Pop up a dialog to select a departure from the list of Personal waypoints
  * Calls the (static) worker function roadmap_trip_waypoint_select_navigation_waypoint
@@ -4186,17 +4181,14 @@ void roadmap_trip_destination_waypoint (void)
 {
    roadmap_trip_waypoint_select_navigation_waypoint(PERSONAL_WAYPOINTS, 1);
 }
-#endif // HAVE_NAVIGATE_PLUGIN
-#endif
 
 /**
  * @brief call this after having added all waypoints and ways
  */
 void roadmap_trip_complete (void)
 {
-#ifdef HAVE_NAVIGATE_PLUGIN
    roadmap_tripdb_complete ();
-#endif
    RoadMapCurrentRoute = (route_head *)ROADMAP_LIST_FIRST(&RoadMapTripRouteHead);
    roadmap_trip_set_route_current(RoadMapCurrentRoute->rte_name);
 }
+#endif
