@@ -1523,8 +1523,16 @@ void roadmap_screen_repaint (void) {
     int *drawnlist;
     int max_pen;
     static int nomap;
+    static int *layers;
+    static int layers_size;
     
     if (!RoadMapScreenDragging && RoadMapScreenFrozen) return;
+
+    if (layers == NULL) {
+	layers_size = roadmap_layer_max_defined();
+	layers = (int *)calloc (layers_size, sizeof(int));
+	roadmap_check_allocated(layers);
+    }
 
     dbg_time_start(DBG_TIME_FULL);
     if (RoadMapScreenDragging &&
@@ -1628,17 +1636,10 @@ void roadmap_screen_repaint (void) {
         for (pen = 0; pen < max_pen; ++pen) {
 
             if (sqcount > 0) {
-               static int *layers = NULL;
-               static int  layers_size = 0;
                int layer_count;
 
                roadmap_screen_reset_square_mask();
 
-               if (layers == NULL) {
-                  layers_size = roadmap_layer_max_defined();
-                  layers = (int *)calloc (layers_size, sizeof(int));
-                  roadmap_check_allocated(layers);
-               }
                layer_count = roadmap_layer_visible_line_layers
                                 (layers, layers_size, pen);
 
@@ -1684,17 +1685,10 @@ void roadmap_screen_repaint (void) {
 	pen = 0;
 
 	if (sqcount > 0) {
-	   static int *layers = NULL;
-	   static int  layers_size = 0;
 	   int layer_count;
 
 	   roadmap_screen_reset_square_mask();
 
-	   if (layers == NULL) {
-	      layers_size = roadmap_layer_max_defined();
-	      layers = (int *)calloc (layers_size, sizeof(int));
-	      roadmap_check_allocated(layers);
-	   }
 	   layer_count = roadmap_layer_visible_place_layers
 			    (layers, layers_size, pen);
 	   if (!layer_count) continue;
