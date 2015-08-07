@@ -53,6 +53,8 @@
 #include "roadmap_county.h"
 #include "roadmap_config.h"
 #include "roadmap_iso.h"
+#include "roadmap_layer.h"
+#include "roadmap_metadata.h"
 
 #include "roadmap_locator.h"
 
@@ -64,6 +66,9 @@ struct roadmap_cache_entry {
    int          fips;
    const char  *path;
    unsigned int last_access;
+   short *db_to_roadmap;
+   short *roadmap_to_db;;
+   short mapcount; // zero indicates no mapping found 
 };
 
 static struct roadmap_cache_entry *RoadMapCountyCache = NULL;
@@ -71,6 +76,7 @@ static struct roadmap_cache_entry *RoadMapCountyCache = NULL;
 static int RoadMapCountyCacheSize = 0;
 
 static int RoadMapActiveCounty;
+static int RoadMapActiveCountyCache;
 
 static int RoadMapUseCounties = 1;
 
@@ -88,7 +94,7 @@ static RoadMapInstaller  RoadMapDownload = roadmap_locator_no_download;
 void
 roadmap_locator_use_counties(int yesno)
 {
-	RoadMapUseCounties = yesno;
+        RoadMapUseCounties = yesno;
 }
 
 
@@ -99,9 +105,13 @@ roadmap_locator_use_counties(int yesno)
 static void roadmap_locator_configure (void) {
 
    const char *path;
+   int i;
 
    if (RoadMapCountyCache == NULL) {
 
+      RoadMapCountyModel =
+         roadmap_db_register
+            (RoadMapCountyModel, "metadata", &RoadMapMetadataHandler);
       RoadMapCountyModel =
          roadmap_db_register
             (RoadMapCountyModel, "zip", &RoadMapZipHandler);
@@ -147,6 +157,14 @@ static void roadmap_locator_configure (void) {
       RoadMapCountyCache = (struct roadmap_cache_entry *)
          calloc (RoadMapCountyCacheSize, sizeof(struct roadmap_cache_entry));
       roadmap_check_allocated (RoadMapCountyCache);
+      for (i = 0; i < RoadMapCountyCacheSize; i++) {
+          RoadMapCountyCache[i].db_to_roadmap =
+                calloc (roadmap_layer_max_defined(), sizeof(short));
+          roadmap_check_allocated (RoadMapCountyCache[i].db_to_roadmap );
+          RoadMapCountyCache[i].roadmap_to_db =
+                calloc (roadmap_layer_max_defined(), sizeof(short));
+          roadmap_check_allocated (RoadMapCountyCache[i].roadmap_to_db );
+      }
 
       for (path = roadmap_scan ("maps", "usdir.rdm");
            path != NULL;
@@ -208,6 +226,7 @@ static void roadmap_locator_remove (int index) {
    RoadMapCountyCache[index].fips = 0;
    RoadMapCountyCache[index].path = NULL;
    RoadMapCountyCache[index].last_access = 0;
+   RoadMapCountyCache[index].mapcount = 0;
 }
 
 /**
@@ -232,11 +251,98 @@ static unsigned int roadmap_locator_new_access (void) {
          }
       }
       RoadMapActiveCounty = 0;
+      RoadMapActiveCountyCache = 0;
 
       RoadMapLocatorAccessCount += 1;
    }
 
    return RoadMapLocatorAccessCount;
+}
+
+static void roadmap_locator_layer_mapping_init(void) {
+
+     const char *name;
+     int db_layer, layer;
+     short *db_to_roadmap;
+     short *roadmap_to_db;
+     int i, t;
+     char *types[] = {
+        "Places",
+        "Lines",
+        "Polygons"
+     };
+
+     db_to_roadmap = RoadMapCountyCache[RoadMapActiveCountyCache].db_to_roadmap;
+     roadmap_to_db = RoadMapCountyCache[RoadMapActiveCountyCache].roadmap_to_db;
+
+     /* order is important.  the classes are indexed sequentially in
+      * both the database and internally to roadmap with places
+      * followed by lines followed by polygons.
+      *
+      * fetch all places, lines, and polygon names from the metadata
+      * attributes Class.Places, Class.Lines, and Class.Polygons.  for
+      * each one, get the internal roadmap layer index corresponding
+      * to that classname, and create a bidirectional mapping.
+      */
+     db_layer = 0;
+     for (t = 0; t < 3; t++) {
+         i = 0;
+         while(1) {
+            name = roadmap_metadata_get_attribute_next ("Class", types[t], i);
+            if (name == NULL || name[0] == 0) {
+                roadmap_log(ROADMAP_DEBUG, "Found %d %s in db\n", i, types[t]);
+                break;
+            }
+            /*
+             * the indices are a little tricky.  roadmap layers external to
+             * roadmap_layer.c are all offset by 1, leaving '0' to indicate
+             * a missing layer.  we do the same with the db_layers as stored
+             * in the roadmap_to_db[] table.  but the indices to both mapping
+             * tables are 0-based.
+             */
+            layer = roadmap_layer_find(name);
+            // fprintf(stderr, "%s: db %d --> roadmap %d\n", name, db_layer, layer);
+            db_to_roadmap[db_layer] = layer;
+            // fprintf(stderr, "roadmap %d --> db %d\n", layer-1, db_layer+1);
+            roadmap_to_db[layer-1] = db_layer + 1;
+            i++;
+            db_layer++;
+         }
+     }
+     roadmap_log(ROADMAP_DEBUG, "Found %d total types in database\n", db_layer);
+     RoadMapCountyCache[RoadMapActiveCountyCache].mapcount = db_layer;
+}
+
+int roadmap_locator_layer_to_roadmap(int i) {
+    int l;
+
+    /* if no mappings exists, use a transparent mapping */
+    if (RoadMapCountyCache[RoadMapActiveCountyCache].mapcount == 0)
+        return i;
+
+    l = RoadMapCountyCache[RoadMapActiveCountyCache].db_to_roadmap[i-1];
+#if 0
+    if (l == 0) {
+        fprintf(stderr, "empty to_roadmap mapping for db layer %d\n", i);
+    }
+#endif
+    return l;
+}
+
+int roadmap_locator_layer_to_db(int i) {
+    int l;
+
+    /* if no mappings exists, use a transparent mapping */
+    if (RoadMapCountyCache[RoadMapActiveCountyCache].mapcount == 0)
+        return i;
+
+    l = RoadMapCountyCache[RoadMapActiveCountyCache].roadmap_to_db[i-1];
+#if 0
+    if (l == 0) {
+        fprintf(stderr, "empty to_db mapping for roadmap layer %d\n", i);
+    }
+#endif
+    return l;
 }
 
 /**
@@ -268,6 +374,7 @@ static int roadmap_locator_open (int fips) {
 
          roadmap_db_activate (RoadMapCountyCache[i].path, map_name);
          RoadMapActiveCounty = fips;
+         RoadMapActiveCountyCache = i;
 
          return ROADMAP_US_OK;
       }
@@ -301,6 +408,8 @@ static int roadmap_locator_open (int fips) {
             RoadMapCountyCache[oldest].last_access = access;
 
             RoadMapActiveCounty = fips;
+            RoadMapActiveCountyCache = oldest;
+            roadmap_locator_layer_mapping_init();
 
             return ROADMAP_US_OK;
          }
@@ -343,9 +452,9 @@ static int roadmap_locator_allocate (int **fipslistp) {
    if (RoadMapCountyCache == NULL) return 0;
 
    if (RoadMapUseCounties)
-	count = roadmap_county_count();
+        count = roadmap_county_count();
     else
-	count = 0;
+        count = 0;
 
    /* note that this can also be resized during tile splitting in
     * roadmap_osm.c -- see usage of roadmap_osm_tilelist in that file.
