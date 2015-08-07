@@ -104,9 +104,9 @@ static RoadMapConfigDescriptor RoadMapConfigTripGPSFocusReleaseDelay =
                         ROADMAP_CONFIG_ITEM("Trip", "GPS Focus Release Delay");
 
 /*
- * try and put the trip name in the window title
+ * try and put the trip and route names in the window title
  */
-#define TRIP_TITLE_FMT " - %s"
+#define TRIP_TITLE_FMT " - %s (%s)"
 
 /* Default location is: 1 Market St, San Francisco, California,
  *  but every effort is made to choose a more "local" initial
@@ -269,21 +269,37 @@ static route_head RoadMapTripQuickRoute = {
 static RoadMapPosition RoadMapTripDefaultPosition =
      {ROADMAP_INITIAL_LONGITUDE, ROADMAP_INITIAL_LATITUDE};
 
-
 static const char *roadmap_trip_current() {
     return roadmap_config_get (&RoadMapConfigTripName);
-}
-
-static void roadmap_trip_set_current(const char *name) {
-    roadmap_config_set (&RoadMapConfigTripName, name);
 }
 
 static const char *roadmap_trip_route_current() {
     return roadmap_config_get (&RoadMapConfigTripRouteName);
 }
 
+
+void roadmap_trip_set_window_name(void) {
+
+    const char *trip, *route;
+
+    trip = roadmap_path_skip_directories(roadmap_trip_current());
+    route = (RoadMapCurrentRoute && RoadMapCurrentRoute->rte_name) ?
+		RoadMapCurrentRoute->rte_name : NULL;
+
+    roadmap_main_title(TRIP_TITLE_FMT,
+	(trip && *trip) ? trip : "Unnamed Trip",
+	(route && *route) ? route: "Unnamed Route");
+}
+
+static void roadmap_trip_set_current(const char *name) {
+
+    roadmap_config_set (&RoadMapConfigTripName, name);
+    roadmap_trip_set_window_name();
+}
+
 static void roadmap_trip_set_route_current(const char *name) {
     roadmap_config_set (&RoadMapConfigTripRouteName, name);
+    roadmap_trip_set_window_name();
 }
 
 /**
@@ -2876,8 +2892,6 @@ void roadmap_trip_new (void)
 
 	roadmap_trip_set_current("");
 
-	roadmap_main_title("");
-
 	RoadMapTripUntitled = 1;
 
 
@@ -2930,7 +2944,6 @@ static void roadmap_trip_file_dialog_ok (const char *filename, const char *mode)
             if ( RoadMapTripUntitled ) {
                 filename = roadmap_trip_path_relative_to_trips(filename);
 		roadmap_trip_set_current(filename);
-		roadmap_main_title(TRIP_TITLE_FMT, roadmap_path_skip_directories(filename));
                 RoadMapTripUntitled = 0;
             }
         }
@@ -3069,7 +3082,6 @@ static int roadmap_trip_load_file (const char *name, int silent, int merge) {
 
 	roadmap_trip_set_current(roadmap_trip_path_relative_to_trips(name));
         roadmap_trip_set_modified(0);
-        roadmap_main_title(TRIP_TITLE_FMT, roadmap_path_skip_directories(name));
         RoadMapTripUntitled = 0;
     }
 
@@ -3090,6 +3102,7 @@ static int roadmap_trip_load_file (const char *name, int silent, int merge) {
 		if ( rh->rte_name && rh->rte_name[0] &&
 			!strcmp(routename, rh->rte_name)) {
         	    RoadMapCurrentRoute = rh;
+        	    roadmap_trip_set_route_current(RoadMapCurrentRoute->rte_name);
 		}
 	    }
 	}
@@ -3130,9 +3143,6 @@ static int roadmap_trip_load_file (const char *name, int silent, int merge) {
 		roadmap_tripdb_waypoint_iter);
     }
 #endif
-
-    roadmap_main_title(TRIP_TITLE_FMT, 
-	    roadmap_path_skip_directories(roadmap_trip_current()));
 
     roadmap_screen_refresh ();
  
@@ -3222,7 +3232,6 @@ int roadmap_trip_save (void) {
 
             if (roadmap_trip_save_file (name)) {
 		roadmap_trip_set_current(name);
-		roadmap_main_title(TRIP_TITLE_FMT, roadmap_path_skip_directories(name));
                 RoadMapTripUntitled = 0;
             }
         }
