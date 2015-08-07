@@ -309,7 +309,8 @@ static void roadmap_locator_layer_mapping_init(void) {
             db_layer++;
          }
      }
-     roadmap_log(ROADMAP_DEBUG, "Found %d total types in database\n", db_layer);
+     roadmap_log(ROADMAP_DEBUG, "Found %d total types in map %d (0x%x)\n",
+            db_layer, RoadMapActiveCounty, -RoadMapActiveCounty);
      RoadMapCountyCache[RoadMapActiveCountyCache].mapcount = db_layer;
 }
 
@@ -366,6 +367,8 @@ static int roadmap_locator_open (int fips) {
 
    roadmap_locator_filename(map_name, fips);
 
+   access = roadmap_locator_new_access ();
+
    /* Look for the oldest entry in the cache. */
 
    for (i = RoadMapCountyCacheSize-1; i >= 0; --i) {
@@ -375,6 +378,7 @@ static int roadmap_locator_open (int fips) {
          roadmap_db_activate (RoadMapCountyCache[i].path, map_name);
          RoadMapActiveCounty = fips;
          RoadMapActiveCountyCache = i;
+         RoadMapCountyCache[i].last_access = access;
 
          return ROADMAP_US_OK;
       }
@@ -392,8 +396,6 @@ static int roadmap_locator_open (int fips) {
        }
        roadmap_locator_remove (oldest);
    }
-
-   access = roadmap_locator_new_access ();
 
    do {
 
