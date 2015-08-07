@@ -898,7 +898,7 @@ main(int argc, char **argv)
 
     buildmap_layer_load(class);
 
-    buildmap_metadata_add_attribute ("MapFormat", "Version", "1.3 alpha");
+    buildmap_metadata_add_attribute ("MapFormat", "Version", "1.4 alpha");
 
     if (tileid) {
 

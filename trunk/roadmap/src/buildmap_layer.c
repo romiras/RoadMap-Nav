@@ -37,6 +37,7 @@
 #include "buildmap.h"
 #include "buildmap_layer.h"
 
+#include "buildmap_metadata.h"
 
 #define BUILDMAP_LAYER_MAX   1024
 
@@ -93,15 +94,25 @@ static int buildmap_layer_split (char *text, char *field[], int max) {
    int   i;
    char *p;
 
+   i = strlen(text);
+   if (i == 0)
+      return 0;
+
+   for (p = &text[i-1]; p > text; p--) {
+	if (*p == ' ')
+	    *p = '\0';
+	else
+	    break;
+   }
+
    field[0] = text;
    p = strchr (text, ' ');
 
    for (i = 1; p != NULL && *p != 0; ++i) {
-
-      *p = 0;
+      while (*p == ' ') *p++ = 0;
       if (i >= max) return -1;
 
-      field[i] = ++p;
+      field[i] = p;
       p = strchr (p, ' ');
    }
    return i;
@@ -118,7 +129,7 @@ static int buildmap_layer_split (char *text, char *field[], int max) {
 static int buildmap_layer_decode (const char *config,
                                   const char *id, char**args, int max) {
 
-   int   count;
+   int   count, i;
    char *buffer;
 
    if (max <= 0) {
@@ -139,6 +150,14 @@ static int buildmap_layer_decode (const char *config,
       buildmap_fatal (0, "invalid layer list %s in class file %s",
                          id,
                          roadmap_config_file(config));
+   }
+
+   for (i = 0; i < count; i++)
+   {
+      if (i == 0)
+	  buildmap_metadata_add_attribute ("Class", id, args[i]);
+      else
+	  buildmap_metadata_add_value ("Class", id, args[i]);
    }
 
    return count;
