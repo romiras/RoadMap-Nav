@@ -70,6 +70,9 @@
 static RoadMapConfigDescriptor RoadMapConfigTripName =
                         ROADMAP_CONFIG_ITEM("Trip", "Name");
 
+static RoadMapConfigDescriptor RoadMapConfigTripRouteName =
+                        ROADMAP_CONFIG_ITEM("Trip", "Route Name");
+
 static RoadMapConfigDescriptor RoadMapConfigTripShowInactiveRoutes =
                         ROADMAP_CONFIG_ITEM("Trip", "Show Inactive Routes");
 
@@ -265,6 +268,23 @@ static route_head RoadMapTripQuickRoute = {
 
 static RoadMapPosition RoadMapTripDefaultPosition =
      {ROADMAP_INITIAL_LONGITUDE, ROADMAP_INITIAL_LATITUDE};
+
+
+static const char *roadmap_trip_current() {
+    return roadmap_config_get (&RoadMapConfigTripName);
+}
+
+static void roadmap_trip_set_current(const char *name) {
+    roadmap_config_set (&RoadMapConfigTripName, name);
+}
+
+static const char *roadmap_trip_route_current() {
+    return roadmap_config_get (&RoadMapConfigTripRouteName);
+}
+
+static void roadmap_trip_set_route_current(const char *name) {
+    roadmap_config_set (&RoadMapConfigTripRouteName, name);
+}
 
 /**
  * @brief
@@ -1213,6 +1233,7 @@ static void roadmap_trip_route_manage_dialog_none (const char *name, void *data)
 {
     RoadMapRouteInProgress = 0;
     RoadMapCurrentRoute = NULL;
+    roadmap_trip_set_route_current(NULL);
     roadmap_trip_unset_route_focii ();
     roadmap_dialog_hide (name);
     RoadMapTripRefresh = 1;
@@ -1238,6 +1259,7 @@ static void roadmap_trip_route_manage_dialog_delete (const char *name, void *dat
         if (route == RoadMapCurrentRoute) { 
             RoadMapRouteInProgress = 0;
             RoadMapCurrentRoute = NULL;
+            roadmap_trip_set_route_current(NULL);
             roadmap_trip_unset_route_focii ();
             RoadMapTripRefresh = 1;
         }
@@ -1307,6 +1329,7 @@ static void roadmap_trip_route_manage_dialog_selected
 
     if (route != RoadMapCurrentRoute) {
         RoadMapCurrentRoute = route;
+        roadmap_trip_set_route_current(route->rte_name);
         RoadMapRouteIsReversed = 0;
         RoadMapRouteInProgress = 0;
         roadmap_trip_set_route_focii ();
@@ -1534,6 +1557,7 @@ void roadmap_trip_new_route_waypoint(waypoint *waypointp)
     roadmap_trip_set_modified(1);
 
     RoadMapCurrentRoute = new_route;
+    roadmap_trip_set_route_current(NULL);
     RoadMapRouteIsReversed = 0;
 
     roadmap_trip_set_route_focii ();
@@ -1636,6 +1660,7 @@ void roadmap_trip_set_as_destination(void)
     route_add_wpt_tail (&RoadMapTripQuickRoute, dest_wpt);
 
     RoadMapCurrentRoute = &RoadMapTripQuickRoute;
+    roadmap_trip_set_route_current(NULL);
     RoadMapRouteIsReversed = 0;
     RoadMapRouteInProgress = 1;
 
@@ -2833,10 +2858,6 @@ void roadmap_trip_toggle_show_inactive_tracks(void) {
 }
 
 
-static const char *roadmap_trip_current() {
-    return roadmap_config_get (&RoadMapConfigTripName);
-}
-
 /**
  * @brief start a new trip
  * Save the current one if there are unsaved changes
@@ -2853,7 +2874,7 @@ void roadmap_trip_new (void)
 
 	roadmap_trip_set_modified(0);
 
-	roadmap_config_set (&RoadMapConfigTripName, "");
+	roadmap_trip_set_current("");
 
 	roadmap_main_title("");
 
@@ -2908,7 +2929,7 @@ static void roadmap_trip_file_dialog_ok (const char *filename, const char *mode)
         if (roadmap_trip_save_file (filename)) {
             if ( RoadMapTripUntitled ) {
                 filename = roadmap_trip_path_relative_to_trips(filename);
-                roadmap_config_set (&RoadMapConfigTripName, filename);
+		roadmap_trip_set_current(filename);
 		roadmap_main_title(TRIP_TITLE_FMT, roadmap_path_skip_directories(filename));
                 RoadMapTripUntitled = 0;
             }
@@ -3046,8 +3067,7 @@ static int roadmap_trip_load_file (const char *name, int silent, int merge) {
         ROADMAP_LIST_MOVE(&RoadMapTripRouteHead, &tmp_route_list);
         ROADMAP_LIST_MOVE(&RoadMapTripTrackHead, &tmp_track_list);
 
-        roadmap_config_set (&RoadMapConfigTripName,
-            roadmap_trip_path_relative_to_trips(name));
+	roadmap_trip_set_current(roadmap_trip_path_relative_to_trips(name));
         roadmap_trip_set_modified(0);
         roadmap_main_title(TRIP_TITLE_FMT, roadmap_path_skip_directories(name));
         RoadMapTripUntitled = 0;
@@ -3061,17 +3081,35 @@ static int roadmap_trip_load_file (const char *name, int silent, int merge) {
 
     if (roadmap_list_count (&RoadMapTripRouteHead) +
             roadmap_list_count (&RoadMapTripTrackHead) > 1) {
-        /* Multiple choices?  Present a dialog. */
-        roadmap_trip_route_manage_dialog ();
+
+	const char *routename = roadmap_trip_route_current();
+	if (routename) {
+	    RoadMapListItem *elem, *tmp;
+	    ROADMAP_LIST_FOR_EACH (&RoadMapTripRouteHead, elem, tmp) {
+		route_head *rh = (route_head *) elem;
+		if ( rh->rte_name && rh->rte_name[0] &&
+			!strcmp(routename, rh->rte_name)) {
+        	    RoadMapCurrentRoute = rh;
+		}
+	    }
+	}
+	if (!RoadMapCurrentRoute) {
+	    /* Multiple choices and no matching saved route name? 
+	     * Present a dialog.  */
+	    roadmap_trip_route_manage_dialog ();
+	}
     } else { /* If there's only one route (or track), use it. */
         if (!ROADMAP_LIST_EMPTY(&RoadMapTripRouteHead)) {
             RoadMapCurrentRoute = 
                     (route_head *)ROADMAP_LIST_FIRST(&RoadMapTripRouteHead);
+            roadmap_trip_set_route_current(RoadMapCurrentRoute->rte_name);
         } else if (!ROADMAP_LIST_EMPTY(&RoadMapTripTrackHead)) {
             RoadMapCurrentRoute = 
                     (route_head *)ROADMAP_LIST_FIRST(&RoadMapTripTrackHead);
+            roadmap_trip_set_route_current(NULL);
         } else {
             RoadMapCurrentRoute = NULL;
+            roadmap_trip_set_route_current(NULL);
         }
     }
 
@@ -3183,7 +3221,7 @@ int roadmap_trip_save (void) {
             }
 
             if (roadmap_trip_save_file (name)) {
-                roadmap_config_set (&RoadMapConfigTripName, name);
+		roadmap_trip_set_current(name);
 		roadmap_main_title(TRIP_TITLE_FMT, roadmap_path_skip_directories(name));
                 RoadMapTripUntitled = 0;
             }
@@ -3332,6 +3370,7 @@ static void roadmap_trip_route_convert_worker
         }
 
         RoadMapCurrentRoute = new_route;
+        roadmap_trip_set_route_current(new_route->rte_name);
         RoadMapRouteIsReversed = 0;
         RoadMapRouteInProgress = 0;
         roadmap_trip_set_route_focii ();
@@ -3909,6 +3948,7 @@ void roadmap_trip_initialize (void)
 
     }
     roadmap_config_declare ("session", &RoadMapConfigTripName, "");
+    roadmap_config_declare ("session", &RoadMapConfigTripRouteName, "");
     roadmap_config_declare ("session", &RoadMapConfigFocusName, "GPS");
 
     roadmap_config_declare_distance
@@ -4149,4 +4189,5 @@ void roadmap_trip_complete (void)
    roadmap_tripdb_complete ();
 #endif
    RoadMapCurrentRoute = (route_head *)ROADMAP_LIST_FIRST(&RoadMapTripRouteHead);
+   roadmap_trip_set_route_current(RoadMapCurrentRoute->rte_name);
 }
