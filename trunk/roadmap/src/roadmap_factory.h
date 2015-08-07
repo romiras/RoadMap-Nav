@@ -77,5 +77,8 @@ void roadmap_factory_initialize (void);
 void roadmap_factory_load (RoadMapAction *actions);
 void roadmap_factory_shutdown (void);
 
+void roadmap_factory_handle_plugin_actions_menu
+	    (RoadMapAction *actions, const char **menu);
+
 #endif /* INCLUDE__ROADMAP_FACTORY__H */
 
