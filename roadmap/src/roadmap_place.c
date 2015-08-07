@@ -46,6 +46,7 @@
 #include "roadmap_point.h"
 #include "roadmap_place.h"
 #include "roadmap_square.h"
+#include "roadmap_locator.h"
 
 #include "roadmap_dictionary.h"
 
@@ -210,6 +211,8 @@ int roadmap_place_in_square (int square, int layer, int *first, int *last) {
    if (square < 0) {
       return 0;   /* This square is empty. */
    }
+
+   layer = roadmap_locator_layer_to_db(layer);
 
    if (layer <= 0 || layer > RoadMapPlaceActive->PlaceBySquare[square].count) {
        return 0;

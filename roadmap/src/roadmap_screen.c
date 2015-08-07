@@ -677,6 +677,8 @@ static int roadmap_screen_draw_polygons (void) {
    for (i = polycount - 1; i >= 0; --i) {
 
       category = roadmap_polygon_category (i);
+      if (!category) continue;
+
       pen = roadmap_layer_get_pen (category, 0);
       
       if (pen == NULL) continue;
@@ -1167,6 +1169,9 @@ static int roadmap_screen_draw_long_lines (int pen_index) {
    roadmap_log_push ("roadmap_screen_draw_long_lines");
 
    while (roadmap_line_long (index++, &line, &area, &layer)) {
+
+	 if (layer == 0) continue;
+
          RoadMapPosition position;
          RoadMapPosition to_position;
          int to_square;
