@@ -1501,6 +1501,8 @@ static void roadmap_start_window (void) {
                     RoadMapStartMenu,
                     RoadMapStartToolbar);
 
+   roadmap_plugin_actions_menu(roadmap_factory_handle_plugin_actions_menu);
+
    roadmap_main_add_canvas ();
 
    roadmap_main_show ();

@@ -783,7 +783,7 @@ void roadmap_factory_config_toolbar
  * @param actions the list of actions for this plugin
  * @param menu the menu configuration for this plugin
  */
-static void roadmap_factory_handle_plugin_actions_menu
+void roadmap_factory_handle_plugin_actions_menu
 	    (RoadMapAction *actions, const char **menu)
 {
    int use_tips;
@@ -864,7 +864,6 @@ void roadmap_factory (const char           *name,
       roadmap_main_set_keyboard (roadmap_factory_keyboard);
    }
 
-   roadmap_plugin_actions_menu(roadmap_factory_handle_plugin_actions_menu);
 }
 
 static char *RoadMapFactoryKeyMapFile;
