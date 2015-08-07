@@ -1639,7 +1639,7 @@ void roadmap_screen_repaint (void) {
                   layers = (int *)calloc (layers_size, sizeof(int));
                   roadmap_check_allocated(layers);
                }
-               layer_count = roadmap_layer_visible_lines
+               layer_count = roadmap_layer_visible_line_layers
                                 (layers, layers_size, pen);
 
                if (!layer_count) continue;
@@ -1695,7 +1695,7 @@ void roadmap_screen_repaint (void) {
 	      layers = (int *)calloc (layers_size, sizeof(int));
 	      roadmap_check_allocated(layers);
 	   }
-	   layer_count = roadmap_layer_visible_places
+	   layer_count = roadmap_layer_visible_place_layers
 			    (layers, layers_size, pen);
 	   if (!layer_count) continue;
 
