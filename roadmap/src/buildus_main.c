@@ -167,9 +167,11 @@ static void buildus_scan_maps (void) {
    RoadMapCountyModel =
       roadmap_db_register
          (RoadMapCountyModel, "square", &RoadMapSquareHandler);
+#ifdef NEEDED
    RoadMapCountyModel =
       roadmap_db_register
          (RoadMapCountyModel, "zip", &RoadMapZipHandler);
+#endif
 
    for (mappath = roadmap_path_first("maps");
          mappath != NULL;
