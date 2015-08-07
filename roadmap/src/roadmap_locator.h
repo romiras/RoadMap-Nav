@@ -55,5 +55,8 @@ void roadmap_locator_set_decluttered(int fips);
 
 void roadmap_locator_use_counties(int yesno);
 
+int roadmap_locator_layer_to_roadmap(int i);
+int roadmap_locator_layer_to_db(int i);
+
 #endif // _ROADMAP_LOCATOR__H_
 
