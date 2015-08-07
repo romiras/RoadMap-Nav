@@ -61,16 +61,6 @@
 
 
 /**
- * @brief This is the maximum number of layers PER CLASS. As there is no limit on
- * the number of classes, the total number of layers is actually unlimited.
- * We could have implemented support for an unlimited number of layers per
- * class, but who wants a thousand layers per map, anyway?
- * Having this limit makes life easier for everyone, and the downside is nil.
- * Note that this has no impact on the API of roadmap_layer.
- */
-#define ROADMAP_MAX_LAYERS           512
-
-/**
  * @brief There is a maximum number of navigation modules that can be registered.
  * This is not really a limitation for now, since there is currently only
  * one navigation mode (car) and any other would be hiking, boat, plane,
@@ -554,6 +544,21 @@ int roadmap_layer_names (const char *names[], int max) {
    return total;
 }
 #endif
+
+int roadmap_layer_find(const char *name) {
+   const char *n;
+   short i;
+   short total = RoadMapLayerCurrentClass->place_layer_count
+   		    + RoadMapLayerCurrentClass->line_layer_count
+                    + RoadMapLayerCurrentClass->polygon_layer_count;
+
+   for (i = 0; i < total; i++) {
+      n = RoadMapLayerCurrentClass->layers[i].name;
+      if (strcmp(name, n) == 0)
+	  return i+1;
+   }
+   return 0;
+}
 
 
 void roadmap_layer_select_set (const char *name) {
