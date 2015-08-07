@@ -120,13 +120,13 @@ typedef struct roadmap_layer_class {
    const char *before;
    const char *after;
 
-   short places_count;
-   short lines_count;
-   short polygons_count;
+   short place_layer_count;
+   short line_layer_count;
+   short polygon_layer_count;
 
    /* "first_line" and "last_line" make it easier to loop through lines */
-#define first_line places_count
-   short last_line;  // really this is one past the last line
+#define first_line_layer place_layer_count
+   short last_line_layer;  // really this is one past the last line
 
    struct roadmap_layer_record *layers;
 
@@ -307,7 +307,7 @@ int roadmap_layer_navigable (int mode, int *layers, int size)
 
     if (RoadMapLayerCurrentClass == NULL) return 0;
 
-    for (i = RoadMapLayerCurrentClass->first_line; i < RoadMapLayerCurrentClass->last_line; ++i) {
+    for (i = RoadMapLayerCurrentClass->first_line_layer; i < RoadMapLayerCurrentClass->last_line_layer; ++i) {
 
         layer = RoadMapLayerCurrentClass->layers + i;
 
@@ -323,7 +323,7 @@ int roadmap_layer_navigable (int mode, int *layers, int size)
     return count;
 }
 
-int roadmap_layer_visible_lines (int *layers, int size, unsigned int pen_index)
+int roadmap_layer_visible_line_layers (int *layers, int size, unsigned int pen_index)
 {
     int i;
     int count = 0;
@@ -333,7 +333,7 @@ int roadmap_layer_visible_lines (int *layers, int size, unsigned int pen_index)
 
     if (RoadMapLayerCurrentClass == NULL) return 0;
 
-    for (i = RoadMapLayerCurrentClass->last_line - 1; i >= RoadMapLayerCurrentClass->first_line; --i) {
+    for (i = RoadMapLayerCurrentClass->last_line_layer - 1; i >= RoadMapLayerCurrentClass->first_line_layer; --i) {
 
         layerp = RoadMapLayerCurrentClass->layers + i;
 
@@ -350,7 +350,7 @@ done:
     return count;
 }
 
-int roadmap_layer_visible_places (int *layers, int size, unsigned int pen_index)
+int roadmap_layer_visible_place_layers (int *layers, int size, unsigned int pen_index)
 {
     int i;
     int count = 0;
@@ -360,7 +360,7 @@ int roadmap_layer_visible_places (int *layers, int size, unsigned int pen_index)
 
     if (RoadMapLayerCurrentClass == NULL) return 0;
 
-    for (i = 0; i < RoadMapLayerCurrentClass->places_count; i++) {
+    for (i = 0; i < RoadMapLayerCurrentClass->place_layer_count; i++) {
 
         layerp = RoadMapLayerCurrentClass->layers + i;
 
@@ -387,7 +387,7 @@ void roadmap_layer_adjust (void) {
 
     if (RoadMapLayerCurrentClass == NULL) return;
 
-    for (i = RoadMapLayerCurrentClass->last_line - 1; i >= RoadMapLayerCurrentClass->first_line; --i) {
+    for (i = RoadMapLayerCurrentClass->last_line_layer - 1; i >= RoadMapLayerCurrentClass->first_line_layer; --i) {
 
        layerp = RoadMapLayerCurrentClass->layers + i;
 
@@ -481,9 +481,9 @@ RoadMapPen roadmap_layer_get_pen (int layer, unsigned int pen_index) {
 
    if (RoadMapLayerCurrentClass == NULL) return NULL;
 
-   total = RoadMapLayerCurrentClass->polygons_count
-                  + RoadMapLayerCurrentClass->places_count
-                  + RoadMapLayerCurrentClass->lines_count;
+   total = RoadMapLayerCurrentClass->polygon_layer_count
+                  + RoadMapLayerCurrentClass->place_layer_count
+                  + RoadMapLayerCurrentClass->line_layer_count;
 
    if (layer >= 0 && layer < total && pen_index < RoadMapMaxUsedPen) {
 
@@ -538,9 +538,9 @@ const char *roadmap_layer_class_name (void) {
 int roadmap_layer_names (const char *names[], int max) {
 
    short i;
-   short total = RoadMapLayerCurrentClass->places_count
-   		    + RoadMapLayerCurrentClass->lines_count
-                    + RoadMapLayerCurrentClass->polygons_count;
+   short total = RoadMapLayerCurrentClass->place_layer_count
+   		    + RoadMapLayerCurrentClass->line_layer_count
+                    + RoadMapLayerCurrentClass->polygon_layer_count;
 
 
    if (total > max) {
@@ -777,7 +777,7 @@ static void roadmap_layer_load_file (const char *class_file) {
     int j;
     unsigned int pen_index;
 
-    int places_count, lines_count, polygons_count, total_count;
+    int place_lcount, line_lcount, polygon_lcount, total_layer_count;
     char *layernames[ROADMAP_MAX_LAYERS];
 
     RoadMapSet   *set;
@@ -817,23 +817,23 @@ static void roadmap_layer_load_file (const char *class_file) {
      * consecutive to each other, so that we can manage them as a
      * single list.
      */
-    places_count =
+    place_lcount =
        roadmap_layer_decode (class_config, "Class", "Places",
            layernames,
 	   ROADMAP_MAX_LAYERS);
 
-    lines_count =
+    line_lcount =
        roadmap_layer_decode (class_config, "Class", "Lines",
-	  layernames + places_count,
-	  ROADMAP_MAX_LAYERS - places_count);
+	  layernames + place_lcount,
+	  ROADMAP_MAX_LAYERS - place_lcount);
 
-    polygons_count =
+    polygon_lcount =
        roadmap_layer_decode (class_config, "Class", "Polygons",
-           layernames + lines_count + places_count,
-	   ROADMAP_MAX_LAYERS - (lines_count + places_count));
+           layernames + line_lcount + place_lcount,
+	   ROADMAP_MAX_LAYERS - (line_lcount + place_lcount));
 
-    total_count = polygons_count + lines_count + places_count;
-    if (total_count == 0) {
+    total_layer_count = polygon_lcount + line_lcount + place_lcount;
+    if (total_layer_count == 0) {
        roadmap_log (ROADMAP_FATAL, "No Class entries found in %s", class_file);
     }
 
@@ -842,17 +842,17 @@ static void roadmap_layer_load_file (const char *class_file) {
 
     new_class =
        calloc (sizeof(RoadMapClass) + 
-	      (total_count * sizeof(RoadMapLayer)), 1);
+	      (total_layer_count * sizeof(RoadMapLayer)), 1);
     roadmap_check_allocated(new_class);
 
     roadmap_log (ROADMAP_DEBUG, "Class [%s] lines %d polygons %d places %d",
-		    class_name, lines_count, polygons_count, places_count);
+		    class_name, line_lcount, polygon_lcount, place_lcount);
 
     new_class->name = class_name;
-    new_class->places_count = places_count;
-    new_class->lines_count = lines_count;
-    new_class->last_line = lines_count + places_count;  // one past the last line layer
-    new_class->polygons_count = polygons_count;
+    new_class->place_layer_count = place_lcount;
+    new_class->line_layer_count = line_lcount;
+    new_class->last_line_layer = line_lcount + place_lcount;  // one past the last line layer
+    new_class->polygon_layer_count = polygon_lcount;
 
     new_class->layers = (RoadMapLayer *) (new_class + 1);
 
@@ -869,14 +869,14 @@ static void roadmap_layer_load_file (const char *class_file) {
     set->class_count += 1;
 
 
-    if (RoadMapMaxDefinedLayers < (unsigned int) total_count) {
-       RoadMapMaxDefinedLayers = total_count;
+    if (RoadMapMaxDefinedLayers < (unsigned int) total_layer_count) {
+       RoadMapMaxDefinedLayers = total_layer_count;
     }
 
     int n_of_callbacks = (int) sizeof(RoadMapLayerPenSetupTable) / 
                                         sizeof(RoadMapLayerPenAttribute);
   
-    for (i = total_count - 1; i >= 0; --i) {
+    for (i = total_layer_count - 1; i >= 0; --i) {
         const char *svalues[ROADMAP_MAX_LAYER_PENS][n_of_callbacks];
         int ivalues[ROADMAP_MAX_LAYER_PENS][n_of_callbacks];
 
@@ -961,7 +961,7 @@ static void roadmap_layer_load_file (const char *class_file) {
 
         /* Create all necessary pens. */
 
-        if (i < places_count || i >= lines_count + places_count) {
+        if (i < place_lcount || i >= line_lcount + place_lcount) {
            /* this is a place or a polygon */
            layer->in_use[0] = 1;
         }
@@ -1007,7 +1007,7 @@ static void roadmap_layer_load_file (const char *class_file) {
              }
            }
 
-           if (i < places_count || i >= lines_count + places_count) {
+           if (i < place_lcount || i >= line_lcount + place_lcount) {
               /* this is a place or a polygon */
               layer->in_use[0] = 1;
            }
@@ -1031,16 +1031,16 @@ static void roadmap_layer_load_file (const char *class_file) {
        int mask = 1 << i;
        char *navigation_layers[ROADMAP_MAX_LAYERS];
 
-       int layers_count = roadmap_layer_decode (class_config,
+       int layer_lcount = roadmap_layer_decode (class_config,
                                 "Navigation", RoadMapNavigationMode[i],
                                 navigation_layers, ROADMAP_MAX_LAYERS);
 
        roadmap_log (ROADMAP_DEBUG, "Navigation %d [%s] -> %d modes",
-		       i, RoadMapNavigationMode[i], layers_count);
+		       i, RoadMapNavigationMode[i], layer_lcount);
 
-       for (j = layers_count - 1; j >= 0; --j) {
+       for (j = layer_lcount - 1; j >= 0; --j) {
 
-          for (k = lines_count - 1; k >= places_count; --k) {
+          for (k = line_lcount - 1; k >= place_lcount; --k) {
 
              if (strcasecmp(layernames[k], navigation_layers[j]) == 0) {
                 new_class->layers[k].navigation_modes |= mask;
@@ -1144,8 +1144,8 @@ int roadmap_layer_is_street(int layer)
 	    roadmap_log (ROADMAP_FATAL, "roadmap_layer_is_street : no current class");
 	    return 0;
 	}
-	return (layer >= RoadMapLayerCurrentClass->first_line &&
-		layer < RoadMapLayerCurrentClass->last_line);
+	return (layer >= RoadMapLayerCurrentClass->first_line_layer &&
+		layer < RoadMapLayerCurrentClass->last_line_layer);
 }
 
 /**
