@@ -1444,8 +1444,6 @@ int roadmap_street_get_closest
    int count = 0;
 
 
-   if (RoadMapRangeActive == NULL) return 0;
-
    county_count = roadmap_locator_by_position (position, &fipslist);
 
    /* - For each candidate county: */
@@ -1839,9 +1837,6 @@ int roadmap_street_intersection (const char *state,
    int county_count;
 
    RoadMapStreetIdentifier street1, street2;
-
-
-   if (RoadMapRangeActive == NULL) return 0;
 
    county_count = roadmap_locator_by_state (state, &fipslist);
 
