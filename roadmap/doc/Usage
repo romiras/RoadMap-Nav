@@ -59,6 +59,10 @@ January 2009
         Use the imperial system for all units. This option is sticky
         (preference item General.Unit = "imperial").
 
+     : --full
+        Go directly to full screen mode on startup. This option is sticky
+        (preference item General.FullScreen = "yes").
+
      : --no-area
         Do not show the polygons (parks, hospitals, malls, airports,
         etc..).
