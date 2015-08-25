@@ -91,7 +91,7 @@ void roadmap_landmark_draw_waypoint
         roadmap_sprite_draw (sprite, &guipoint, 0);
     }
 
-    if (pen && roadmap_math_declutter(RoadMapLandmarkDeclutter )) {
+    if (pen && ! roadmap_math_should_declutter(RoadMapLandmarkDeclutter )) {
 
         roadmap_canvas_select_pen (pen);
         /* FIXME -- We should do label collision detection, which
