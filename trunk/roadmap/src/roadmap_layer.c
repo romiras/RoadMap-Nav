@@ -260,7 +260,7 @@ static int roadmap_layer_is_visible (RoadMapLayer *layer)
 	return 0;
 
    d = roadmap_config_get_integer (&layer->declutter);
-   r = roadmap_math_declutter (d);
+   r = ! roadmap_math_should_declutter (d);
    return r;
 }
 
@@ -1174,7 +1174,7 @@ int roadmap_layer_labels_visible(int layer)
     layerp = RoadMapLayerCurrentClass->layers + layer;
     d = roadmap_config_get_integer (&layerp->label_declutter);
 	roadmap_log (ROADMAP_DEBUG, "roadmap_layer_road_last: declutter %d", d);
-    return roadmap_math_declutter (d);
+    return ! roadmap_math_should_declutter (d);
 }
 
 

@@ -64,7 +64,7 @@ void roadmap_math_set_focus     (const RoadMapArea *focus);
 void roadmap_math_get_focus     (RoadMapArea *area);
 void roadmap_math_release_focus (void);
 
-int  roadmap_math_declutter (int level);
+int  roadmap_math_should_declutter (int level);
 int  roadmap_math_thickness (int base, int declutter, int use_multiple_pens);
 
 int roadmap_math_areas_intersect

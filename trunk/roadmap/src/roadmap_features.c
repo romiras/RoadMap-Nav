@@ -68,7 +68,7 @@ static void roadmap_features_draw(const weepoint *w) {
     RoadMapPen pen = RoadMapFeatureList->pen;
     char *sprite = RoadMapFeatureList->sprite;
 
-    if ( ! roadmap_math_declutter(RoadMapFeatureList->label_declutter)) {
+    if ( roadmap_math_should_declutter(RoadMapFeatureList->label_declutter)) {
         pen = NULL;
         /* not drawing label?  make sure there's a sprite */
         if (sprite == NULL) {
@@ -77,7 +77,7 @@ static void roadmap_features_draw(const weepoint *w) {
     }
 
     if ( RoadMapFeatureList->sprite_declutter >= 0 &&
-        ! roadmap_math_declutter(RoadMapFeatureList->sprite_declutter)) {
+        roadmap_math_should_declutter(RoadMapFeatureList->sprite_declutter)) {
         sprite = NULL;
     }
 
