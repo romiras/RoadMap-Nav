@@ -1,5 +1,82 @@
 RoadMap Changelog
 
+    - The polygon node limit is now 32bits wide, allowing for lots and
+	lots of big polygons.  Backward compatiblity with old maps is
+	still maintained.
+
+    - The php subdirectory is gone, along the helper programs that
+	were used to create quadtiles.  Quadtiles are now converted by the
+	native XML parser, just as other OSM source data is converted. 
+	roadmap_osm_text.c has seen a lot of cleanup, and is at least 10x
+	faster than it was before.
+
+    - The new OSM download helper script now points at the OSM
+	"Overpass API" servers, which are read-only servers intended for
+	higher volume downloading.  These servers are easier to use, are
+	faster, and support bigger map segment requests.
+
+    - RoadMap now builds a world basemap (using data from
+	naturalearthdata.com) which gives country (and US state) outlines. 
+	These are very rough outlines, but help give a geographic sense
+	while one is panning or zooming through an area not covered by the
+	current maps.
+
+    - Class file entries now assume the previous class.name if if that
+	field is left empty on a line
+
+    - Map "places" can now be displayed and labeled, e.g. cities,
+	towns, villages, points of interest, and are configured just as
+	lines and polygons are, in the class file.  Finally.
+
+
+    - New POI support:  restaurants, lodging, fuel, ATM (currently),
+	complete with sprites and labels
+
+    - Finally fully enabled the "ADVANCED_STYLE" canvas ifdef, giving
+	pens the ability to have many more properties.  Only a few
+	implemented for gtk2.
+
+    - Openstreetmap XML is now parsed a bit more carefully.  The next
+	step will be to switch to using libreadosm.
+
+    - We now do a better job of tracking online/offline status of a
+	GPS device, when talking to it via gpsd.
+
+    - Any keyboard key can now be rebound from a user or system
+	configuration file.  I believe this makes the entire UI
+	redefinable by a user.
+
+    - Text scaling for labels is now implemented via pen definitions
+	in the class file.
+
+    - Implemented angled street labels, and font size control, for
+	gtk2.  The AGG implementation is no longer functionally superior
+	to plain GTK2 as a canvas implementation.  (It still looks much
+	better, but on a slow machine, the jaggies you get with GTK2 are
+	worth it, just to make the map update faster.
+
+    - Support for the old "Hershey" line font has been dropped.
+
+    - A bug was causing street labels to be angled incorrectly with
+	respect to their street.  They are now shown parallel.
+
+    - Cleaned up the tables in buildmap_osm, making it much easier to
+	add a new layer to the maps.
+
+    - Voice announcements detailing progress are available when
+	following a GPX route.
+
+    - The current route name is now saved across program restarts, if
+	possible, and is displayed in window title.
+
+    - RoadMap's dependency on using the exact same class file that was
+	used to when buildmap was run has been eliminated:  maps can not
+	contain more, or fewer, layers than RoadMap's class file wishes to
+	display.  (The maps now contain an index of the classes used when
+	building.  Roadmap constructs a mapping to that index at runtime.)
+
+    - Several performance improvements.
+
 
 Roadmap v1.2.1 (February, 2009)
 

@@ -160,30 +160,32 @@ January 2009
      parameters ("-f" and "On %N").
 
 
-== Menus and Toolbar ==
+== Menus, Toolbar, and Key bindings ==
 
-     The items shown in the RoadMap and RoadGps menus and toolbars can be
-     redefined by the user in text configuration files.  Note that each
-     program comes with a built-in menus and toolbar configuration that
-     serves as the default, so none of these configuration files is required
-     to be present for RoadMap or RoadGps to work.  In fact, RoadMap is
-     distributed with none of the configuration files described in this
-     section.  (Example files are provided for RoadMap, but are not installed
-     automatically.)
+     The items shown in the RoadMap and RoadGps menus and toolbars, as
+     well as the keyboard bindings, can be redefined by the user in
+     text configuration files.  Note that each program comes with a
+     built-in versions of these tables which serve serves as the
+     defaults, so none of these configuration files is required to be
+     present for RoadMap or RoadGps to work.  In fact, RoadMap is
+     distributed with none of the configuration files described in
+     this section.  (Example files are provided for RoadMap, but are
+     not installed automatically.)
 
-     It must be realized that making any change to the menus and the toolbar
-     comes at a price:  this documentation was written using the standard
-     user interface.  Modifying the user interface is likely to make this
-     documentation even more confusing than it originally is.
+     It must be realized that making any change to the menus, toolbar,
+     or key bindings comes at a price:  this documentation was written
+     using the standard user interface.  Modifying the user interface
+     is likely to make this documentation even more confusing than it
+     originally is.
 
-     The major reason for customizing the menus or the toolbar is to let
-     the user tailor the toolbar to fill small screens (such as a PDA) with
-     his preferred controls at the most convenient place. Using a GUI in
+     The major reason for customizing the is to let the user tailor
+     the toolbar to fill small screens (such as a PDA) with his
+     preferred controls at the most convenient place.  Using a GUI in
      a car or on a bike is challenging enough.
 
-     The configuration files are organized with one entity per line. An
-     entity is either the title of a menu, the name of an action, a separator
-     or a comment.
+     The configuration files are organized with one entity per line. 
+     An entity is either the title of a menu, the name of an action, a
+     separator or a comment.
 
      Each menu is described by it's title (prefixed with character '/'),
      followed by the list of items in that menu. The title of a menu is
@@ -294,6 +296,15 @@ January 2009
 
      Remember that the toolbar labels should be very short, since the toolbar
      has a limited size.
+
+     Keyboard bindings are configured in a "roadmap.keys" file.  Each
+     line should consist of the name of key, an '=' symbol, and the
+     name of the RoadMap action to which it is bound.  For example:
+```
+        LeftArrow = resumeroute
+        C = gpsconsole
+        Q = quit
+```
 
 == On-Screen Objects ==
 
@@ -1093,6 +1104,12 @@ January 2009
          - //Format:// string
          - //Default:// default
 
+     : Trip.Route Name
+         The name of the last selected route.  This route will be
+	 (re)selected if it exists in the chosen trip file.
+         - //Format:// string
+         - //Default:// none
+
      : Delta.X
          The horizontal map shift compare to the reference position.
          - //Format:// number of pixels
@@ -1160,17 +1177,12 @@ January 2009
   (*) NOTE: the default position values match 1 Market St, San Francisco, CA.
 
 
-== Schema Items ==
+== Class Items ==
 
-     The schema file uses the same format as the preference file. It defines
-     the properties of the various categories of objects that make a map.
-     the list of categories matches the list of Tiger file's categories
-     (see Tiger's CFCC field) that have been filtered by buildmap.
-
-     The two differences with the preferences files are that there is no
-     pre-defined category in RoadMap: categories are defined by the maps
-     (FIXME: this is still to be done--as a temporary hack, the categories
-     have been hardcoded somewhere) and there is no default value.
+     The Class file uses the same format as the preference file. It defines
+     the properties of the various categories of objects that make a map
+     when the map database is built, as well as the categories of
+     objects which RoadMap will display on the screen.
 
      For each category, RoadMap use the following items:
 
