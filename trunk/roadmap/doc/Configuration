@@ -118,6 +118,8 @@ January 2009
      | %v | Total number of available satellites.
      | %x | Distance from one side of the screen to the other.
      | %y | Distance from the top to the bottom of the screen.
+     | %1 | Angle (in vague english) to the next waypoint
+     | %2 | Angle (in vague english) to the one after that waypoint
 
      Note that the time is always shown using the military format: HH:MM.
 
