@@ -90,6 +90,7 @@ static struct WayInfo {
     int      WayIsOneWay;        /**< is this way one direction only */
     int      WayIsBuilding;      /**< this way represents a building */
     char     *WayTourism;        /**< value of tourism tag, if any */
+    char     *WayAmenity;        /**< value of amenity tag, if any */
     int      WayAdminLevel;	 /**< boundaries */
     int      WayTerritorial;     /**< is this a territorial boundary? */
     int      WayCoast;           /**< coastline */
@@ -178,6 +179,7 @@ buildmap_osm_text_reset_way(void)
 	if (wi.WayName) free(wi.WayName); 
 	if (wi.WayStreetRef) free(wi.WayStreetRef);
 	if (wi.WayTourism) free(wi.WayTourism);
+	if (wi.WayAmenity) free(wi.WayAmenity);
 	memset(&wi, 0, sizeof(wi));
 }
 
@@ -289,13 +291,13 @@ buildmap_osm_text_node_finish(void)
 
 	if (ni.NodeName && ni.NodePlace) {
 	    if (ni.NodeLayer) {
-		buildmap_verbose("finishing %f %f %s %s layer: %d",
+		buildmap_debug( "finishing %f %f %s %s layer: %d",
 		    (float)ni.NodeLat/1000000.0, (float)ni.NodeLon/1000000.0,
 		    ni.NodePlace, ni.NodeName, ni.NodeLayer);
 		s = str2dict (DictionaryCity, (char *) ni.NodeName);
 		buildmap_place_add(s, ni.NodeLayer, point);
 	    } else {
-		buildmap_verbose("dropping %s %s", ni.NodePlace, ni.NodeName);
+		buildmap_debug( "dropping %s %s", ni.NodePlace, ni.NodeName);
 	    }
 	}
 
@@ -693,10 +695,10 @@ buildmap_osm_text_way_tag(char *data)
 #endif
 	
 	if (strcasecmp(tag, "building") == 0) {
-		if (strcasecmp(value, "yes") == 0) {
-			/* what else would the value be? */
-			wi.WayIsBuilding = 1;
-		}
+		/* the value can be things like "shed", "barn", "temple",
+		 * or "yes".  we don't really care which.
+		 */
+		wi.WayIsBuilding = 1;
 		return;
 	}
 
@@ -704,6 +706,12 @@ buildmap_osm_text_way_tag(char *data)
 		if (wi.WayTourism)
 			free(wi.WayTourism);
 		wi.WayTourism = FromXmlAndDup(value);
+		return;
+	}
+	if (strcasecmp(tag, "amenity") == 0) {
+		if (wi.WayAmenity)
+			free(wi.WayAmenity);
+		wi.WayAmenity = FromXmlAndDup(value);
 		return;
 	}
 
@@ -729,7 +737,7 @@ void
 buildmap_osm_text_way_drop_uninteresting(void)
 {
 	if (wi.WayIsBuilding) {
-	    if (!wi.WayTourism) {
+	    if (!wi.WayTourism && !wi.WayAmenity) {
 		wi.WayIsInteresting = 0;
 	    }
 	}
@@ -770,6 +778,8 @@ buildmap_osm_text_way_finish(void)
 	if (wi.WayIsBuilding) {
 	    if (wi.WayTourism) {
 		buildmap_osm_get_layer(PLACE, "tourism", wi.WayTourism, &wi.WayFlags, &wi.WayLayer);
+	    } else if (wi.WayAmenity) {
+		buildmap_osm_get_layer(PLACE, "amenity", wi.WayAmenity, &wi.WayFlags, &wi.WayLayer);
 	    } else {
 		buildmap_osm_text_reset_way();
 		return;
@@ -821,7 +831,7 @@ buildmap_osm_text_way_finish(void)
         rms_name = 0;
 
 
-        if ((wi.WayFlags & PLACE) && wi.WayTourism) {
+        if ((wi.WayFlags & PLACE) && (wi.WayTourism || wi.WayAmenity)) {
 	    /* we're finishing a way, but the flags may say PLACE if
 	     * we're treating a polygon as a place, for instance.  find
 	     * the center of the bounding box (which is good enough, for
@@ -848,17 +858,21 @@ buildmap_osm_text_way_finish(void)
 		/* this code looks like buildmap_osm_text_node_finish() */
 		point = buildmap_point_add(lon, lat);
 
-		if (wi.WayName && wi.WayTourism) {
-		    if (wi.WayLayer) {
-			RoadMapString s;
-			buildmap_verbose("wayplace: finishing %f %f %s %s layer: %d",
-			    (float)lat/1000000.0, (float)lon/1000000.0,
-			    wi.WayTourism, wi.WayName, wi.WayLayer);
-			s = str2dict (DictionaryCity, (char *) wi.WayName);
-			buildmap_place_add(s, wi.WayLayer, point);
-		    } else {
-			buildmap_verbose("dropping %s %s", wi.WayTourism, wi.WayName);
-		    }
+		if (!wi.WayName)
+		    wi.WayName = FromXmlAndDup("??");
+
+		if (wi.WayLayer) {
+		    RoadMapString s;
+		    buildmap_debug( "wayplace: finishing %f %f %s %s layer: %d",
+			(float)lat/1000000.0, (float)lon/1000000.0,
+			wi.WayTourism ? wi.WayTourism : wi.WayAmenity,
+			wi.WayName, wi.WayLayer);
+		    s = str2dict (DictionaryCity, (char *) wi.WayName);
+		    buildmap_place_add(s, wi.WayLayer, point);
+		} else {
+		    buildmap_debug( "dropping %s %s",
+			wi.WayTourism ? wi.WayTourism : wi.WayAmenity,
+			wi.WayName);
 		}
 
 
@@ -991,7 +1005,7 @@ buildmap_osm_text_way_finish(void)
 			buildmap_check_allocated(shapes);
 		}
 
-		buildmap_debug("lineid %d wi.nWayNodes %d\n",
+		buildmap_debug("lineid %d wi.nWayNodes %d",
 			LineId, wi.nWayNodes);
 		/* Keep info for the shapes */
 		shapes[numshapes].lons = lonsbuf;
