@@ -290,7 +290,7 @@ static void roadmap_locator_layer_mapping_init(void) {
          while(1) {
             name = roadmap_metadata_get_attribute_next ("Class", types[t], i);
             if (name == NULL || name[0] == 0) {
-                roadmap_log(ROADMAP_DEBUG, "Found %d %s in db\n", i, types[t]);
+                roadmap_log(ROADMAP_DEBUG, "Found %d %s layers in db", i, types[t]);
                 break;
             }
             /*
@@ -309,7 +309,7 @@ static void roadmap_locator_layer_mapping_init(void) {
             db_layer++;
          }
      }
-     roadmap_log(ROADMAP_DEBUG, "Found %d total types in map %d (0x%x)\n",
+     roadmap_log(ROADMAP_DEBUG, "Found %d total layer types in map %d (0x%x)",
             db_layer, RoadMapActiveCounty, -RoadMapActiveCounty);
      RoadMapCountyCache[RoadMapActiveCountyCache].mapcount = db_layer;
 }
