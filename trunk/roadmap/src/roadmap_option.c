@@ -39,6 +39,9 @@ static RoadMapConfigDescriptor RoadMapConfigGeometryMain =
 static RoadMapConfigDescriptor RoadMapConfigGeneralUnit =
                         ROADMAP_CONFIG_ITEM("General", "Unit");
 
+static RoadMapConfigDescriptor RoadMapConfigGeneralFullScreen =
+                        ROADMAP_CONFIG_ITEM("General", "FullScreen");
+
 static RoadMapConfigDescriptor RoadMapConfigAddressPosition =
                         ROADMAP_CONFIG_ITEM("Address", "Position");
 
@@ -258,6 +261,11 @@ static void roadmap_option_set_imperial (const char *value) {
     roadmap_config_set (&RoadMapConfigGeneralUnit, "imperial");
 }
 
+static void roadmap_option_set_fullscreen (const char *value) {
+
+    roadmap_config_set (&RoadMapConfigGeneralFullScreen, "yes");
+}
+
 
 static void roadmap_option_set_no_area (const char *value) {
 
@@ -422,6 +430,9 @@ static struct roadmap_option_descriptor RoadMapOptionMap[] = {
 
     {"--imperial", "", roadmap_option_set_imperial, 1,
         "Use the imperial system for all units"},
+
+    {"--full", "", roadmap_option_set_fullscreen, 1,
+        "Start in full screen mode"},
 
     {"--no-area", "", roadmap_option_set_no_area, 1,
         "Do not show the polygons (parks, hospitals, airports, etc..)"},

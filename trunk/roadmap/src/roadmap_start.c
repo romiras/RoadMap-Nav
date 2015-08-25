@@ -118,6 +118,9 @@ static RoadMapDynamicString RoadMapStartGpsID;
 static RoadMapConfigDescriptor RoadMapConfigGeneralUnit =
                         ROADMAP_CONFIG_ITEM("General", "Unit");
 
+static RoadMapConfigDescriptor RoadMapConfigGeneralFullScreen =
+                        ROADMAP_CONFIG_ITEM("General", "FullScreen");
+
 static RoadMapConfigDescriptor RoadMapConfigGeneralKeyboard =
                         ROADMAP_CONFIG_ITEM("General", "Keyboard");
 
@@ -1694,6 +1697,9 @@ void roadmap_start (int argc, char **argv) {
       ("preferences", &RoadMapConfigGeneralKeyboard, "yes", "no", NULL);
 
    roadmap_config_declare_enumeration
+      ("preferences", &RoadMapConfigGeneralFullScreen, "no", "yes", NULL);
+
+   roadmap_config_declare_enumeration
       ("preferences", &RoadMapConfigGeneralShowErrors, "yes", "no", NULL);
 
    roadmap_config_declare
@@ -1771,6 +1777,7 @@ void roadmap_start (int argc, char **argv) {
 
    roadmap_option (argc, argv, 1, roadmap_start_usage);
 
+
 #ifdef _WIN32
    roadmap_log (ROADMAP_WARNING,
 		   "RoadMap build %s starting, time %s",
@@ -1833,6 +1840,9 @@ void roadmap_start (int argc, char **argv) {
    trip_new ();
 # endif
 #endif
+   if (!strcmp(roadmap_config_get (&RoadMapConfigGeneralFullScreen), "yes")) {
+	roadmap_main_toggle_full_screen();
+   }
 
    roadmap_locator_declare_downloader (&roadmap_start_no_download);
 
