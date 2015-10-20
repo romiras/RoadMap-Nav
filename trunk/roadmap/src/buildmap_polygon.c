@@ -98,6 +98,8 @@ typedef struct {
    int count;
    int sorted;
 
+   RoadMapArea area;
+
 } BuildMapPolygon;
 
 typedef struct {
@@ -246,11 +248,13 @@ static void buildmap_polygon_explain_the_line_order_problem
    }
 }
 
-/* FIXME.  this is called with the endpoints of every line.  it
+/* this is called with the endpoints of every line.  it
  * misses all of the shape points for the line, so the bounding
  * box is a poor approximation, at best.  "long lines" have the
  * same problem (but in practice, not as bad -- polygons tend to
  * have bigger bounding boxes than lines, even long ones).
+ * this problem is fixed for OSM maps by calculating the fully-shaped
+ * bbox.
  */
 static void buildmap_polygon_adjust_bbox
         (RoadMapPolygon *polygon, int from, int to) {
@@ -304,12 +308,16 @@ static void buildmap_polygon_fill_in_drawing_order
    BuildMapPolygonLine *this_line;
    BuildMapPolygonLine *other_line;
    RoadMapArea *pa = &polygon->area;
+   int adjust_bbox = 0;
 
    first = polygon->first;
    count = polygon->count;
 
-   pa->west = pa->south = 180000000;
-   pa->east = pa->north = -180000000;
+   if (pa->west == -1) {
+      adjust_bbox = 1;
+      pa->west = pa->south = 180000000;
+      pa->east = pa->north = -180000000;
+   }
 
    end = first + count - 1;
 
@@ -320,7 +328,8 @@ static void buildmap_polygon_fill_in_drawing_order
 
       buildmap_line_get_points_sorted (this_line->line, &from, &to);
 
-      buildmap_polygon_adjust_bbox(polygon, from, to);
+      if (adjust_bbox)
+	  buildmap_polygon_adjust_bbox(polygon, from, to);
 
       if (this_line->side == POLYGON_SIDE_LEFT) {
          /* draw from 'to' to 'from' */
@@ -408,7 +417,8 @@ static void buildmap_polygon_fill_in_drawing_order
    this_line = PolygonLine[index/BUILDMAP_BLOCK] + (index % BUILDMAP_BLOCK);
 
    buildmap_line_get_points_sorted (this_line->line, &from, &to);
-   buildmap_polygon_adjust_bbox(polygon, from, to);
+   if (adjust_bbox)
+      buildmap_polygon_adjust_bbox(polygon, from, to);
 
    /* check that the last line connects with the first */
    if (this_line->side == POLYGON_SIDE_LEFT) {
@@ -510,7 +520,7 @@ int  buildmap_polygon_add_landmark
 }
 
 
-int  buildmap_polygon_add (int landid, RoadMapString cenid, int polyid) {
+int  buildmap_polygon_add (int landid, RoadMapString cenid, int polyid, RoadMapArea **areap) {
 
    int block;
    int offset;
@@ -523,7 +533,7 @@ int  buildmap_polygon_add (int landid, RoadMapString cenid, int polyid) {
 
    this_landmark = buildmap_polygon_search_landmark (landid);
    if (this_landmark == NULL) {
-      return -1;
+      buildmap_fatal(0, "no landmark %d for polygon %d", landid, polyid);
    }
 
    block = PolygonCount / BUILDMAP_BLOCK;
@@ -552,6 +562,19 @@ int  buildmap_polygon_add (int landid, RoadMapString cenid, int polyid) {
    this_polygon->square[1] = -1;
    this_polygon->square[2] = -1;
    this_polygon->square[3] = -1;
+
+   if (areap) {
+      *areap = &this_polygon->area;
+      this_polygon->area.west = this_polygon->area.south = 180000000;
+      this_polygon->area.east = this_polygon->area.north = -180000000;
+   } else {
+      // attempt to preserve compatibility for tiger maps
+      // this will cause the bbox to be calculated in
+      // buildmap_polygon_fill_in_drawing_order(), as was
+      // done in the past.  for OSM maps, it's done while
+      // we add the lines in buildmap_text_osm.c
+      this_polygon->area.west = -1;
+   }
 
    this_polygon->count = 0;
 
@@ -984,6 +1007,7 @@ static int buildmap_polygon_save (void) {
 	    return 1;
          }
          db_poly->count = one_polygon->count;
+         db_poly->area = one_polygon->area;
 
          square = one_polygon->square[0];
 
