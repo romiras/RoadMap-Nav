@@ -28,6 +28,13 @@
  * @brief a module to read OSM text format
  */
 
+/*
+ * this module uses libreadosm to process OSM input.  see:
+ *  http://www.gaia-gis.it/gaia-sins/readosm-1.0.0b-doxy-doc/index.html
+ * it's packaged for debian and others.  for fedora, see:
+ *  http://rpmfind.net//linux/RPM/fedora/updates/18/armhfp/readosm-1.0.0b-1.fc18.armv7hl.html
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,7 +45,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <sys/mman.h>
 #include <time.h>
 #include <readosm.h>
 
@@ -52,8 +58,6 @@
 #include "roadmap_hash.h"
 
 #include "buildmap.h"
-#include "buildmap_zip.h"
-#include "buildmap_city.h"
 #include "buildmap_square.h"
 #include "buildmap_point.h"
 #include "buildmap_place.h"
@@ -72,131 +76,21 @@
 extern char *BuildMapResult;
 
 /* OSM has over 2G nodes already -- enough to overflow a 32 bit signed int */
-typedef unsigned int nodeid_t;
-typedef unsigned int wayid_t;
+typedef unsigned nodeid_t;
+typedef unsigned wayid_t;
 
-/**
- * @brief a couple of variables to keep track of the way we're dealing with
- */
-static struct WayInfo {
-    wayid_t WayId;              /**< are we in a way (its id) */
-    int      nWayNodes;          /**< number of nodes known for 
-						     this way */
-    int      WayLayer;           /**< the layer for this way */
-    char     *WayName;     /**< the street name */
-    char     *WayStreetRef;	 /**< street code,
-				       to be used when no name (e.g. motorway) */
-    int      WayFlags;           /**< properties of this way, from
-						     the table flags */
-    int      WayIsOneWay;        /**< is this way one direction only */
-    int      WayIsBuilding;      /**< this way represents a building */
-    char     *WayTourism;        /**< value of tourism tag, if any */
-    char     *WayAmenity;        /**< value of amenity tag, if any */
-    int      WayAdminLevel;	 /**< boundaries */
-    int      WayTerritorial;     /**< is this a territorial boundary? */
-    int      WayCoast;           /**< coastline */
-    int      WayIsInteresting;   /**< this way is interesting for RoadMap */
-} wi;
-
-/**
- * @brief variables referring to the current node
- */
-static struct NodeInfo {
-    nodeid_t      NodeId;         /**< which node */
-    int      NodeLayer;           /**< the layer for this node */
-    int      NodeFlags;           /**< properties of this node, from
-						     the table flags */
-    char     *NodePlace;         /**< what kind of place is this */
-    char     *NodeName;          /**< what's it's name? */
-    int      NodeLon,            /**< coordinates */
-	     NodeLat;            /**< coordinates */
-    int      NodeFakeFips;       /**< fake postal code */
-} ni;
 
 /**
  * @brief some global variables
  */
-// static int      LineNo;                 /**< line number in the input file */
-static int      nPolygons = 0;          /**< current polygon id (number of
-                                                        polygons until now) */
-static int      LineId = 0;             /**< for buildmap_line_add */
+static int      PolygonId = 0;
+static int      LineId = 0;
+
+static int l_shoreline, l_boundary;
+static int nWays, nNodes;
 
 /**
- * @brief table for translating the names in XML strings into readable format
- */
-static struct XmlIsms {
-        char    *code;          /**< the piece between & and ; */
-        char    *string;        /**< translates into this */
-} XmlIsms[] = {
-        { "apos",       "'" },
-        { "gt",         ">" },
-        { "lt",         "<" },
-        { "quot",       """" },
-        { "amp",        "&" },
-        { NULL,         NULL }  /* end */
-};
-
-/**
- * @brief remove XMLisms such as &apos; and strdup
- * limitation : names must be shorter than 512 bytes
- * @param s input string
- * @return duplicate, to be freed elsewhere
- */
-static char *FromXmlAndDup(const char *s)
-{
-        int             i, j, k, l, found;
-        static char     res[512];
-
-        for (i=j=0; s[i]; i++)
-                if (s[i] == '&') {
-                        found = 0;
-                        for (k=0; XmlIsms[k].code && !found; k++) {
-                                for (l=0; s[l+i+1] == XmlIsms[k].code[l]; l++)
-                                        ;
-                                /* When not equal, must be at end of code */
-                                if (XmlIsms[k].code[l] == '\0' &&
-                                                s[l+i+1] == ';') {
-                                        found = 1;
-                                        i += l+1;
-                                        for (l=0; XmlIsms[k].string[l]; l++)
-                                                res[j++] = XmlIsms[k].string[l];
-                                }
-                        }
-                        if (!found)
-                                res[j++] = s[i];
-                } else {
-                        res[j++] = s[i];
-                }
-        res[j] = '\0';
-        return strdup(res);
-}
-
-/**
- * @brief reset all the info about this way
- */
-static void
-buildmap_osm_text_reset_way(void)
-{
-	if (wi.WayName) free(wi.WayName); 
-	if (wi.WayStreetRef) free(wi.WayStreetRef);
-	if (wi.WayTourism) free(wi.WayTourism);
-	if (wi.WayAmenity) free(wi.WayAmenity);
-	memset(&wi, 0, sizeof(wi));
-}
-
-/**
- * @brief reset all the info about this node
- */
-static void
-buildmap_osm_text_reset_node(void)
-{
-	if (ni.NodePlace) free(ni.NodePlace);
-	if (ni.NodeName) free(ni.NodeName);
-	memset(&ni, 0, sizeof(ni));
-}
-
-/**
- * @brief
+ * @brief add string to dictionary, taking note of null inputs
  * @param d
  * @param string
  * @return
@@ -210,17 +104,27 @@ static RoadMapString str2dict (BuildMapDictionary d, const char *string) {
    return buildmap_dictionary_add (d, (char *) string, strlen(string));
 }
 
+int
+qsort_compare_unsigneds(const void *id1, const void *id2)
+{
+    if (*(unsigned int *)id1 < *(unsigned int *)id2)
+	    return -1;
+    else if (*(unsigned int *)id1 > *(unsigned int *)id2)
+	    return 1;
+    else
+	    return 0;
+}
+
 /**
- * @brief simplistic way to gather point data
+ * @brief incoming lat/lon nodes are translated to roadmap points,
+ *	and a hash is maintained
  */
 static int nPointsAlloc = 0;
 static int nPoints = 0;
 static struct points {
         int     id;
         int     point;
-} *points = 0;
-
-#define	NPOINTSINC	10000
+} *Points = 0;
 
 RoadMapHash	*PointsHash = NULL;
 
@@ -229,8 +133,8 @@ buildmap_osm_text_point_hash_reset(void)
 {
     nPoints = 0;
     PointsHash = 0;
-    if (points) free(points);
-    points = 0;
+    if (Points) free(Points);
+    Points = 0;
     nPointsAlloc = 0;
 }
 
@@ -238,21 +142,23 @@ static void
 buildmap_osm_text_point_add(int id, int point)
 {
         if (nPoints == nPointsAlloc) {
-                nPointsAlloc += NPOINTSINC;
-
+		if (Points)
+		    nPointsAlloc *= 2;
+		else
+		    nPointsAlloc = 10000;
 		if (PointsHash == NULL)
 			PointsHash = roadmap_hash_new("PointsHash", nPointsAlloc);
 		else
 			roadmap_hash_resize(PointsHash, nPointsAlloc);
 
-                points = realloc(points, sizeof(struct points) * nPointsAlloc);
-		buildmap_check_allocated(points);
+                Points = realloc(Points, sizeof(struct points) * nPointsAlloc);
+		buildmap_check_allocated(Points);
         }
 
 	roadmap_hash_add(PointsHash, id, nPoints);
 
-        points[nPoints].id = id;
-        points[nPoints++].point = point;
+        Points[nPoints].id = id;
+        Points[nPoints++].point = point;
 }
 
 /**
@@ -268,68 +174,12 @@ buildmap_osm_text_point_get(int id)
         for (i = roadmap_hash_get_first(PointsHash, id);
 			i >= 0;
 			i = roadmap_hash_get_next(PointsHash, i))
-                if (points[i].id == id)
-                        return points[i].point;
+                if (Points[i].id == id)
+                        return Points[i].point;
         return -1;
 }
 
 
-/**
- * @brief At the end of a node, process its data
- * @param data point to the line buffer
- * @return error indication
- */
-void
-buildmap_osm_text_node_finish(void)
-{
-
-	int point;
-	RoadMapString s;
-
-	/* Add the node */
-	point = buildmap_point_add(ni.NodeLon, ni.NodeLat);
-	buildmap_osm_text_point_add(ni.NodeId, point);
-
-	if (ni.NodeName && ni.NodePlace) {
-	    if (ni.NodeLayer) {
-		buildmap_debug( "finishing %f %f %s %s layer: %d",
-		    (float)ni.NodeLat/1000000.0, (float)ni.NodeLon/1000000.0,
-		    ni.NodePlace, ni.NodeName, ni.NodeLayer);
-		s = str2dict (DictionaryCity, (char *) ni.NodeName);
-		buildmap_place_add(s, ni.NodeLayer, point);
-	    } else {
-		buildmap_debug( "dropping %s %s", ni.NodePlace, ni.NodeName);
-	    }
-	}
-
-        buildmap_osm_text_reset_node();
-}
-
-/**
- * @brief this structure keeps shape data for a postprocessing step
- */
-struct shapeinfo {
-    int lineid;
-    int count;
-    int *lons;
-    int *lats;
-};
-
-static int numshapes = 0;
-static int nallocshapes = 0;
-
-/**
- * @brief ?
- */
-static struct shapeinfo *shapes;
-
-struct neighbor_ways {
-    int tileid;		    // these are the ways for this tileid
-    RoadMapFileContext fc;  // file context for the mmap
-    int count;	    	    // how many ways
-    const wayid_t *ways;    // the way ids for that tileid.
-			    // (also serves as the "populated" flag.)
-} Neighbor_Ways[8];
 
 static int maxWayTable = 0;
 int nWayTable = 0;
@@ -345,6 +195,12 @@ copyWayTable(void)
 	memcpy(WayTableCopy, WayTable, nWayTable * sizeof(wayid_t));
 }
 
+/**
+ * @brief  we mark a way as interesting by adding it to WayTable.  this
+ *	is later sorted, and we can use it later to quickly check if
+ *	we thought it was interesing.
+ * @param wayid
+ */
 static void
 saveInterestingWay(wayid_t wayid)
 {
@@ -363,23 +219,10 @@ saveInterestingWay(wayid_t wayid)
 	nWayTable++;
 }
 
-int
-qsort_compare_unsigneds(const void *id1, const void *id2)
-{
-    if (*(unsigned int *)id1 < *(unsigned int *)id2)
-	    return -1;
-    else if (*(unsigned int *)id1 > *(unsigned int *)id2)
-	    return 1;
-    else
-	    return 0;
-}
-
 /**
- * @brief find out if this way is interesting
+ * @brief after WayTable has been sorted, see if this way is interesting
  * @param wayid
  * @return whether we thought way was interesting when we found it
- *
- * Note : relies on the order of ways encountered in the file, for performance
  */
 static wayid_t *
 isWayInteresting(wayid_t wayid)
@@ -395,6 +238,10 @@ static int nNodeTable = 0;
 static nodeid_t *NodeTable = NULL;
 
 
+/*
+ * @brief creates our .ways table, later used by our neighbors so they
+ *    know which ways are already being taken care of by us.
+ */
 void
 buildmap_osm_text_save_wayids(const char *path, const char *outfile)
 {
@@ -427,8 +274,14 @@ buildmap_osm_text_save_wayids(const char *path, const char *outfile)
 }
 
 
+/**
+ * @brief  we mark a node as interesting by adding it to NodeTable.  this
+ *	is later sorted, and we can use it later to quickly check if
+ *	we thought it was interesting.
+ * @param nodeid
+ */
 static void
-saveInterestingNode(nodeid_t node)
+saveInterestingNode(nodeid_t nodeid)
 {
 
 	if (nNodeTable == maxNodeTable) {
@@ -441,10 +294,15 @@ saveInterestingNode(nodeid_t node)
 		buildmap_check_allocated(NodeTable);
 	}
 
-	NodeTable[nNodeTable] = node;
+	NodeTable[nNodeTable] = nodeid;
 	nNodeTable++;
 }
 
+/**
+ * @brief after NodeTable has been sorted, see if this node is interesting
+ * @param nodeid
+ * @return whether we thought way was interesting when we found it
+ */
 static int
 isNodeInteresting(nodeid_t nodeid)
 {
@@ -459,104 +317,12 @@ isNodeInteresting(nodeid_t nodeid)
 
 
 /**
- * @brief
- * @param data points into the line of text being processed
- * @return error indication
- *
- * Example line :
- *     <nd ref="997470"/>
+ * @brief  checks to see if the tag and value found in the input data
+ *	corresponds to a layer we're interested in recording in the map.
+ *      the layer is returned if so (but we don't touch it if not).  the
+ *	returned flags indicate what sort of layer this is (PLACE, AREA).
+ * @param lookfor limits the search to matching types (PLACE, AREA)
  */
-
-int      nWayNodeAlloc; /**< size of the allocation of the array */
-int      *WayNodes;     /**< the array to keep track of this way's nodes */
-
-void
-buildmap_osm_text_save_way_nodes(char *data)
-{
-        nodeid_t node;
-	int s;
-
-        if (!wi.WayId)
-                buildmap_fatal(0, "Wasn't in a way (%s)", data);
-
-        s = sscanf(data, "nd ref=%*[\"']%u%*[\"']", &node);
-        if (s != 1)
-		buildmap_fatal(0, "fail to scanf interesting nd");
-
-        if (buildmap_osm_text_point_get(node) < 0) {
-                return;
-        }
-
-        if (wi.nWayNodes == nWayNodeAlloc) {
-		if (WayNodes)
-                    nWayNodeAlloc *= 2;
-		else
-                    nWayNodeAlloc = 1000;
-                WayNodes = 
-                    (int *)realloc(WayNodes, sizeof(*WayNodes) * nWayNodeAlloc);
-		buildmap_check_allocated(WayNodes);
-        }
-        WayNodes[wi.nWayNodes++] = node;
-}
-
-/**
- * @brief collect node data in pass 1
- * @param data
- * @return an error indicator
- *
- * The input line is discarded if a bounding box is specified and
- * the node is outside.
- *
- * Example input line :
- *   <node id="123295" timestamp="2005-07-05T03:26:11Z" user="LA2"
- *      lat="50.4443626" lon="3.6855288"/>
- */
-void
-buildmap_osm_text_node_read_lat_lon(char *p)
-{
-    int         nchars;
-    double      flat, flon;
-    int         NodeLatRead, NodeLonRead;
-    char	tag[512], value[512];
-    int		s;
-
-    ni.NodeLat = ni.NodeLon = 0;
-    NodeLatRead = NodeLonRead = 0;
-
-    while (NodeLatRead == 0 || NodeLonRead == 0) {
-
-            for (; *p && isspace(*p); p++) ;
-
-            s = sscanf(p, "%[a-zA-Z0-9_]=%*[\"']%[^\"']%*[\"']%n",
-                        	tag, value, &nchars);
-	    if (s != 2)
-		    buildmap_fatal(0, "bad tag read at '%s'\n", p);
-
-            if (strcmp(tag, "lat") == 0) {
-                    sscanf(value, "%lf", &flat);
-                    ni.NodeLat = flat * 1000000;
-                    NodeLatRead++;
-            } else if (strcmp(tag, "lon") == 0) {
-                    sscanf(value, "%lf", &flon);
-                    ni.NodeLon = flon * 1000000;
-                    NodeLonRead++;
-            }
-
-            p += nchars;
-    }
-
-    /* if the node is finished ("\>"), then finish it off.  i.e.,
-     * these are untagged nodes */
-    for (; *p && isspace(*p); p++) ;
-    if (*p == '/' && *(p+1) == '>') {
-	    /* since this is a tagless node, it can only be interesting
-	     * because it's in the interesting list. */
-	    if (isNodeInteresting(ni.NodeId)) {
-		    buildmap_osm_text_node_finish();
-	    } 
-    }
-
-}
 
 int
 buildmap_osm_get_layer(int lookfor, const char *tag, const char *value,
@@ -585,442 +351,18 @@ buildmap_osm_get_layer(int lookfor, const char *tag, const char *value,
     return 0;
 }
 
-/**
- * @brief deal with tag lines outside of ways
- * @param data points into the line of text being processed
- * @return error indication
- */
-void
-buildmap_osm_text_node_tag(char *data, int catalog)
-{
-        static char *tagk = 0;
-        static char *tagv = 0;
-	int s;
-
-        if (! tagk)
-                tagk = malloc(512);
-        if (! tagv)
-                tagv = malloc(512);
-
-// it turns out that the OSM xml output contains raw apostrophe
-// characters, e.g. "Cortina d'Ampezzo".  but i assume that if
-// a placename actually contained a '"', then the XML escape
-// mechanisms would be used, and not single quotes.
-// summary:  stop parsing for 'string', just get "string".
-#ifdef BEFORE
-        s = sscanf(data, "tag k=%*['\"]%[^\"']%*['\"] v=%*['\"]%[^\"']%*['\"]",
-                        tagk, tagv);
-#else
-        s = sscanf(data, "tag k=%*[\"]%[^\"]%*[\"] v=%*[\"]%[^\"]%*[\"]/>",
-                        tagk, tagv);
-#endif
-	if (s != 2)
-		buildmap_fatal(0, "fail to scanf tag k and v (%s)", data);
-
-	if (strcmp(tagk, "name") == 0) {
-                /* <tag k="name" v="Herent"/> */
-                if (ni.NodeName)
-                        free(ni.NodeName);
-                ni.NodeName = FromXmlAndDup(tagv);
-		if (catalog) {
-		    saveInterestingNode(ni.NodeId);
-		}
-        } else {
-	    if (!buildmap_osm_get_layer(PLACE, tagk, tagv,
-			    &ni.NodeFlags, &ni.NodeLayer)) {
-		return;
-	    }
-	    if (ni.NodeFlags & PLACE) {
-		    if (ni.NodePlace)
-			    free(ni.NodePlace);
-		    ni.NodePlace = strdup(tagv);
-		    if (catalog) {
-			saveInterestingNode(ni.NodeId);
-		    }
-	    } else {
-		buildmap_debug("dropping node %u info k %s v %s", ni.NodeId, tagk, tagv);
-	    }
-	}
-
-}
 
 /**
- * @brief deal with tag lines inside a <way> </way> pair
- * @param data points into the line of text being processed
- * @return error indication
- *
- * Example line :
- *     <tag k="highway" v="residential"/>
- *     <tag k="name" v="Rue de Thiribut"/>
- *     <tag k="created_by" v="JOSM"/>
- *     <tag k="ref" v="E40">
- *     <tag k="int_ref" v="E 40">
+ * @brief neighbor_ways keeps track of ways our neighbors are already 
+ *	taking care of.
  */
-void
-buildmap_osm_text_way_tag(char *data)
-{
-	static char	*tag = 0, *value = 0;
-	int		s;
-
-	/* have we already decided this way is uninteresting? */
-	if (!wi.WayIsInteresting)
-		return;
-
-	if (! tag) tag = malloc(512);
-	if (! value) value = malloc(512);
-
-	s = sscanf(data, "tag k=%*[\"']%[^\"']%*[\"'] v=%*[\"']%[^\"']%*[\"']",
-			tag, value);
-	if (s != 2)
-		buildmap_fatal(0, "fail to scanf tag and value (%s)", data);
-
-	/* street names */
-	if (strcasecmp(tag, "name") == 0) {
-		if (wi.WayName)
-			free(wi.WayName);
-		wi.WayName = FromXmlAndDup(value);
-		return;
-	} 
-	
-	if (strcasecmp(tag, "ref") == 0) {
-		if (wi.WayStreetRef)
-			free(wi.WayStreetRef);
-		wi.WayStreetRef = FromXmlAndDup(value);
-		return;
-	} 
-	
-#ifdef BUILDMAP_NAVIGATION_SUPPORT
-	if (strcasecmp(tag, "oneway") == 0 && strcasecmp(value, "yes") == 0) {
-		wi.WayIsOneWay = ROADMAP_LINE_DIRECTION_ONEWAY;
-		return;
-	}
-#endif
-	
-	if (strcasecmp(tag, "building") == 0) {
-		/* the value can be things like "shed", "barn", "temple",
-		 * or "yes".  we don't really care which.
-		 */
-		wi.WayIsBuilding = 1;
-		return;
-	}
-
-	if (strcasecmp(tag, "tourism") == 0) {
-		if (wi.WayTourism)
-			free(wi.WayTourism);
-		wi.WayTourism = FromXmlAndDup(value);
-		return;
-	}
-	if (strcasecmp(tag, "amenity") == 0) {
-		if (wi.WayAmenity)
-			free(wi.WayAmenity);
-		wi.WayAmenity = FromXmlAndDup(value);
-		return;
-	}
-
-	if (strcasecmp(tag, "admin_level") == 0) {
-		wi.WayAdminLevel = atoi(value);
-		return;
-	} else if (strcasecmp(tag, "border_type") == 0) {
-		wi.WayTerritorial = !strcasecmp(value, "territorial");
-		return;
-	} else if (strcasecmp(tag, "natural") == 0 &&
-			strcasecmp(value, "coastline") == 0) {
-		wi.WayCoast = 1;
-	}
-
-	/*
-	 * Get layer info
-	 */
-	buildmap_osm_get_layer(ANY, tag, value, &wi.WayFlags, &wi.WayLayer);
-
-}
-
-void
-bxuildmap_osm_text_way_drop_uninteresting(void)
-{
-	if (wi.WayIsBuilding) {
-	    if (!wi.WayTourism && !wi.WayAmenity) {
-		wi.WayIsInteresting = 0;
-	    }
-	}
-}
-
-/**
- * @brief We found an end tag for a way, so we must have read all
- *  the required data.  Process it.
- * @param data points to the line of text being processed
- * @return error indication
- */
-void
-buildmap_osm_text_way_finish(void)
-{
-        int             from_point, to_point, line, street;
-        int             fromlon, fromlat;
-        RoadMapString   rms_dirp, rms_dirs, rms_type, rms_name;
-        int             j;
-	char compound_name[1024];
-	char *n;
-	static int	l_shoreline = 0,
-			l_boundary = 0;
-       
-	if (l_shoreline == 0)
-		l_shoreline = buildmap_layer_get("shore");;
-	if (l_boundary == 0)
-		l_boundary = buildmap_layer_get("boundaries");;
-
-        if (wi.WayId == 0)
-                buildmap_fatal(0, "Wasn't in a way");
-
-	if (wi.nWayNodes < 1) {
-                buildmap_osm_text_reset_way();
-                return;
-	}
-
-
-	if (wi.WayIsBuilding) {
-	    if (wi.WayTourism) {
-		buildmap_osm_get_layer(PLACE, "tourism", wi.WayTourism, &wi.WayFlags, &wi.WayLayer);
-	    } else if (wi.WayAmenity) {
-		buildmap_osm_get_layer(PLACE, "amenity", wi.WayAmenity, &wi.WayFlags, &wi.WayLayer);
-	    } else {
-		buildmap_osm_text_reset_way();
-		return;
-	    }
-	}
-
-	if (wi.WayLayer == 0) {
-		/* if a way is both a coast and a boundary, treat it only as coast */
-		if (wi.WayCoast) {
-			wi.WayLayer = l_shoreline;
-		} else if (wi.WayAdminLevel) {
-			/* national == 2, state == 4, ignore lesser boundaries */
-			/* also ignore territorial (marine) borders */
-			if  (wi.WayAdminLevel > 4 || wi.WayTerritorial) {
-				wi.WayIsInteresting = 0;
-			} else if (wi.WayAdminLevel > 2) {
-
-			    from_point = buildmap_osm_text_point_get(WayNodes[0]);
-			    fromlon = buildmap_point_get_longitude(from_point);
-			    fromlat = buildmap_point_get_latitude(from_point);
-
-			    /* if we're not (roughly) in north america,
-			     * discard state boundaries as well.  */
-			    if (fromlon > -32 || fromlat < 17) {
-				    /* east of the azores or south of mexico */
-				    wi.WayIsInteresting = 0;
-			    }
-			}
-
-			wi.WayLayer = l_boundary;
-		}
-	}
-
-        if ( !wi.WayIsInteresting || wi.WayLayer == 0) {
-		wayid_t *wp;
-                buildmap_debug("discarding way %d, not interesting (%s)", wi.WayId, wi.WayName);
-		wp = isWayInteresting(wi.WayId);
-		if (wp) {
-		    WayTableCopy[wp-WayTable] = 0;
-		}
-
-                buildmap_osm_text_reset_way();
-                return;
-        }
-
-        rms_dirp = str2dict(DictionaryPrefix, "");
-        rms_dirs = str2dict(DictionarySuffix, "");
-        rms_type = str2dict(DictionaryType, "");
-        rms_name = 0;
-
-
-        if ((wi.WayFlags & PLACE) && (wi.WayTourism || wi.WayAmenity)) {
-	    /* we're finishing a way, but the flags may say PLACE if
-	     * we're treating a polygon as a place, for instance.  find
-	     * the center of the bounding box (which is good enough, for
-	     * these purposes), and make it into a place.
-	     */
-		int minlat = 999999999, maxlat = -999999999;
-		int minlon = 999999999, maxlon = -999999999;
-		int point, lon, lat;
-
-		for (j = 0; j < wi.nWayNodes; j++) {
-			point = buildmap_osm_text_point_get(WayNodes[j]);
-			lon = buildmap_point_get_longitude(point);
-			lat = buildmap_point_get_latitude(point);
-
-			if (lat < minlat) minlat = lat;
-			if (lat > maxlat) maxlat = lat;
-			if (lon < minlon) minlon = lon;
-			if (lon > maxlon) maxlon = lon;
-		}
-
-		lat = (maxlat + minlat) / 2;
-		lon = (maxlon + minlon) / 2;
-
-		/* this code looks like buildmap_osm_text_node_finish() */
-		point = buildmap_point_add(lon, lat);
-
-		if (!wi.WayName)
-		    wi.WayName = FromXmlAndDup("??");
-
-		if (wi.WayLayer) {
-		    RoadMapString s;
-		    buildmap_debug( "wayplace: finishing %f %f %s %s layer: %d",
-			(float)lat/1000000.0, (float)lon/1000000.0,
-			wi.WayTourism ? wi.WayTourism : wi.WayAmenity,
-			wi.WayName, wi.WayLayer);
-		    s = str2dict (DictionaryCity, (char *) wi.WayName);
-		    buildmap_place_add(s, wi.WayLayer, point);
-		} else {
-		    buildmap_debug( "dropping %s %s",
-			wi.WayTourism ? wi.WayTourism : wi.WayAmenity,
-			wi.WayName);
-		}
-
-
-	} else if ((wi.WayFlags & AREA) &&
-			(WayNodes[0] == WayNodes[wi.nWayNodes-1])) {
-		/* see http://wiki.openstreetmap.org/wiki/The_Future_of_Areas
-		 * for why the above conditions are simplistic */
-                static int polyid = 0;
-                static int cenid = 0;
-
-                /*
-                 * Detect an AREA -> create a polygon
-                 */
-                nPolygons++;
-                cenid++;
-                polyid++;
-
-                rms_name = str2dict(DictionaryStreet, wi.WayName);
-                buildmap_polygon_add_landmark (nPolygons, wi.WayLayer, rms_name);
-                buildmap_polygon_add(nPolygons, cenid, polyid);
-
-                for (j=1; j<wi.nWayNodes; j++) {
-                        int prevpoint =
-                            buildmap_osm_text_point_get(WayNodes[j-1]);
-                        int point =
-                            buildmap_osm_text_point_get(WayNodes[j]);
-
-                        LineId++;
-                        buildmap_line_add
-                                (LineId, wi.WayLayer, prevpoint, point,
-				 ROADMAP_LINE_DIRECTION_BOTH);
-			buildmap_polygon_add_line (cenid, polyid, LineId, POLYGON_SIDE_RIGHT);
-                }
-	} else {
-		/*
-		 * Register the way
-		 *
-		 * Need to do this several different ways :
-		 * - begin and end points form a "line"
-		 * - register street name
-		 * - adjust the square
-		 * - keep memory of the point coordinates so we can
-		 *   postprocess the so called shapes (otherwise we only have
-		 *   straight lines)
-		 */
-
-		int     *lonsbuf, *latsbuf;
-
-		/* Street name */
-		buildmap_debug ("Way %d [%s] ref [%s]", wi.WayId,
-				wi.WayName ? wi.WayName : "",
-				wi.WayStreetRef ? wi.WayStreetRef : "");
-
-		if (wi.WayStreetRef) {
-		    char *d = compound_name;
-		    char *s = wi.WayStreetRef;
-#define ENDASHSEP " \xe2\x80\x93 "
-#define EMDASHSEP " \xe2\x80\x94 "
-		    while (*s) {  /* OSM separates multi-value refs with ';' */
-			if (*s == ';') {
-			    d += sprintf(d, ENDASHSEP);
-			} else {
-			    *d++ = *s;
-			}
-			s++;
-		    }
-		    n = compound_name;
-		    *d = '\0';
-
-		    if (wi.WayName) {
-        		// sprintf(d, ", %s", wi.WayName);
-        		sprintf(d, "%s%s", ENDASHSEP, wi.WayName);
-        	    }
-		} else {
-        	    n = wi.WayName;
-		}
-		rms_name = str2dict(DictionaryStreet, n);
-
-		LineId++;
-		/* Map begin and end points to internal point id */
-		from_point = buildmap_osm_text_point_get(WayNodes[0]);
-		to_point = buildmap_osm_text_point_get(WayNodes[wi.nWayNodes-1]);
-
-		line = buildmap_line_add(LineId,
-			wi.WayLayer, from_point, to_point, wi.WayIsOneWay);
-
-		street = buildmap_street_add(wi.WayLayer,
-				rms_dirp, rms_name, rms_type,
-				rms_dirs, line);
-		buildmap_range_add_no_address(line, street);
-
-		/*
-		 * We're passing too much here - the endpoints of
-		 * the line don't need to be passed to the shape
-		 * module.  We're keeping them here just to be on
-		 * the safe side, they'll be ignored in
-		 * buildmap_osm_text_ways_shapeinfo().
-		 *
-		 * The lonsbuf/latsbuf are never freed, need to be
-		 * preserved for shape registration which happens
-		 * at the end of the program run, so exit() will
-		 * free this for us.
-		 */
-
-		lonsbuf = calloc(wi.nWayNodes, sizeof(int));
-		latsbuf = calloc(wi.nWayNodes, sizeof(int));
-
-		for (j=0; j<wi.nWayNodes; j++) {
-			int point =
-			    buildmap_osm_text_point_get(WayNodes[j]);
-			int lon = buildmap_point_get_longitude(point);
-			int lat = buildmap_point_get_latitude(point);
-
-			/* Keep info for the shapes */
-			lonsbuf[j] = lon;
-			latsbuf[j] = lat;
-
-			buildmap_square_adjust_limits(lon, lat);
-		}
-
-		if (numshapes == nallocshapes) {
-			/* Allocate additional space (in big
-			 * chunks) when needed */
-			if (shapes)
-			    nallocshapes *= 2;
-			else
-			    nallocshapes = 1000;
-			shapes = realloc(shapes,
-			    nallocshapes * sizeof(struct shapeinfo));
-			buildmap_check_allocated(shapes);
-		}
-
-		buildmap_debug("lineid %d wi.nWayNodes %d",
-			LineId, wi.nWayNodes);
-		/* Keep info for the shapes */
-		shapes[numshapes].lons = lonsbuf;
-		shapes[numshapes].lats = latsbuf;
-		shapes[numshapes].count = wi.nWayNodes;
-		shapes[numshapes].lineid = LineId;
-
-		numshapes++;
-	}
-
-        buildmap_osm_text_reset_way();
-
-}
+struct neighbor_ways {
+    int tileid;		    // these are the ways for this tileid
+    RoadMapFileContext fc;  // file context for the mmap
+    int count;	    	    // how many ways
+    const wayid_t *ways;    // the way ids for that tileid.
+			    // (also serves as the "populated" flag.)
+} Neighbor_Ways[8];
 
 /*
  * @brief memory maps the way list for the give tileid, if it exists
@@ -1117,6 +459,20 @@ buildmap_osm_text_check_neighbors(wayid_t wayid)
 }
 
 /**
+ * @brief this structure keeps shape data for a postprocessing step
+ */
+struct shapeinfo {
+    int lineid;
+    int count;
+    int *lons;
+    int *lats;
+};
+
+static int nShapes = 0;
+static int nShapesAlloc = 0;
+static struct shapeinfo *shapes;
+
+/**
  * @brief a postprocessing step to load shape info
  *
  * this needs to be a separate step because lines need to be sorted
@@ -1131,11 +487,11 @@ buildmap_osm_text_ways_shapeinfo(void)
     int *lons, *lats;  /* , *used; */
     int line_index;
 
-    buildmap_info("loading shape info (from %d ways) ...", numshapes);
+    buildmap_info("loading shape info (from %d ways) ...", nShapes);
 
     buildmap_line_sort();
 
-    for (i = 0; i < numshapes; i++) {
+    for (i = 0; i < nShapes; i++) {
 
         count = shapes[i].count;
 
@@ -1162,460 +518,10 @@ buildmap_osm_text_ways_shapeinfo(void)
 }
 
 
-static int text_file_is_pipe;
-FILE *buildmap_osm_text_fopen(char *fn)
-{
-    FILE *fdata;
-    int len;
-
-    len = strlen(fn);
-    if (len > 3 && strcmp(&fn[len-3], ".gz") == 0) {
-	char command[1024];
-	sprintf(command, "gzip -d -c %s", fn);
-	fdata = popen(command, "r");
-	text_file_is_pipe = 1;
-    } else {
-	fdata = fopen(fn, "r");
-	text_file_is_pipe = 0;
-    }
-    
-    if (fdata == NULL) {
-            buildmap_fatal(0, "couldn't open \"%s\"", fn);
-            return NULL;
-    }
-
-    return fdata;
-}
-
-int buildmap_osm_text_fclose(FILE *fp)
-{
-    if (text_file_is_pipe)
-	return pclose(fp);
-    else
-	return fclose(fp);
-}
-
-#if BEFORE
-/**
- * @brief This is the gut of buildmap_osm_text : parse an OSM XML file
- * @param fdata an open file pointer, this will get read twice
- * @param country_num the country id that we're working for
- * @param division_num the country subdivision id that we're working for
- * @return error indication
- *
- * This is a simplistic approach to parsing the OSM text (XML) files.
- * It scans the XML twice, to cope with out of order information.
- * (Note that this simplistic approach may raise eyebrows, but this is
- * not a big time consumer !)
- *
- * Pass 1 deals with way definitions -- make a list of interesting ways.
- * Pass 2 catalogs interesting nodes, based on references from ways.
- * Pass 3 interprets ways and a few tags.
- *
- * All underlying processing is passed to other functions.
- */
-void
-buildmap_osm_text_read(char *fn, int tileid, int country_num, int division_num)
-{
-    FILE 	*fdata;
-    int		lines;
-    char	*got;
-    static char	buf[LINELEN];
-    char	*p;
-    time_t	t[10];
-    int		passid, NumNodes, NumWays;
-    struct stat st;
-    wayid_t interesting_way = 0;
-    int		in_relation;
-    int		need_xml_header = 1;
-    int		need_osm_header = 1;
-    int		need_osm_trailer = 1;
-    int		s;
-
-    fdata = buildmap_osm_text_fopen(fn);
-    fstat(fileno(fdata), &st);
-
-    ni.NodeFakeFips = 1000000 + country_num * 1000 + division_num;
-
-    if (tileid)
-	    buildmap_osm_text_neighbor_way_maps(tileid);
-
-    buildmap_osm_text_point_hash_reset();
-    buildmap_osm_text_reset_way();
-    buildmap_osm_text_reset_node();
-
-    (void) time(&t[0]);
-    passid = 1;
-
-    DictionaryPrefix = buildmap_dictionary_open("prefix");
-    DictionaryStreet = buildmap_dictionary_open("street");
-    DictionaryType = buildmap_dictionary_open("type");
-    DictionarySuffix = buildmap_dictionary_open("suffix");
-    DictionaryCity = buildmap_dictionary_open("city");
-
-    buildmap_osm_common_find_layers ();
-
-    /*
-     * Pass 1 - just figure out which ways are interesting
-     */
-    buildmap_info("Starting pass %d", passid);
-    buildmap_set_source("pass 1");
-    LineNo = 0;
-    NumWays = 0;
-    numshapes = 0;
-    nPolygons = 0;
-    LineId = 0;
-    nWayTable = 0;
-    nNodeTable = 0;
-
-    while (! feof(fdata) && need_osm_trailer) {
-        buildmap_set_line(++LineNo);
-	if (LineNo % 1000 == 0) buildmap_progress(LineNo, 0);
-        got = fgets(buf, LINELEN, fdata);
-        if (got == NULL) {
-            if (feof(fdata))
-                break;
-            buildmap_fatal(0, "short read (length)");
-        }
-
-        /* Figure out the XML */
-        for (p=buf; *p && isspace(*p); p++) ;
-        if (*p == '\n' || *p == '\r') 
-                continue;
-
-	/* do some error checking in the first pass */
-	if (need_xml_header) {
-	    if (strncmp(p, "<?xml ", 6))
-		buildmap_fatal(0, "bad input from %s, no <?xml line", fn);
-	    need_xml_header = 0;
-	    continue;
-	}
-	if (need_osm_header) {
-	    if (strncmp(p, "<osm ", 5))
-		buildmap_fatal(0, "bad input from %s, no <osm line", fn);
-	    need_osm_header = 0;
-	    continue;
-	}
-
-        if (*p != '<') {
-		/*
-		 * Assume we're in a continuation line such as
-		 * <tag k='opening_hours' v='Sa 09:30-19:00;
-		 * Su 10:00-14:00'/>
-		 * and just continue with the next line and hope we'll pick up
-		 * a new tag soon.
-		 */
-		continue;
-	}
-
-        p++; /* point to character after '<' now */
-        for (; *p && isspace(*p); p++) ;
-
-	in_relation = 0;
-        if (strncasecmp(p, "relation", 8) == 0) {
-
-		in_relation = 1;
-		continue;
-
-        } else if (strncasecmp(p, "/relation", 9) == 0) {
-
-		in_relation = 0;
-		continue;
-
-        } else if (in_relation) {
-
-		continue;
-
-        } else if (strncasecmp(p, "way", 3) == 0) {
-
-		// assume ways are interesting, to begin with
-		wi.WayIsInteresting = 1;
-		s = sscanf(p, "way id=%*[\"']%u%*[\"']", &wi.WayId);
-		if (s != 1)
-			buildmap_fatal(0, "buildmap_osm_text(%s) way error", p);
-
-		NumWays++;
-                continue;
-
-        } else if (strncasecmp(p, "/way", 4) == 0) {
-
-		/* if we're processing a quadtile, don't include any
-		 * ways that our neighbors already include */
-		if (tileid && wi.WayId && wi.WayIsInteresting &&
-			    buildmap_osm_text_check_neighbors(wi.WayId)) {
-			buildmap_verbose("dropping way %d because a neighbor "
-				"already has it", wi.WayId);
-			wi.WayIsInteresting = 0;
-		}
-
-		if (wi.WayIsBuilding) {
-		    if (!wi.WayTourism && !wi.WayAmenity) {
-			wi.WayIsInteresting = 0;
-		    }
-		}
-
-		/* if the way is still flagged interesting, save it */
-		if (wi.WayId && wi.WayIsInteresting)
-			saveInterestingWay(wi.WayId);
-
-		buildmap_osm_text_reset_way();
-                continue;
-
-        } else if (strncasecmp(p, "tag", 3) == 0) {
-
-		if (wi.WayId)
-                	buildmap_osm_text_way_tag(p);
-		else
-                	buildmap_osm_text_node_tag(p, 0);
-                continue;
-
-        } else if (strncasecmp(p, "/osm>", 5) == 0) {
-
-		need_osm_trailer = 0;
-
-        } 
-    }
-    buildmap_progress(LineNo, 0);
-    putchar('\n');
-    lines = LineNo;
-
-    if (need_osm_trailer)
-	buildmap_fatal(0, "bad input from %s, no </osm> line", fn);
-
-    qsort(WayTable, nWayTable, sizeof(*WayTable), qsort_compare_unsigneds);
-
-    (void) time(&t[passid]);
-    buildmap_info("Pass %d : %d lines read (%d seconds)",
-		    passid, LineNo, t[passid] - t[passid - 1]);
-    passid++;
-
-    /*
-     * Pass 2 - flag interesting nodes : any node (a <nd>) in a way,
-     * but e.g. nodes that represent town definitions as well.
-     */
-    LineNo = 0;
-    buildmap_set_source("pass 2");
-    buildmap_osm_text_fclose(fdata);
-    fdata = buildmap_osm_text_fopen(fn);
-    buildmap_osm_text_reset_way();
-    buildmap_osm_text_reset_node();
-
-    while (! feof(fdata)) {
-	buildmap_progress(LineNo, lines);
-        buildmap_set_line(++LineNo);
-        got = fgets(buf, LINELEN, fdata);
-        if (got == NULL) {
-            if (feof(fdata))
-                break;
-            buildmap_fatal(0, "short read (length)");
-        }
-
-        /* Figure out the XML */
-        for (p=buf; *p && isspace(*p); p++) ;
-        if (*p == '\n' || *p == '\r') 
-                continue;
-        if (*p != '<') // continuation line?
-		continue;
-
-	in_relation = 0;
-        p++; /* point to character after '<' now */
-        for (; *p && isspace(*p); p++) ;
-
-        if (strncasecmp(p, "relation", 8) == 0) {
-
-		in_relation = 1;
-		continue;
-
-        } else if (strncasecmp(p, "/relation", 9) == 0) {
-
-		in_relation = 0;
-		continue;
-
-        } else if (in_relation) {
-
-		continue;
-
-        } else if (strncasecmp(p, "way", 3) == 0) {
-
-		s = sscanf(p, "way id=%*[\"']%u%*[\"']", &wi.WayId);
-		if (s != 1)
-			buildmap_fatal(0, "buildmap_osm_text(%s) way error", p);
-
-		interesting_way = !!isWayInteresting(wi.WayId);
-                continue;
-
-        } else if (strncasecmp(p, "/way", 4) == 0) {
-
-		wi.WayId = 0;
-		buildmap_osm_text_reset_way();
-                continue;
-
-        } else if (strncasecmp(p, "nd", 2) == 0) {
-
-		nodeid_t     node;
-		/* nodes referenced by interesting ways are interesting */
-                if (wi.WayId && interesting_way) {
-		    s = sscanf(p, "nd ref=%*[\"']%u%*[\"']", &node);
-		    if (s != 1)
-			buildmap_fatal(0, "buildmap_osm_text(%s) way error", p);
-
-		    saveInterestingNode(node);
-		}
-                continue;
-
-        } else if (strncasecmp(p, "tag", 3) == 0) {
-                continue;
-        }
-    }
-    buildmap_progress(LineNo, lines);
-    putchar('\n');
-
-    qsort(NodeTable, nNodeTable, sizeof(*NodeTable), qsort_compare_unsigneds);
-
-    (void) time(&t[passid]);
-    buildmap_info("Pass %d : %d lines read (%d seconds)",
-		    passid, LineNo, t[passid] - t[passid - 1]);
-    passid++;
-
-    /*
-     * Pass 3 - look for all <node>s, define the interesting ones.
-     * 		nodes that are interesting because they're a part of
-     * 		interesting ways are already on the interesting list.
-     * 		nodes interesting in their own right (i.e., places) are not.
-     * Pass 3 - define ways flagged as interesting
-     */
-    LineNo = 0;
-    NumNodes = 0;
-    buildmap_set_source("pass 3");
-    buildmap_osm_text_fclose(fdata);
-    fdata = buildmap_osm_text_fopen(fn);
-    buildmap_osm_text_reset_way();
-    buildmap_osm_text_reset_node();
-
-    /* we've finished saving ways.  we need a fresh place to mark
-     * the ones we're discarding, while still keeping the original list
-     * quickly searchable. */
-    copyWayTable();
-
-    while (! feof(fdata)) {
-	buildmap_progress(LineNo, lines);
-        buildmap_set_line(++LineNo);
-        got = fgets(buf, LINELEN, fdata);
-        if (got == NULL) {
-            if (feof(fdata))
-                break;
-            buildmap_fatal(0, "short read (length)");
-        }
-
-        /* Figure out the XML */
-        for (p=buf; *p && isspace(*p); p++) ;
-        if (*p == '\n' || *p == '\r') 
-                continue;
-        if (*p != '<') // continuation line?
-		continue;
-
-	in_relation = 0;
-        p++; /* point to character after '<' now */
-        for (; *p && isspace(*p); p++) ;
-
-        if (strncasecmp(p, "relation", 8) == 0) {
-		in_relation = 1;
-		continue;
-
-        } else if (strncasecmp(p, "/relation", 9) == 0) {
-		in_relation = 0;
-		continue;
-
-        } else if (in_relation) {
-		continue;
-
-        } else if (strncasecmp(p, "node", 4) == 0) {
-		int nchars;
-
-		s = sscanf(p, "node id=%*[\"']%u%*[\"']%n", &ni.NodeId, &nchars);
-		if (s != 1)
-			buildmap_fatal(0, "buildmap_osm_text(%s) node error", p);
-
-		p += nchars;
-
-		/* next read lat/lon k/v tags, and also call _finish()
-		 * if necessary.  */
-		buildmap_osm_text_node_read_lat_lon(p);
-
-		NumNodes++;
-                continue;
-        } else if (strncasecmp(p, "/node", 5) == 0) {
-
-		/* if what we had was <node ....  />, then we won't get
-		 * here.  buildmap_osm_text_node_finish() was called
-		 * already, from buildmap_osm_text_node_read_lat_lon() */
-		// if (isNodeInteresting(ni.NodeId)) {
-		    /* this could be either a tagged or untagged node.
-		     * it will be interesting, and saved to the db, if
-		     * the tags tell us to do so. */
-			buildmap_osm_text_node_finish();
-		// }
-                continue;
-
-        } else if (strncasecmp(p, "tag", 3) == 0) {
-
-		if (!wi.WayId)
-			buildmap_osm_text_node_tag(p, 1);
-		else
-                	buildmap_osm_text_way_tag(p);
-                continue;
-
-	} else if (strncasecmp(p, "way", 3) == 0) {
-
-        	s = sscanf(p, "way id=%*[\"']%u%*[\"']", &wi.WayId);
-        	if (s != 1)
-                	buildmap_fatal(0, "buildmap_osm_text(%s) way error", p);
-
-        	wi.WayIsInteresting = !!isWayInteresting(wi.WayId);
-                continue;
-
-        } else if (strncasecmp(p, "/way", 4) == 0) {
-
-		if (wi.WayIsInteresting)
-                	buildmap_osm_text_way_finish();
-                continue;
-
-        } else if (strncasecmp(p, "nd", 2) == 0) {
-
-		// the nd node references gets put on WayNodes list
-		if (wi.WayIsInteresting)
-                	buildmap_osm_text_save_way_nodes(p);
-                continue;
-        }
-    }
-    buildmap_progress(LineNo, lines);
-    putchar('\n');
-
-    buildmap_osm_text_fclose(fdata);
-
-    (void) time(&t[passid]);
-    buildmap_info("Pass %d : %d lines read (%d seconds)",
-		    passid, LineNo, t[passid] - t[passid - 1]);
-    passid++;
-
-
-    buildmap_osm_text_ways_shapeinfo();
-
-    (void) time(&t[passid]);
-    buildmap_info("Ways %d, interesting %d",
-	    NumWays, nWayTable);
-    buildmap_info("Number of nodes : %d, interesting %d", NumNodes, nNodeTable);
-    buildmap_info("Final: (%d seconds)",
-		    passid, t[passid] - t[passid - 1]);
-
-}
-#else
-
 char *readosm_errors[] = {
     "READOSM_OK",
     "READOSM_INVALID_SUFFIX",
     "READOSM_FILE_NOT_FOUND",
-					
     "READOSM_NULL_HANDLE",              
     "READOSM_INVALID_HANDLE",           
     "READOSM_INSUFFICIENT_MEMORY",      
@@ -1627,11 +533,11 @@ char *readosm_errors[] = {
     "READOSM_ABORT"                     
 };
 
-static int l_shoreline, l_boundary;
-static int nWays, nNodes;
-
+/**
+ * @brief callback for initial node parsing, called via readosm_parse()
+ */
 static int
-parse_node(const void *user_data, const readosm_node * node)
+parse_node(const void *is_tile, const readosm_node * node)
 {
     const readosm_tag *tag;
     const char *name = NULL, *place = NULL;
@@ -1662,8 +568,11 @@ parse_node(const void *user_data, const readosm_node * node)
     return READOSM_OK;
 }
 
+/**
+ * @brief callback for final node parsing, called via readosm_parse()
+ */
 static int
-parse_node_finalize(const void *user_data, const readosm_node * node)
+parse_node_finalize(const void *is_tile, const readosm_node * node)
 {
     const readosm_tag *tag;
     const char *name = NULL, *place = NULL;
@@ -1718,8 +627,11 @@ parse_node_finalize(const void *user_data, const readosm_node * node)
     return READOSM_OK;
 }
 
+/**
+ * @brief callback for initial way parsing, called via readosm_parse()
+ */
 static int
-parse_way(const void *user_data, const readosm_way *way)
+parse_way(const void *is_tile, const readosm_way *way)
 {
     const readosm_tag *tag;
     const char *tourism = NULL, *amenity = NULL;
@@ -1732,6 +644,14 @@ parse_way(const void *user_data, const readosm_way *way)
 
     if (way->node_ref_count == 0)
 	return READOSM_OK;
+
+    /* if we're processing a quadtile, don't include any
+     * ways that our neighbors already include */
+    if (is_tile && buildmap_osm_text_check_neighbors(way->id)) {
+	buildmap_verbose("dropping way %d because a neighbor "
+		    "already has it", way->id);
+	return READOSM_OK;
+    }
 
     for (i = 0; i < way->tag_count; i++)
     {
@@ -1809,8 +729,11 @@ parse_way(const void *user_data, const readosm_way *way)
     return READOSM_OK;
 }
 
+/**
+ * @brief callback for final way parsing, called via readosm_parse()
+ */
 static int
-parse_way_finalize(const void *user_data, const readosm_way *way)
+parse_way_finalize(const void *is_tile, const readosm_way *way)
 {
     const readosm_tag *tag;
     const char *tourism = NULL, *amenity = NULL, *name = NULL, *ref = NULL;
@@ -1894,9 +817,6 @@ parse_way_finalize(const void *user_data, const readosm_way *way)
 	    /* this code looks like buildmap_osm_text_node_finish() */
 	    point = buildmap_point_add(lon, lat);
 
-	    if (!name)
-		name = FromXmlAndDup("??");
-
 	    if (layer) {
 		RoadMapString s;
 		int p;
@@ -1915,19 +835,15 @@ parse_way_finalize(const void *user_data, const readosm_way *way)
 		(way->node_refs[0] == way->node_refs[way->node_ref_count-1])) {
 	    /* see http://wiki.openstreetmap.org/wiki/The_Future_of_Areas
 	     * for why the above conditions are simplistic */
-	    static int polyid = 0;
-	    static int cenid = 0;
 
 	    /*
 	     * Detect an AREA -> create a polygon
 	     */
-	    nPolygons++;
-	    cenid++;
-	    polyid++;
+	    PolygonId++;
 
 	    rms_name = str2dict(DictionaryStreet, name);
-	    buildmap_polygon_add_landmark (nPolygons, layer, rms_name);
-	    buildmap_polygon_add(nPolygons, cenid, polyid);
+	    buildmap_polygon_add_landmark (PolygonId, layer, rms_name);
+	    buildmap_polygon_add(PolygonId, 0, PolygonId);
 
 	    for (j=1; j<way->node_ref_count; j++) {
 		    int prevpoint =
@@ -1939,7 +855,7 @@ parse_way_finalize(const void *user_data, const readosm_way *way)
 		    buildmap_line_add
 			    (LineId, layer, prevpoint, point,
 			     ROADMAP_LINE_DIRECTION_BOTH);
-		    buildmap_polygon_add_line (cenid, polyid, LineId, POLYGON_SIDE_RIGHT);
+		    buildmap_polygon_add_line (0, PolygonId, LineId, POLYGON_SIDE_RIGHT);
 	    }
     } else {
 	    /*
@@ -2027,27 +943,27 @@ parse_way_finalize(const void *user_data, const readosm_way *way)
 		    buildmap_square_adjust_limits(lon, lat);
 	    }
 
-	    if (numshapes == nallocshapes) {
+	    if (nShapes == nShapesAlloc) {
 		    /* Allocate additional space (in big
 		     * chunks) when needed */
 		    if (shapes)
-			nallocshapes *= 2;
+			nShapesAlloc *= 2;
 		    else
-			nallocshapes = 1000;
+			nShapesAlloc = 1000;
 		    shapes = realloc(shapes,
-			nallocshapes * sizeof(struct shapeinfo));
+			nShapesAlloc * sizeof(struct shapeinfo));
 		    buildmap_check_allocated(shapes);
 	    }
 
 	    buildmap_debug("lineid %d way->node_ref_count %d",
 		    LineId, way->node_ref_count);
 	    /* Keep info for the shapes */
-	    shapes[numshapes].lons = lonsbuf;
-	    shapes[numshapes].lats = latsbuf;
-	    shapes[numshapes].count = way->node_ref_count;
-	    shapes[numshapes].lineid = LineId;
+	    shapes[nShapes].lons = lonsbuf;
+	    shapes[nShapes].lats = latsbuf;
+	    shapes[nShapes].count = way->node_ref_count;
+	    shapes[nShapes].lineid = LineId;
 
-	    numshapes++;
+	    nShapes++;
     }
     return READOSM_OK;
 }
@@ -2060,10 +976,17 @@ parse_relation(const void *user_data, const readosm_relation * relation)
 }
 #endif
 
-void buildmap_readosm_pass(int pass, char *fn)
+/**
+ * @brief rather than trying to put an entire file's contents in memory,
+ *	we parse it in two passes.  this routine is called for each pass.
+ */
+void buildmap_readosm_pass(int pass, char *fn, int tileid)
 {
     int ret;
     const void *handle;
+    void *is_tile = 0;
+
+    if (tileid) is_tile = (void *)1;
 
     buildmap_info("Starting pass %d", pass);
     // buildmap_set_source("pass %d", pass);
@@ -2076,10 +999,10 @@ void buildmap_readosm_pass(int pass, char *fn)
     }
 
     switch (pass) {
-    case 1: ret = readosm_parse(handle, NULL,
+    case 1: ret = readosm_parse(handle, is_tile,
     		parse_node, parse_way, NULL);
 	    break;
-    case 2: ret = readosm_parse(handle, NULL,
+    case 2: ret = readosm_parse(handle, is_tile,
     		parse_node_finalize, parse_way_finalize, NULL);
 	    break;
     }
@@ -2098,6 +1021,16 @@ void buildmap_readosm_pass(int pass, char *fn)
 }
 
 
+/**
+ * @brief This is the gut of buildmap_osm_text : parse an OSM XML file
+ * @param fdata an open file pointer, this will get read twice
+ * @param country_num the country id that we're working for
+ * @param division_num the country subdivision id that we're working for
+ *
+ * currently this only handles tiles.  the country and division parameters
+ *  are ignored.
+ *
+ */
 void 
 buildmap_osm_text_read(char *fn, int tileid,
 			int country_num, int division_num)
@@ -2107,9 +1040,6 @@ buildmap_osm_text_read(char *fn, int tileid,
 	buildmap_osm_text_neighbor_way_maps(tileid);
 
     buildmap_osm_text_point_hash_reset();
-
-    buildmap_osm_text_reset_way();
-    buildmap_osm_text_reset_node();
 
     DictionaryPrefix = buildmap_dictionary_open("prefix");
     DictionaryStreet = buildmap_dictionary_open("street");
@@ -2121,15 +1051,16 @@ buildmap_osm_text_read(char *fn, int tileid,
     l_shoreline = buildmap_layer_get("shore");;
     l_boundary = buildmap_layer_get("boundaries");;
 
-    nWays = nNodes = 0;
-    numshapes = 0;
-    nPolygons = 0;
-    LineId = 0;
+    nWays = 0;
+    nNodes = 0;
+    nShapes = 0;
     nWayTable = 0;
     nNodeTable = 0;
+    PolygonId = 0;
+    LineId = 0;
 
     /* pass 1: look at all ways and nodes, decide if they're interesting */
-    buildmap_readosm_pass(1, fn);
+    buildmap_readosm_pass(1, fn, tileid);
 
     qsort(WayTable, nWayTable, sizeof(*WayTable), qsort_compare_unsigneds);
     qsort(NodeTable, nNodeTable, sizeof(*NodeTable), qsort_compare_unsigneds);
@@ -2140,7 +1071,7 @@ buildmap_osm_text_read(char *fn, int tileid,
     copyWayTable();
 
     /* pass 2: look at ways again, and finalize */
-    buildmap_readosm_pass(2, fn);
+    buildmap_readosm_pass(2, fn, tileid);
 
     buildmap_osm_text_ways_shapeinfo();
 
@@ -2149,4 +1080,3 @@ buildmap_osm_text_read(char *fn, int tileid,
     buildmap_info("Number of nodes : %d, interesting %d", nNodes, nNodeTable);
     buildmap_info("Number of points: %d", nPoints);
 }
-#endif
