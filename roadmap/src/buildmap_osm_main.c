@@ -55,6 +55,7 @@ char *progname;
 int BuildMapNoLongLines;
 
 static int   BuildMapReplaceAll = 0;
+static int   BuildMapReDownload = 0;
 static char *BuildMapFileName = 0;
 
 char *BuildMapResult;
@@ -67,6 +68,8 @@ struct opt_defs options[] = {
         "The number of bits of quadtile address"},
    {"replace", "r", opt_flag, "0",
         "Rebuild .rdm files, reuse existing .osm if possible"},
+   {"download", "", opt_flag, "0",
+        "Force downloading a new copy of the OSM data"},
    {"maps", "m", opt_string, "",
         "Location for the generated map files"},
    {"fetcher", "F", opt_string, "rdm_osm_fetch_tile",
@@ -234,9 +237,10 @@ buildmap_osm_process_one_tile (int tileid, const char *fetcher)
     xmlfile = roadmap_path_join(BuildMapResult,
 		roadmap_osm_filename(0, 1, tileid, ".osm.gz"));
 
-    snprintf(cmd, sizeof(cmd), "%s "
+    snprintf(cmd, sizeof(cmd), "%s %s"
     		"--bits %d --bbox %s --xmlfile %s",
-    		fetcher, bits, bbox, xmlfile);
+    		fetcher, BuildMapReDownload ?  "--force " : "",
+		bits, bbox, xmlfile);
 
     ret = system(cmd);
     if ((WEXITSTATUS(ret) != 0) || 
@@ -859,6 +863,7 @@ main(int argc, char **argv)
             opt_val("class", &class) ||
             opt_val("bits", &osm_bits) ||
             opt_val("replace", &BuildMapReplaceAll) ||
+            opt_val("download", &BuildMapReDownload) ||
             opt_val("maps", &BuildMapResult) ||
             opt_val("fetcher", &fetcher) ||
             opt_val("tileid", &tileid) ||
