@@ -227,12 +227,12 @@ buildmap_osm_process_one_tile (int tileid, const char *fetcher)
         
     /* create all parents of our file */
     parent = roadmap_path_parent(BuildMapResult,
-		roadmap_osm_filename(0, 1, tileid, ".osm"));
+		roadmap_osm_filename(0, 1, tileid, ".osm.gz"));
     roadmap_path_create(parent);
     roadmap_path_free(parent);
 
     xmlfile = roadmap_path_join(BuildMapResult,
-		roadmap_osm_filename(0, 1, tileid, ".osm"));
+		roadmap_osm_filename(0, 1, tileid, ".osm.gz"));
 
     snprintf(cmd, sizeof(cmd), "%s "
     		"--bits %d --bbox %s --xmlfile %s",
