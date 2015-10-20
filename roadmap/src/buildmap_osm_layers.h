@@ -94,7 +94,9 @@ value_info_t aeroway_to_layer[] = {
 
 value_info_t landuse_to_layer[] = {
         { "reservoir",          &Lakes,         AREA },
-        { "conservation",       &Nature,         AREA },
+        { "conservation",       &Nature,        AREA },
+        { "recreation_ground",  &Parks,         AREA },
+        { "village_green",      &Parks,         AREA },
         { 0,                    NULL,           0 },
 };
 
@@ -185,6 +187,7 @@ value_info_t leisure_to_layer[] = {
         { "dog_park",           &Parks,         AREA },
         { "playground",         &Parks,         AREA },
         { "golf course",        &Parks,         AREA },
+        { "recreation_ground",  &Parks,         AREA },
         { 0,                    NULL,           0 },
 };
 
