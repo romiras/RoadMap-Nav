@@ -50,6 +50,7 @@ static char *DumpMapShowDump = "";
 static char *DumpMapShowVolume = "";
 static char *DumpMapSearchStringOption = "";
 
+static void show_data(const char *data, int size);
 
 /**
  * Tree print module
@@ -83,6 +84,7 @@ static void dumpmap_printtree (roadmap_db *parent, roadmap_db *root) {
    int count;
    int level;
    roadmap_db *child;
+   char *data;
 
    level = 2 * (roadmap_db_get_level (parent) - roadmap_db_get_level (root));
 
@@ -110,6 +112,11 @@ static void dumpmap_printtree (roadmap_db *parent, roadmap_db *root) {
 
          dumpmap_show_size (size);
          fprintf(out, ")\n");
+	 if (DumpMapVerbose) {
+	     data = roadmap_db_get_data (child);
+	     show_data(data, size);
+	     fprintf(out, "\n");
+	 }
       }
    }
 }
@@ -379,15 +386,8 @@ roadmap_db_handler DumpMapPrintIndex =
  * then it forgets about the database.
  */
 
-static void *dumpmap_hexadump_map (roadmap_db *root) {
-
+static void show_data(const char *data, int size) {
    int i, j;
-   int size;
-   const char *data;
-
-   size = roadmap_db_get_size (root);
-   data = roadmap_db_get_data (root);
-
    for (i = 0; i <= size - 16; i += 16) {
 
       int j;
@@ -419,6 +419,17 @@ static void *dumpmap_hexadump_map (roadmap_db *root) {
       }
       fprintf(out, "\n");
    }
+}
+
+static void *dumpmap_hexadump_map (roadmap_db *root) {
+
+   int size;
+   const char *data;
+
+   size = roadmap_db_get_size (root);
+   data = roadmap_db_get_data (root);
+
+   show_data(data, size);
 
    return "OK";
 }
