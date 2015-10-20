@@ -48,7 +48,7 @@ Railroads.Color: black
 Rivers.Color: LightBlue
  .LabelFontColor: DarkBlue
  .LabelFontSize: 10
- .Declutter: 300
+ .Declutter: 1300
  .Thickness: 3
  .Speed: 1
 Shore.Color: LightSlateBlue
@@ -96,7 +96,7 @@ Nature.Color: lightgreen
  .Thickness: 1
  .Speed: 1
 Islands.Color: lightyellow
- .Declutter: 600
+ .Declutter: 900
  .Thickness: 1
  .Speed: 1
 Peak.Color: brown
