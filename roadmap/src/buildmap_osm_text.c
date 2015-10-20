@@ -569,6 +569,20 @@ parse_node(const void *is_tile, const readosm_node * node)
 }
 
 /**
+ * @brief convert from 12.3456789 to 12345679.  note the rounding.
+ */
+int
+osmfloat_to_rdmint(double f)
+{
+    int i;
+    i = 10000000. * f;
+    if (i < 0)
+	return (i-5)/10;
+    else
+	return (i+5)/10;
+}
+
+/**
  * @brief callback for final node parsing, called via readosm_parse()
  */
 static int
@@ -580,6 +594,7 @@ parse_node_finalize(const void *is_tile, const readosm_node * node)
     int point;
     RoadMapString s;
     int i;
+    int lat, lon;
 
     if (!isNodeInteresting(node->id))
 	return READOSM_OK;
@@ -602,10 +617,11 @@ parse_node_finalize(const void *is_tile, const readosm_node * node)
      * provided.  it doesn't make a difference in practice, but can
      * be annoying when debugging, or comparing values later.
      */
-    point = buildmap_point_add(
-	(((int)(10000000. * node->longitude)+5)/10),
-    	(((int)(10000000. * node->latitude)+5)/10)
-	);
+    lat = osmfloat_to_rdmint(node->latitude);
+    lon = osmfloat_to_rdmint(node->longitude);
+
+    point = buildmap_point_add(lon, lat);
+
     buildmap_osm_text_point_add(node->id, point);
 
     /* If it's a place, add it to the place table as well */
@@ -616,9 +632,9 @@ parse_node_finalize(const void *is_tile, const readosm_node * node)
 		s = str2dict (DictionaryCity, (char *)name);
 		p = buildmap_place_add(s, layer, point);
 	    }
-	    buildmap_debug( "finishing %1.7f %1.7f %s (%d) %s layer: %d",
+	    buildmap_debug( "finishing %1.7f %1.7f [%d %d] %s (%d) %s layer: %d",
 		node->latitude, node->longitude,
-		place, p, name, layer);
+		lat, lon, place, p, name, layer);
 	} else {
 	    buildmap_debug( "dropping %s %s", place, name);
 	}
