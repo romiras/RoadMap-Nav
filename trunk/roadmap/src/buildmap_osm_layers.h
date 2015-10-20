@@ -106,6 +106,7 @@ value_info_t aeroway_to_layer[] = {
 value_info_t landuse_to_layer[] = {
         { 0,                    NULL,           0 },
         { "reservoir",          &Lakes,         AREA },
+        { "conservation",       &Nature,         AREA },
         { 0,                    NULL,           0 },
 };
 
