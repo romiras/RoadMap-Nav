@@ -120,7 +120,8 @@ then
 	*)
 	    echo "Note: download didn't use gzip encoding."
 	    echo "Compressing now..."
-	    gzip -c -d $xmlfile.tmp > $xmlfile || exit 1
+	    set -x
+	    gzip -c $xmlfile.tmp > $xmlfile || exit 1
 	    ;;
 	esac
     fi
