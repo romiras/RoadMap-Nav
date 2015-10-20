@@ -214,20 +214,20 @@ buildmap_osm_process_one_tile (int tileid, const char *fetcher)
 
     bits = tileid2bits(tileid);
     buildmap_verbose("buildmap_osm_process_one_tile: tileid 0x%x, bits %d",
-    		tileid, bits);
+		tileid, bits);
 
     roadmap_osm_tileid_to_bbox(tileid, edges);
-    /* w, s, e, n */
+    /* s, w, n, e */
     bbp = bbox;
     bbp += sprintf(bbp, "%s,",
-    		roadmap_math_to_floatstring(0, edges->west, MILLIONTHS));
-    bbp += sprintf(bbp, "%s,", 
-    		roadmap_math_to_floatstring(0, edges->south, MILLIONTHS));
-    bbp += sprintf(bbp, "%s,", 
-    		roadmap_math_to_floatstring(0, edges->east, MILLIONTHS));
-    bbp += sprintf(bbp, "%s", 
-    		roadmap_math_to_floatstring(0, edges->north, MILLIONTHS));
-        
+		roadmap_math_to_floatstring(0, edges->south, MILLIONTHS));
+    bbp += sprintf(bbp, "%s,",
+		roadmap_math_to_floatstring(0, edges->west, MILLIONTHS));
+    bbp += sprintf(bbp, "%s,",
+		roadmap_math_to_floatstring(0, edges->north, MILLIONTHS));
+    bbp += sprintf(bbp, "%s",
+		roadmap_math_to_floatstring(0, edges->east, MILLIONTHS));
+
     /* create all parents of our file */
     parent = roadmap_path_parent(BuildMapResult,
 		roadmap_osm_filename(0, 1, tileid, ".osm.gz"));
@@ -238,12 +238,12 @@ buildmap_osm_process_one_tile (int tileid, const char *fetcher)
 		roadmap_osm_filename(0, 1, tileid, ".osm.gz"));
 
     snprintf(cmd, sizeof(cmd), "%s %s"
-    		"--bits %d --bbox %s --xmlfile %s",
-    		fetcher, BuildMapReDownload ?  "--force " : "",
+		"--bits %d --bbox %s --xmlfile %s",
+		fetcher, BuildMapReDownload ?  "--force " : "",
 		bits, bbox, xmlfile);
 
     ret = system(cmd);
-    if ((WEXITSTATUS(ret) != 0) || 
+    if ((WEXITSTATUS(ret) != 0) ||
 	(WIFSIGNALED(ret) &&
 	    (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT))) {
 	ret = -1;
@@ -325,7 +325,7 @@ int buildmap_osm_text_process_file(char *fn, char *ofn)
 	    return ret2;
 
     return ret;
-     
+
 }
 
 int qsort_compare_tiles(const void *t1, const void *t2)
@@ -622,15 +622,15 @@ buildmap_osm_process_tiles (int *tiles, int bits, int count,
 	    buildmap_db_sort();
 
             if (buildmap_is_verbose()) {
-        	roadmap_hash_summary();
-        	buildmap_db_summary();
+		roadmap_hash_summary();
+		buildmap_db_summary();
 	    }
 
-            buildmap_osm_save(tileid, 1);
-        }
+	    buildmap_osm_save(tileid, 1);
+	}
 
-        buildmap_db_reset();
-        roadmap_hash_reset();
+	buildmap_db_reset();
+	roadmap_hash_reset();
     }
 
     return ret < 0;
@@ -691,22 +691,22 @@ int buildmap_osm_decode(char *decode) {
     roadmap_osm_tileid_to_bbox(tileid, e);
 
     printf("tileid:\t0x%08x\t%d\n", tileid, tileid);
-    printf("true tileid:\t0x%08x\t%d\n", 
+    printf("true tileid:\t0x%08x\t%d\n",
         tileid2trutile(tileid), tileid2trutile(tileid));
     printf("bits:\t%d\n", tileid2bits(tileid));
 
     pos1.latitude = (e->north + e->south)/2;
     pos1.longitude = (e->west + e->east)/2;
-    printf("center:\t%s,%s\n", 
+    printf("center:\t%s,%s\n",
         roadmap_math_to_floatstring(lat, pos1.latitude, MILLIONTHS),
         roadmap_math_to_floatstring(lon, pos1.longitude, MILLIONTHS));
-    printf("north:\t%s\n", 
+    printf("north:\t%s\n",
         roadmap_math_to_floatstring(NULL, e->north, MILLIONTHS));
-    printf("south:\t%s\n", 
+    printf("south:\t%s\n",
         roadmap_math_to_floatstring(NULL, e->south, MILLIONTHS));
-    printf("east:\t%s\n", 
+    printf("east:\t%s\n",
         roadmap_math_to_floatstring(NULL, e->east, MILLIONTHS));
-    printf("west:\t%s\n", 
+    printf("west:\t%s\n",
         roadmap_math_to_floatstring(NULL, e->west, MILLIONTHS));
 
     roadmap_math_set_center (&pos1);
@@ -731,7 +731,7 @@ int buildmap_osm_decode(char *decode) {
 		(NULL, roadmap_math_to_trip_distance_tenths
 			    (roadmap_math_distance(&pos1, &pos2)) , TENTHS), roadmap_math_trip_unit());
     }
-    
+
     return 0;
 
 }
@@ -816,11 +816,11 @@ void buildmap_osm_list_tiles(int *tileslist, int count)
 	roadmap_osm_filename(filename, 1, n, ".rdm");
 	printf("%s	", filename);
 	roadmap_osm_tileid_to_bbox(n, edges);
-	/* w, s, e, n */
-	printf("%s,", roadmap_math_to_floatstring(0, edges->west, MILLIONTHS));
+	/* s, w, n, e */
 	printf("%s,", roadmap_math_to_floatstring(0, edges->south, MILLIONTHS));
-	printf("%s,", roadmap_math_to_floatstring(0, edges->east, MILLIONTHS));
-	printf("%s\n", roadmap_math_to_floatstring(0, edges->north, MILLIONTHS));
+	printf("%s,", roadmap_math_to_floatstring(0, edges->west, MILLIONTHS));
+	printf("%s,", roadmap_math_to_floatstring(0, edges->north, MILLIONTHS));
+	printf("%s\n", roadmap_math_to_floatstring(0, edges->east, MILLIONTHS));
     }
 }
 
@@ -843,7 +843,7 @@ main(int argc, char **argv)
     int listonly;
     int tileid;
     char *class, *latlonarg, *fetcher, *inputfile;
-    
+
     progname = strrchr(argv[0], '/');
 
     if (progname) progname++;
