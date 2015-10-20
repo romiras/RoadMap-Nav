@@ -1468,7 +1468,9 @@ static int roadmap_screen_repaint_square (int square, int pen_type,
    }
 
    /* draw individual square outline (only with "--square") */
-   if (pen_type == 0 && roadmap_is_visible (ROADMAP_SHOW_SQUARE)) {
+   if (pen_type == 0 &&
+	which == LINES &&
+	roadmap_is_visible (ROADMAP_SHOW_SQUARE)) {
       roadmap_screen_draw_square_edges (square);
    }
    
