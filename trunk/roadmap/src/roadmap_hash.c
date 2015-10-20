@@ -71,6 +71,10 @@ RoadMapHash *roadmap_hash_new (char *name, int size) {
    hash->size = size;
    hash->next = malloc (size * sizeof(int));
    hash->values = NULL;
+   hash->count_add_first = 0;
+   hash->count_add_next = 0;
+   hash->count_get_first = 0;
+   hash->count_get_next = 0;
 
    roadmap_check_allocated(hash->next);
 
