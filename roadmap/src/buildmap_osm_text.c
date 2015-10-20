@@ -119,7 +119,7 @@ typedef struct wayinfo wayinfo;
 static int      PolygonId = 0;
 static int      LineId = 0;
 
-static int l_shoreline, l_boundary, l_lake, l_island;
+static int l_shoreline, l_boundary, l_lake, l_river, l_island;
 static int nRels, nWays, nNodes;
 
 /**
@@ -1269,6 +1269,9 @@ parse_relation(const void *is_tile, const readosm_relation * relation)
 	buildmap_osm_get_layer(AREA, tag->key, tag->value, &flags, &layer);
     }
 
+    if (layer == l_lake || layer == l_river)
+	is_water = 1;
+
     if (flags & PLACE) {
 	buildmap_info("discarding %s layer %d", name, layer);
 	flags = 0;
@@ -1578,6 +1581,7 @@ buildmap_osm_text_read(char *fn, int tileid,
     l_shoreline = buildmap_layer_get("shore");;
     l_boundary = buildmap_layer_get("boundaries");;
     l_lake = buildmap_layer_get("lakes");;
+    l_lake = buildmap_layer_get("rivers");;
     l_island = buildmap_layer_get("islands");;
 
     nRels = 0;
