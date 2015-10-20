@@ -393,7 +393,7 @@ static int buildmap_place_save (void) {
    buildmap_db *layer_table;
 
 
-   buildmap_info ("saving places...");
+   buildmap_info ("saving %d places...", PlaceCount);
 
    square_count = buildmap_square_get_count();
 
@@ -420,11 +420,13 @@ static int buildmap_place_save (void) {
             return 1;
          }
          if (square_current >= 0) {
+            if (layer_current <= 0) {
+                buildmap_error (0, "empty square %d has places?", square);
+		return 1;
+            }
             layer_count += (layer_current + 1);
          }
          square_current = square;
-
-
 
          layer_current = 0; /* Restart from first layer. */
       }
@@ -505,13 +507,13 @@ static int buildmap_place_save (void) {
 
             /* Complete the previous square. */
 
-            db_layer[layer_sublist+square_current] = i;
+            db_layer[layer_sublist+layer_current] = i;
             db_square[square_current].first = layer_sublist;
             db_square[square_current].count = layer_current;
 
             /* Move on to the next square. */
 
-            layer_sublist += layer_current;
+            layer_sublist += (layer_current+1);
             if (layer_sublist >= layer_count) {
                buildmap_error (0, "invalid place/bylayer count (1)");
                return 1;
@@ -534,25 +536,14 @@ static int buildmap_place_save (void) {
 
 
    if (square_current >= 0) {
-#ifdef BEFORE
-      db_layer[layer_sublist+square_current] = i;
+      db_layer[layer_sublist+layer_current] = i;
       db_square[square_current].first = layer_sublist;
       db_square[square_current].count = layer_current;
 
-      if (layer_sublist+square_current+1 != layer_count) {
+      if (layer_sublist+layer_current+1 != layer_count) {
          buildmap_error (0, "invalid place/bylayer count (2)");
          return 1;
       }
-#else // pgf changed -- the conditions here now match those in the loop above
-      db_layer[layer_sublist+square_current] = i + 1;
-      db_square[square_current].first = layer_sublist;
-      db_square[square_current].count = layer_current;
-
-      if (layer_sublist+layer_current >= layer_count) {
-         buildmap_error (0, "invalid place/bylayer count (2)");
-         return 1;
-      }
-#endif
    }
 
    return 0;
