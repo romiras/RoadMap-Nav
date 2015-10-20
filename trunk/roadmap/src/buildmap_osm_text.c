@@ -118,7 +118,7 @@ typedef struct wayinfo wayinfo;
 static int      PolygonId = 0;
 static int      LineId = 0;
 
-static int l_shoreline, l_boundary;
+static int l_shoreline, l_boundary, l_lake, l_island;
 static int nRels, nWays, nNodes;
 
 /**
@@ -857,7 +857,7 @@ parse_way(const void *is_tile, const readosm_way *way)
     int layer = 0, flags = 0;
     const char *name = 0, *ref = 0;
     wayinfo *wp;
-    int has_relation_layer, has_relation_flags;
+    int relation_layer, relation_flags;
     int i;
 
     nWays++;
@@ -866,8 +866,10 @@ parse_way(const void *is_tile, const readosm_way *way)
      * found then. */
     wp = isWayInteresting(way->id);
     if (wp) {
-	has_relation_layer = wp->relation_layer;
-	has_relation_flags = wp->relation_flags;
+	relation_layer = wp->relation_layer;
+	relation_flags = wp->relation_flags;
+	layer = wp->layer;
+	flags = wp->flags;
     }
 
     if (way->node_ref_count < 2) {
@@ -876,7 +878,7 @@ parse_way(const void *is_tile, const readosm_way *way)
 
     /* if we're processing a quadtile, don't include any
      * ways that our neighbors already include */
-    if (is_tile && buildmap_osm_text_check_neighbor_way(way->id) && !has_relation_layer) {
+    if (is_tile && buildmap_osm_text_check_neighbor_way(way->id) && !relation_layer) {
 	buildmap_verbose("dropping way %lld because a neighbor "
 		    "already has it", way->id);
 	return READOSM_OK;
@@ -908,8 +910,11 @@ parse_way(const void *is_tile, const readosm_way *way)
 	    is_coast = 1;
 	}
 
-	// really?
-	buildmap_osm_get_layer(ANY, tag->key, tag->value, &flags, &layer);
+	// in some cases we set the way's layer in parse_relation(),
+	// so we don't want to override it here.  this also means
+	// that otherwise, first tag to set the layer wins.
+	if (!layer)
+	    buildmap_osm_get_layer(ANY, tag->key, tag->value, &flags, &layer);
     }
 
 
@@ -967,18 +972,20 @@ parse_way(const void *is_tile, const readosm_way *way)
 
 
 out:
-    if (layer || has_relation_layer) {
+    if (layer || relation_layer) {
 	const char *n = road_name(name, ref);
 
 	if (wp) {
 	    if (n)
 		wp->name = strdup(n);
-	    if (layer) {
-		wp->layer = layer;
-		wp->flags = flags;
-	    } else {
-		wp->layer = has_relation_layer;
-		wp->flags = has_relation_flags;
+	    if (!wp->layer) {
+		if (layer) {
+		    wp->layer = layer;
+		    wp->flags = flags;
+		} else {
+		    wp->layer = relation_layer;
+		    wp->flags = relation_flags;
+		}
 	    }
 	    wp->from = way->node_refs[0];
 	    wp->to = way->node_refs[way->node_ref_count-1];
@@ -1183,9 +1190,6 @@ parse_way_final(const void *is_tile, const readosm_way *way)
 
     } else if (wp->flags & AREA) {
 	add_as_poly:
-	    /*
-	     * Detect an AREA -> create a polygon
-	     */
 	    PolygonId++;
 
 	    buildmap_polygon_add_landmark (PolygonId, wp->layer, rms_name);
@@ -1194,8 +1198,6 @@ parse_way_final(const void *is_tile, const readosm_way *way)
 	    wp->lineid = add_shaped_line(way, rms_name, wp->layer, 1);
     } else {
 	add_as_way:
-	    /* Street name */
-	    // buildmap_debug ("Way %lld [%s] ref [%s]", way->id,
 	    buildmap_debug ("Way %lld [%s]", way->id,
 			    wp->name ? wp->name : "");
 
@@ -1215,6 +1217,7 @@ parse_relation(const void *is_tile, const readosm_relation * relation)
     int layer = 0, flags = 0;
     int waslayer;
     int is_building = 0;
+    int is_water = 0;
     const char *tourism = NULL, *amenity = NULL;
     int i;
 
@@ -1249,15 +1252,13 @@ parse_relation(const void *is_tile, const readosm_relation * relation)
 	    tourism = tag->value;
 	} else if (strcasecmp(tag->key, "amenity") == 0) {
 	    amenity = tag->value;
-#if 0
 	} else if (strcasecmp(tag->key, "natural") == 0 &&
-		    strcasecmp(tag->key, "coastline") == 0) {
-	    is_coast = 1;
-#endif
+		    strcasecmp(tag->value, "water") == 0) {
+	    is_water = 1;
         }
 	
 	waslayer = layer;
-	buildmap_osm_get_layer(PLACE, tag->key, tag->value, &flags, &layer);
+	buildmap_osm_get_layer(AREA, tag->key, tag->value, &flags, &layer);
 	if (!waslayer && layer)
 	    buildmap_info("relation %u has layer %s/%s", relation->id, tag->key, tag->value);
     }
@@ -1277,12 +1278,26 @@ parse_relation(const void *is_tile, const readosm_relation * relation)
     if (is_multipolygon && layer) {
 	for (i = 0; i < relation->member_count; i++)
 	{
+	    int innerlayer = 0;
+	    int innerflags = 0;
+
 	    member = relation->members + i;
 	    switch(member->member_type) {
 	    case READOSM_MEMBER_WAY:
+		if (is_water) {
+		    if (strcmp(member->role, "inner") == 0) {
+			innerlayer = l_island;
+		    } else if (strcmp(member->role, "outer") == 0
+			    || strcmp(member->role, "") == 0) {
+			innerlayer = l_lake;
+		    }
+		    innerflags = AREA;
+		}
 		if (!isWayInteresting(member->id)) {
-		    saveInterestingWay(member->id, 0, 0, 0, 0, layer, flags, relation->id);
-		    qsort(WayTable, nWayTable, sizeof(*WayTable), qsort_compare_osm_ids);
+		    saveInterestingWay(member->id, 0, 0, innerlayer,
+		    	innerflags, layer, flags, relation->id);
+		    qsort(WayTable, nWayTable, sizeof(*WayTable),
+				qsort_compare_osm_ids);
     		    nSearchableWays = nWayTable;
 		}
 		break;
@@ -1294,7 +1309,8 @@ parse_relation(const void *is_tile, const readosm_relation * relation)
 	    }
 	}
 	// buildmap_info("warning: save interesting relation %s", name);
-	saveInterestingRelation(relation->id, name ? strdup(name) : 0, layer, flags);
+	saveInterestingRelation(relation->id, name ?  strdup(name) : 0,
+			layer, flags);
     }
 
     return READOSM_OK;
@@ -1537,6 +1553,8 @@ buildmap_osm_text_read(char *fn, int tileid,
     buildmap_osm_common_find_layers ();
     l_shoreline = buildmap_layer_get("shore");;
     l_boundary = buildmap_layer_get("boundaries");;
+    l_lake = buildmap_layer_get("lakes");;
+    l_island = buildmap_layer_get("islands");;
 
     nRels = 0;
     nWays = 0;
