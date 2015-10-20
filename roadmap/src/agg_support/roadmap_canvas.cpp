@@ -332,7 +332,6 @@ void roadmap_canvas_erase (void) {
 
 void roadmap_canvas_draw_string (RoadMapGuiPoint *position,
                                  int corner,
-                                 int size,
                                  const char *text) {
    int text_width;
    int text_ascent;
@@ -647,6 +646,7 @@ static void roadmap_canvas_draw_string_worker (RoadMapGuiPoint *start,
                                        int width,
                                        int angle, const char *text)
 {
+   int size;
    
    if (RoadMapCanvasFontLoaded != 1) return;
    
