@@ -1,0 +1,103 @@
+#!/bin/sh
+
+# this script is a work in progress, used for rebuilding all
+# of the OSM maps stored under the current directory.
+
+me=${0##*/}
+mydir=${0%/*}
+
+# mydir=/usr/local/bin
+
+export LD_LIBRARY_PATH=/usr/local/lib
+
+bits=19
+classfile=/tmp/All
+classfile=/usr/local/share/roadmap/default/All
+
+while :
+do
+    case $1 in
+    -f) force=--download; shift ;;
+    -i) ignorelist=true; shift ;;
+    -F) ignorelist=true; force=--download; shift ;;
+    -g) ignorelist=true; gdb=yes; shift ;;
+    -n) dryrun=':'; shift ;;
+    -b) bits=$2; shift 2;;
+    *) break ;;
+    esac
+done
+
+if [ "$gdb" ]
+then
+    dogdb="gdb $mydir/buildmap_osm --args"
+fi
+
+hex2file()
+{
+     $mydir/buildmap_osm -l --class $classfile -t $1 | sed 's/[[:space:]].*//'
+}
+file2hex()
+{
+    echo $1 | sed 's;.*/qt\(........\)\.\(osm\|rdm\).*;0x\1;'
+}
+
+do_build()
+{
+    if test -z "$ignorelist" -a -s /tmp/rebuild_osm.log && \
+	grep -q $1 /tmp/rebuild_osm.log && \
+	test -e $(hex2file $1)
+    then
+	echo Already rebuilt $1, skipping
+	return
+    fi
+    set -x
+    $dryrun $dogdb $mydir/buildmap_osm $force --replace \
+        --fetcher $mydir/rdm_osm_fetch_tile \
+	--class $classfile \
+	--tileid $1 || exit 1
+    r=$?
+    set +x
+#	--verbose --debug \
+
+    if [ $r = 0 -a -z "$ignorelist" ]
+    then
+	echo $1 >>/tmp/rebuild_osm.log
+    fi
+}
+
+if [ "$1" ]
+then
+    for x
+    do
+	case $x in
+	qt*|./qt*)
+	    do_build $(file2hex $x)
+	    ;;
+	0x*)
+	    do_build $x
+	    ;;
+	esac
+    done
+    exit
+fi
+
+started=$(date)
+tiles=$(
+    for x in $(find qt$bits -name '*.osm.gz' -or -name '*.rdm')
+    do
+	file2hex $x  # convert all filenames to tileid
+    done | sort -u   # sort/uniq in case we have both .rdm and .osm.gz files
+)
+
+for t in $tiles
+do
+    do_build $t
+done
+
+finished=$(date)
+
+echo started at $started
+echo finished at $finished
+
+exit
+
