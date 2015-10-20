@@ -123,7 +123,7 @@ static void roadmap_metadata_activate (void *context) {
          this->strings = roadmap_dictionary_open ("attributes");
 
          if (this->strings == NULL) {
-            roadmap_log (ROADMAP_FATAL, "cannot open dictionary");
+            roadmap_log (ROADMAP_FATAL, "cannot open 'attributes' dictionary");
          }
       }
    }
