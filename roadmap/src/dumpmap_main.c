@@ -28,6 +28,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #include "roadmap.h"
 #include "roadmap_dbread.h"
@@ -380,7 +381,7 @@ roadmap_db_handler DumpMapPrintIndex =
 
 static void *dumpmap_hexadump_map (roadmap_db *root) {
 
-   int i;
+   int i, j;
    int size;
    const char *data;
 
@@ -396,13 +397,25 @@ static void *dumpmap_hexadump_map (roadmap_db *root) {
       for (j = 0; j < 16; ++j) {
          fprintf(out, " %02x", 0xff & ((int)data[i+j]));
       }
+      fprintf(out, "  ");
+      for (j = 0; j < 16; ++j) {
+	 int c = 0xff & ((int)data[i+j]);
+         fprintf(out, "%c", isprint(c) ? c : '.');
+      }
       fprintf(out, "\n");
    }
 
    if (i < size) {
       fprintf(out, "%08d  ", i);
-      for (; i < size; ++i) {
-         fprintf(out, " %02x", 0xff & ((int)data[i]));
+      j = i;
+      for (; j < size; ++j) {
+         fprintf(out, " %02x", 0xff & ((int)data[j]));
+      }
+      fprintf(out, "  ");
+      j = i;
+      for (; j < size; ++j) {
+	 int c = 0xff & ((int)data[j]);
+         fprintf(out, "%c", isprint(c) ? c : '.');
       }
       fprintf(out, "\n");
    }
