@@ -902,7 +902,8 @@ static int buildmap_polygon_save (void) {
    buildmap_db *head_table;
    buildmap_db *line_table;
 
-   buildmap_info ("saving %d polygons...", PolygonLineCount);
+   buildmap_info ("saving %d polygons with %d lines...",
+	PolygonCount, PolygonLineCount);
 
    /* Create the new-style "polygons" (note new name) tables,
     * based on lines, instead of points).
