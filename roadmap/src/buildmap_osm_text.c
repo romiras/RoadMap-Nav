@@ -40,6 +40,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <time.h>
+#include <readosm.h>
 
 #include "roadmap.h"
 #include "roadmap_types.h"
@@ -115,7 +116,7 @@ static struct NodeInfo {
 /**
  * @brief some global variables
  */
-static int      LineNo;                 /**< line number in the input file */
+// static int      LineNo;                 /**< line number in the input file */
 static int      nPolygons = 0;          /**< current polygon id (number of
                                                         polygons until now) */
 static int      LineId = 0;             /**< for buildmap_line_add */
@@ -558,7 +559,8 @@ buildmap_osm_text_node_read_lat_lon(char *p)
 }
 
 int
-buildmap_osm_get_layer(int lookfor, char *tag, char *value, int *flags, int *layer)
+buildmap_osm_get_layer(int lookfor, const char *tag, const char *value,
+		int *flags, int *layer)
 {
     int		i,j;
     value_info_t	*value_list;
@@ -734,7 +736,7 @@ buildmap_osm_text_way_tag(char *data)
 }
 
 void
-buildmap_osm_text_way_drop_uninteresting(void)
+bxuildmap_osm_text_way_drop_uninteresting(void)
 {
 	if (wi.WayIsBuilding) {
 	    if (!wi.WayTourism && !wi.WayAmenity) {
@@ -1063,12 +1065,10 @@ buildmap_osm_text_neighbor_way_maps(int tileid)
 	 */
 	for (i = 0; i < 8; i++) {
 	    neighbor_tile = roadmap_osm_tileid_to_neighbor(tileid, i);
-	    // fprintf(stderr, "loading ways list for neighbor 0x%x\n", neighbor_tile);
 
 	    /* if we already have that neighbor's ways, reuse */
 	    for (j = 0; j < 8; j++) {
 		if (Neighbor_Ways[j].tileid == neighbor_tile) {
-		    // fprintf(stderr, "reusing neighbor 0x%x\n", neighbor_tile);
 		    new_neighbor_ways[i] = Neighbor_Ways[j];
 		    Neighbor_Ways[j].ways = 0;
 		    break;
@@ -1077,7 +1077,6 @@ buildmap_osm_text_neighbor_way_maps(int tileid)
 
 	    /* didn't find it -- fetch the neighbor's ways */
 	    if (j == 8) {
-		// fprintf(stderr, "fetching neighbor 0x%x\n", neighbor_tile);
 		buildmap_osm_text_load_neighbor_ways(neighbor_tile,
 				&new_neighbor_ways[i]);
 	    }
@@ -1196,6 +1195,7 @@ int buildmap_osm_text_fclose(FILE *fp)
 	return fclose(fp);
 }
 
+#if BEFORE
 /**
  * @brief This is the gut of buildmap_osm_text : parse an OSM XML file
  * @param fdata an open file pointer, this will get read twice
@@ -1348,7 +1348,11 @@ buildmap_osm_text_read(char *fn, int tileid, int country_num, int division_num)
 			wi.WayIsInteresting = 0;
 		}
 
-		buildmap_osm_text_way_drop_uninteresting();
+		if (wi.WayIsBuilding) {
+		    if (!wi.WayTourism && !wi.WayAmenity) {
+			wi.WayIsInteresting = 0;
+		    }
+		}
 
 		/* if the way is still flagged interesting, save it */
 		if (wi.WayId && wi.WayIsInteresting)
@@ -1605,3 +1609,544 @@ buildmap_osm_text_read(char *fn, int tileid, int country_num, int division_num)
 		    passid, t[passid] - t[passid - 1]);
 
 }
+#else
+
+char *readosm_errors[] = {
+    "READOSM_OK",
+    "READOSM_INVALID_SUFFIX",
+    "READOSM_FILE_NOT_FOUND",
+					
+    "READOSM_NULL_HANDLE",              
+    "READOSM_INVALID_HANDLE",           
+    "READOSM_INSUFFICIENT_MEMORY",      
+    "READOSM_CREATE_XML_PARSER_ERROR",  
+    "READOSM_READ_ERROR",               
+    "READOSM_XML_ERROR",                
+    "READOSM_INVALID_PBF_HEADER",       
+    "READOSM_UNZIP_ERROR",              
+    "READOSM_ABORT"                     
+};
+
+static int l_shoreline, l_boundary;
+static int nWays, nNodes;
+
+static int
+parse_node(const void *user_data, const readosm_node * node)
+{
+    const readosm_tag *tag;
+    const char *name = NULL, *place = NULL;
+    int layer = 0, flags = 0;
+    int i;
+
+    nNodes++;
+
+    for (i = 0; i < node->tag_count; i++)
+    {
+	tag = node->tags + i;
+	if (strcasecmp(tag->key, "name") == 0) {
+	    name = tag->value;
+	    break;
+        } else if (buildmap_osm_get_layer(PLACE, tag->key, tag->value,
+			    &flags, &layer)) {
+	    if (flags & PLACE)
+		place = tag->value;
+	    break;
+	}
+    }
+
+    if (name || (flags & PLACE)) {
+	buildmap_debug( "saving %s %s", place, name);
+	saveInterestingNode((nodeid_t)(node->id));
+    }
+
+    return READOSM_OK;
+}
+
+static int
+parse_node_finalize(const void *user_data, const readosm_node * node)
+{
+    const readosm_tag *tag;
+    const char *name = NULL, *place = NULL;
+    int layer = 0, flags = 0;
+    int point;
+    RoadMapString s;
+    int i;
+
+    if (!isNodeInteresting(node->id))
+	return READOSM_OK;
+
+    for (i = 0; i < node->tag_count; i++)
+    {
+	tag = node->tags + i;
+	if (strcasecmp(tag->key, "name") == 0) {
+	    name = tag->value;
+        } else if (buildmap_osm_get_layer(PLACE, tag->key, tag->value,
+			    &flags, &layer)) {
+	    if (flags & PLACE)
+		place = tag->value;
+	}
+    }
+
+    /* Add this interesting node as a point */
+    /* libreadosm uses float to handle lat/lon, which introduces
+     * small errors.  try and ensure we get the same lat/lon as OSM
+     * provided.  it doesn't make a difference in practice, but can
+     * be annoying when debugging, or comparing values later.
+     */
+    point = buildmap_point_add(
+	(((int)(10000000. * node->longitude)+5)/10),
+    	(((int)(10000000. * node->latitude)+5)/10)
+	);
+    buildmap_osm_text_point_add(node->id, point);
+
+    /* If it's a place, add it to the place table as well */
+    if (place) {
+	int p;
+	if (layer) {
+	    if (name) {
+		s = str2dict (DictionaryCity, (char *)name);
+		p = buildmap_place_add(s, layer, point);
+	    }
+	    buildmap_debug( "finishing %1.7f %1.7f %s (%d) %s layer: %d",
+		node->latitude, node->longitude,
+		place, p, name, layer);
+	} else {
+	    buildmap_debug( "dropping %s %s", place, name);
+	}
+    }
+
+    return READOSM_OK;
+}
+
+static int
+parse_way(const void *user_data, const readosm_way *way)
+{
+    const readosm_tag *tag;
+    const char *tourism = NULL, *amenity = NULL;
+    int adminlevel = 0;
+    int is_building = 0, is_territorial = 0, is_coast = 0;  // booleans
+    int layer = 0, flags = 0;
+    int i;
+
+    nWays++;
+
+    if (way->node_ref_count == 0)
+	return READOSM_OK;
+
+    for (i = 0; i < way->tag_count; i++)
+    {
+	tag = way->tags + i;
+
+	if (strcasecmp(tag->key, "building") == 0) {
+	    is_building = 1;
+#ifdef BUILDMAP_NAVIGATION_SUPPORT
+	} else if (strcasecmp(tag->key, "oneway") == 0) {
+	    is_oneway = !strcasecmp(tag->value, "yes");
+#endif
+	} else if (strcasecmp(tag->key, "tourism") == 0) {
+	    tourism = tag->value;
+	} else if (strcasecmp(tag->key, "amenity") == 0) {
+	    amenity = tag->value;
+	} else if (strcasecmp(tag->key, "admin_level") == 0) {
+	    adminlevel = atoi(tag->value);
+	} else if (strcasecmp(tag->key, "border_type") == 0) {
+	    is_territorial = !strcasecmp(tag->value, "territorial");
+	} else if (strcasecmp(tag->key, "natural") == 0 &&
+		    strcasecmp(tag->key, "coastline") == 0) {
+	    is_coast = 1;
+	}
+
+	// really?
+	buildmap_osm_get_layer(ANY, tag->key, tag->value, &flags, &layer);
+    }
+
+
+    /* only save buildings that are amenities or touristic */
+    if (is_building) {
+	if (tourism) {
+	    buildmap_osm_get_layer(PLACE, "tourism", tourism, &flags, &layer);
+	} else if (amenity) {
+	    buildmap_osm_get_layer(PLACE, "amenity", amenity, &flags, &layer);
+	} else {
+	    return READOSM_OK;
+	}
+    }
+
+    if (layer == 0) {
+	if (is_coast) {
+	    layer = l_shoreline;
+	} else if (adminlevel) {
+	    /* national == 2, state == 4, ignore lesser boundaries */
+	    /* also ignore territorial (marine) borders */
+	    if  (adminlevel > 4 || is_territorial) {
+		    return READOSM_OK;
+	    }
+#if LATER /* we don't actually have the points yet in pass 1 */
+	      else if (adminlevel > 2) {
+		from_point = buildmap_osm_text_point_get(WayNodes[0]);
+		fromlon = buildmap_point_get_longitude(from_point);
+		fromlat = buildmap_point_get_latitude(from_point);
+
+		/* if we're not (roughly) in north america,
+		 * discard state boundaries as well.  */
+		if (fromlon > -32 || fromlat < 17) {
+			/* east of the azores or south of mexico */
+			return READOSM_OK;
+		}
+	    }
+#endif
+
+	    layer = l_boundary;
+	}
+    }
+
+    if (layer) {
+	saveInterestingWay((wayid_t)(way->id));
+	for (i = 0; i < way->node_ref_count; i++)
+	    saveInterestingNode((nodeid_t)way->node_refs[i]);
+    }
+
+    return READOSM_OK;
+}
+
+static int
+parse_way_finalize(const void *user_data, const readosm_way *way)
+{
+    const readosm_tag *tag;
+    const char *tourism = NULL, *amenity = NULL, *name = NULL, *ref = NULL;
+    int is_oneway = 0;  // booleans
+    int layer = 0, flags = 0;
+    int from_point, to_point, line, street;
+    RoadMapString rms_dirp, rms_dirs, rms_type, rms_name;
+    char compound_name[1024];
+    const char *n;
+    int i, j;
+
+    if (!isWayInteresting(way->id))
+	return READOSM_OK;
+
+    if (way->node_ref_count == 0)
+	return READOSM_OK;
+
+    for (i = 0; i < way->tag_count; i++)
+    {
+	tag = way->tags + i;
+
+	if (strcasecmp(tag->key, "name") == 0) {
+	    name = tag->value;
+	} else if (strcasecmp(tag->key, "ref") == 0) {
+	    ref = tag->value;
+#ifdef BUILDMAP_NAVIGATION_SUPPORT
+	} else if (strcasecmp(tag->key, "oneway") == 0) {
+	    is_oneway = !strcasecmp(tag->value, "yes");
+#endif
+	} else if (strcasecmp(tag->key, "tourism") == 0) {
+	    tourism = tag->value;
+	} else if (strcasecmp(tag->key, "amenity") == 0) {
+	    amenity = tag->value;
+	}
+
+	// this will preserve the layer/flags for the last tag that
+	// indicates a layer.
+	buildmap_osm_get_layer(ANY, tag->key, tag->value, &flags, &layer);
+    }
+
+    if ( layer == 0) {
+	    wayid_t *wp;
+	    buildmap_debug("discarding way %d, not interesting (%s)", way->id, name);
+	    wp = isWayInteresting(way->id);
+	    if (wp) {
+		WayTableCopy[wp-WayTable] = 0;
+	    }
+	    return READOSM_OK;
+    }
+
+    rms_dirp = str2dict(DictionaryPrefix, "");
+    rms_dirs = str2dict(DictionarySuffix, "");
+    rms_type = str2dict(DictionaryType, "");
+    rms_name = 0;
+
+
+    if ((flags & PLACE) && (tourism || amenity)) {
+	/* we're finishing a way, but the flags may say PLACE if
+	 * we're treating a polygon as a place, for instance.  find
+	 * the center of the bounding box (which is good enough, for
+	 * these purposes), and make it into a place.
+	 */
+	    int minlat = 999999999, maxlat = -999999999;
+	    int minlon = 999999999, maxlon = -999999999;
+	    int point, lon, lat;
+
+	    for (j = 0; j < way->node_ref_count; j++) {
+		    point = buildmap_osm_text_point_get(way->node_refs[j]);
+		    lon = buildmap_point_get_longitude(point);
+		    lat = buildmap_point_get_latitude(point);
+
+		    if (lat < minlat) minlat = lat;
+		    if (lat > maxlat) maxlat = lat;
+		    if (lon < minlon) minlon = lon;
+		    if (lon > maxlon) maxlon = lon;
+	    }
+
+	    lat = (maxlat + minlat) / 2;
+	    lon = (maxlon + minlon) / 2;
+
+	    /* this code looks like buildmap_osm_text_node_finish() */
+	    point = buildmap_point_add(lon, lat);
+
+	    if (!name)
+		name = FromXmlAndDup("??");
+
+	    if (layer) {
+		RoadMapString s;
+		int p;
+		s = str2dict (DictionaryCity, (char *)name);
+		p = buildmap_place_add(s, layer, point);
+		buildmap_debug( "wayplace: finishing %f %f %s (%d) %s layer: %d",
+		    (float)lat/1000000.0, (float)lon/1000000.0,
+		    tourism ? tourism : amenity, p, name, layer);
+	    } else {
+		buildmap_debug( "dropping %s %s",
+		    tourism ? tourism : amenity, name);
+	    }
+
+
+    } else if ((flags & AREA) &&
+		(way->node_refs[0] == way->node_refs[way->node_ref_count-1])) {
+	    /* see http://wiki.openstreetmap.org/wiki/The_Future_of_Areas
+	     * for why the above conditions are simplistic */
+	    static int polyid = 0;
+	    static int cenid = 0;
+
+	    /*
+	     * Detect an AREA -> create a polygon
+	     */
+	    nPolygons++;
+	    cenid++;
+	    polyid++;
+
+	    rms_name = str2dict(DictionaryStreet, name);
+	    buildmap_polygon_add_landmark (nPolygons, layer, rms_name);
+	    buildmap_polygon_add(nPolygons, cenid, polyid);
+
+	    for (j=1; j<way->node_ref_count; j++) {
+		    int prevpoint =
+			buildmap_osm_text_point_get(way->node_refs[j-1]);
+		    int point =
+			buildmap_osm_text_point_get(way->node_refs[j]);
+
+		    LineId++;
+		    buildmap_line_add
+			    (LineId, layer, prevpoint, point,
+			     ROADMAP_LINE_DIRECTION_BOTH);
+		    buildmap_polygon_add_line (cenid, polyid, LineId, POLYGON_SIDE_RIGHT);
+	    }
+    } else {
+	    /*
+	     * Register the way
+	     *
+	     * Need to do this several different ways :
+	     * - begin and end points form a "line"
+	     * - register street name
+	     * - adjust the square
+	     * - keep memory of the point coordinates so we can
+	     *   postprocess the so called shapes (otherwise we only have
+	     *   straight lines)
+	     */
+
+	    int     *lonsbuf, *latsbuf;
+
+	    /* Street name */
+	    buildmap_debug ("Way %d [%s] ref [%s]", way->id,
+			    name ? name : "", ref ? ref : "");
+
+	    if (ref) {
+		char *d = compound_name;
+		const char *s = ref;
+#define ENDASHSEP " \xe2\x80\x93 "
+#define EMDASHSEP " \xe2\x80\x94 "
+		while (*s) {  /* OSM separates multi-value refs with ';' */
+		    if (*s == ';') {
+			d += sprintf(d, ENDASHSEP);
+		    } else {
+			*d++ = *s;
+		    }
+		    s++;
+		}
+		n = compound_name;
+		*d = '\0';
+
+		if (name) {
+		    // sprintf(d, ", %s", name);
+		    sprintf(d, "%s%s", ENDASHSEP, name);
+		}
+	    } else {
+		n = name;
+	    }
+	    rms_name = str2dict(DictionaryStreet, n);
+
+	    LineId++;
+	    /* Map begin and end points to internal point id */
+	    from_point = buildmap_osm_text_point_get(way->node_refs[0]);
+	    to_point = buildmap_osm_text_point_get(way->node_refs[way->node_ref_count-1]);
+
+	    line = buildmap_line_add(LineId,
+		    layer, from_point, to_point, is_oneway);
+
+	    street = buildmap_street_add(layer,
+			    rms_dirp, rms_name, rms_type,
+			    rms_dirs, line);
+	    buildmap_range_add_no_address(line, street);
+
+	    /*
+	     * We're passing too much here - the endpoints of
+	     * the line don't need to be passed to the shape
+	     * module.  We're keeping them here just to be on
+	     * the safe side, they'll be ignored in
+	     * buildmap_osm_text_ways_shapeinfo().
+	     *
+	     * The lonsbuf/latsbuf are never freed, need to be
+	     * preserved for shape registration which happens
+	     * at the end of the program run, so exit() will
+	     * free this for us.
+	     */
+
+	    lonsbuf = calloc(way->node_ref_count, sizeof(way->node_refs[0]));
+	    latsbuf = calloc(way->node_ref_count, sizeof(way->node_refs[0]));
+
+	    for (j=0; j < way->node_ref_count; j++) {
+		    int point =
+			buildmap_osm_text_point_get(way->node_refs[j]);
+		    int lon = buildmap_point_get_longitude(point);
+		    int lat = buildmap_point_get_latitude(point);
+
+		    /* Keep info for the shapes */
+		    lonsbuf[j] = lon;
+		    latsbuf[j] = lat;
+
+		    buildmap_square_adjust_limits(lon, lat);
+	    }
+
+	    if (numshapes == nallocshapes) {
+		    /* Allocate additional space (in big
+		     * chunks) when needed */
+		    if (shapes)
+			nallocshapes *= 2;
+		    else
+			nallocshapes = 1000;
+		    shapes = realloc(shapes,
+			nallocshapes * sizeof(struct shapeinfo));
+		    buildmap_check_allocated(shapes);
+	    }
+
+	    buildmap_debug("lineid %d way->node_ref_count %d",
+		    LineId, way->node_ref_count);
+	    /* Keep info for the shapes */
+	    shapes[numshapes].lons = lonsbuf;
+	    shapes[numshapes].lats = latsbuf;
+	    shapes[numshapes].count = way->node_ref_count;
+	    shapes[numshapes].lineid = LineId;
+
+	    numshapes++;
+    }
+    return READOSM_OK;
+}
+
+#if NEEDED
+static int
+parse_relation(const void *user_data, const readosm_relation * relation)
+{
+    return READOSM_OK;
+}
+#endif
+
+void buildmap_readosm_pass(int pass, char *fn)
+{
+    int ret;
+    const void *handle;
+
+    buildmap_info("Starting pass %d", pass);
+    // buildmap_set_source("pass %d", pass);
+
+    ret = readosm_open(fn, &handle);
+    if (ret != READOSM_OK) {
+	buildmap_fatal(0, "buildmap_osm_text: couldn't open \"%s\", %s",
+		fn, readosm_errors[-ret]);
+	return;
+    }
+
+    switch (pass) {
+    case 1: ret = readosm_parse(handle, NULL,
+    		parse_node, parse_way, NULL);
+	    break;
+    case 2: ret = readosm_parse(handle, NULL,
+    		parse_node_finalize, parse_way_finalize, NULL);
+	    break;
+    }
+    if (ret != READOSM_OK) {
+	buildmap_fatal(0, "buildmap_osm_text pass %d: %s",
+		pass, readosm_errors[-ret]);
+	return;
+    }
+
+    ret = readosm_close(handle);
+    if (ret != READOSM_OK) {
+	buildmap_fatal(0, "buildmap_osm_text pass %d: %s",
+		pass, readosm_errors[-ret]);
+	return;
+    }
+}
+
+
+void 
+buildmap_osm_text_read(char *fn, int tileid,
+			int country_num, int division_num)
+{
+
+    if (tileid)
+	buildmap_osm_text_neighbor_way_maps(tileid);
+
+    buildmap_osm_text_point_hash_reset();
+
+    buildmap_osm_text_reset_way();
+    buildmap_osm_text_reset_node();
+
+    DictionaryPrefix = buildmap_dictionary_open("prefix");
+    DictionaryStreet = buildmap_dictionary_open("street");
+    DictionaryType = buildmap_dictionary_open("type");
+    DictionarySuffix = buildmap_dictionary_open("suffix");
+    DictionaryCity = buildmap_dictionary_open("city");
+
+    buildmap_osm_common_find_layers ();
+    l_shoreline = buildmap_layer_get("shore");;
+    l_boundary = buildmap_layer_get("boundaries");;
+
+    nWays = nNodes = 0;
+    numshapes = 0;
+    nPolygons = 0;
+    LineId = 0;
+    nWayTable = 0;
+    nNodeTable = 0;
+
+    /* pass 1: look at all ways and nodes, decide if they're interesting */
+    buildmap_readosm_pass(1, fn);
+
+    qsort(WayTable, nWayTable, sizeof(*WayTable), qsort_compare_unsigneds);
+    qsort(NodeTable, nNodeTable, sizeof(*NodeTable), qsort_compare_unsigneds);
+
+    /* we've finished saving ways.  we need a fresh place to mark
+     * the ones we're discarding, while still keeping the original list
+     * quickly searchable. */
+    copyWayTable();
+
+    /* pass 2: look at ways again, and finalize */
+    buildmap_readosm_pass(2, fn);
+
+    buildmap_osm_text_ways_shapeinfo();
+
+    buildmap_info("Ways %d, interesting %d",
+	    nWays, nWayTable);
+    buildmap_info("Number of nodes : %d, interesting %d", nNodes, nNodeTable);
+    buildmap_info("Number of points: %d", nPoints);
+}
+#endif

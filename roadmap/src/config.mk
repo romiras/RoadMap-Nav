@@ -133,6 +133,9 @@ LIBGPS = YES
 SHAPEFILES = NO
 # SHAPEFILES = YES
 
+# building OSM libraries relies on libreadosm
+READOSM = YES
+
 # For better-looking lines and a better looking street-label
 # font, RoadMap can use the "Anti-Grain Geometry" library,
 # libagg.a, on some desktops.  If you don't have this library,

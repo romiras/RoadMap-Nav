@@ -193,6 +193,11 @@ ifneq ($(strip $(SHAPEFILES)),NO)
 	LIBS += -lshp
 endif
 
+# libreadosm support needed for building OSM maps
+ifneq ($(strip $(READOSM)),NO)
+	LIBS += -lreadosm
+endif
+
 # rotation support in QT/QPE?
 ifeq ($(strip $(QT_NO_ROTATE)),YES)
 	CFLAGS += -DQT_NO_ROTATE
