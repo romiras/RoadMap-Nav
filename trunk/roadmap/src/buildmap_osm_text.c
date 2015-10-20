@@ -1215,7 +1215,6 @@ parse_relation(const void *is_tile, const readosm_relation * relation)
     const char *name = 0;
     int is_multipolygon = 0;
     int layer = 0, flags = 0;
-    int waslayer;
     int is_building = 0;
     int is_water = 0;
     const char *tourism = NULL, *amenity = NULL;
@@ -1245,7 +1244,6 @@ parse_relation(const void *is_tile, const readosm_relation * relation)
 	    }
 	} else if (strcasecmp(tag->key, "name") == 0) {
 	    name = tag->value;
-	    buildmap_info("warning: relation has name %s", name);
 	} else if (strcasecmp(tag->key, "building") == 0) {
 	    is_building = 1;
 	} else if (strcasecmp(tag->key, "tourism") == 0) {
@@ -1257,10 +1255,7 @@ parse_relation(const void *is_tile, const readosm_relation * relation)
 	    is_water = 1;
         }
 	
-	waslayer = layer;
 	buildmap_osm_get_layer(AREA, tag->key, tag->value, &flags, &layer);
-	if (!waslayer && layer)
-	    buildmap_info("relation %u has layer %s/%s", relation->id, tag->key, tag->value);
     }
 
     /* only save buildings that are amenities or touristic */
@@ -1308,7 +1303,6 @@ parse_relation(const void *is_tile, const readosm_relation * relation)
 		break;
 	    }
 	}
-	// buildmap_info("warning: save interesting relation %s", name);
 	saveInterestingRelation(relation->id, name ?  strdup(name) : 0,
 			layer, flags);
     }
@@ -1323,20 +1317,15 @@ static void add_multipolygon(wayinfo **wayinfos, relinfo *rp, int layer, int rms
     int ring = 0;
     int i, j;
 
-    buildmap_info("relation %d adding multipolygon", rp->id);
-    // for (wp = wayinfos; wp < wayinfos + count; wp++) {
     for (i = 0; i < count; i++) {
 	wp = wayinfos[i];
 	if (wp->ring) continue;
 	wp->ring = ++ring;
 
 	PolygonId++;
-	buildmap_info("adding polygon %d ring %d", PolygonId, ring);
 	buildmap_polygon_add_landmark (PolygonId, layer, rms_name);
 	buildmap_polygon_add(PolygonId, 0, PolygonId);
-	buildmap_info("adding first line %d (way %d) to polygon %d", wp->lineid, wp->id, PolygonId);
 	buildmap_polygon_add_line (0, PolygonId, wp->lineid, POLYGON_SIDE_RIGHT);
-	buildmap_info("  from %d to %d", wp->from, wp->to);
 
 	from = wp->from;
 	to = wp->to;
@@ -1352,16 +1341,12 @@ static void add_multipolygon(wayinfo **wayinfos, relinfo *rp, int layer, int rms
 
 	    if (wp2->from == to) {
 		wp2->ring = ring;
-		buildmap_info("adding right line %d (way %d) to polygon %d", wp2->lineid, wp2->id, PolygonId);
-		buildmap_info("  from %d to %d", wp2->from, wp2->to);
 		buildmap_polygon_add_line (0, PolygonId, wp2->lineid,
 			POLYGON_SIDE_RIGHT);
 		to = wp2->to;
 		j = i;
 	    } else if (wp2->to == to) {
 		wp2->ring = ring;
-		buildmap_info("adding left line %d (way %d) to polygon %d", wp2->lineid, wp2->id, PolygonId);
-		buildmap_info("  from %d to %d", wp2->from, wp2->to);
 		buildmap_polygon_add_line (0, PolygonId, wp2->lineid,
 			POLYGON_SIDE_LEFT);
 		to = wp2->from;
@@ -1397,7 +1382,7 @@ parse_relation_final(const void *user_data, const readosm_relation * relation)
     if (!rp)
 	return READOSM_OK;
 
-    buildmap_info("warning: relation %s is interesting", rp->name);
+    // buildmap_info("warning: relation %s is interesting", rp->name);
 
     // note: assumes this is a multipolygon relation
 
@@ -1483,7 +1468,6 @@ void buildmap_readosm_pass(int pass, char *fn, int tileid)
     if (tileid) is_tile = (void *)1;
 
     buildmap_info("Starting pass %d", pass);
-    // buildmap_set_source("pass %d", pass);
 
     fp = buildmap_osm_text_fopen(fn);
     ret = readosm_fopen(fp, READOSM_OSM_FORMAT, &handle);
