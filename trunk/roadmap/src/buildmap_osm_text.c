@@ -1210,7 +1210,7 @@ parse_way_final(const void *is_tile, const readosm_way *way)
 	    RoadMapArea *polyarea;
 	    PolygonId++;
 
-	    // buildmap_info("adding %s as polygon %d", wp->name, PolygonId);
+	    // buildmap_info("adding %d (%s) as polygon %d", wp->id, wp->name, PolygonId);
 	    buildmap_polygon_add_landmark (PolygonId, wp->layer, rms_name);
 	    buildmap_polygon_add(PolygonId, 0, PolygonId, &polyarea);
 
@@ -1354,7 +1354,7 @@ static void add_multipolygon(wayinfo **wayinfos, int layer,
 	// if (wp->flags & AREA) continue; // already a polygon
 
 	PolygonId++;
-	// buildmap_info("add_multi: adding %s as polygon %d", name, PolygonId);
+	// buildmap_info("add_multi: adding %d (%s) as polygon %d", wp->id, name, PolygonId);
 	buildmap_polygon_add_landmark (PolygonId, layer, rms_name);
 	buildmap_polygon_add(PolygonId, 0, PolygonId, &polyarea);
 	buildmap_polygon_add_line (0, PolygonId, wp->lineid, POLYGON_SIDE_RIGHT);
@@ -1377,6 +1377,7 @@ static void add_multipolygon(wayinfo **wayinfos, int layer,
 
 	    if (wp2->from == to) {
 		wp2->ring = ring;
+		// buildmap_info(" and %d (%d) as right side", wp2->id, wp2->lineid, PolygonId);
 		buildmap_polygon_add_line (0, PolygonId, wp2->lineid,
 			POLYGON_SIDE_RIGHT);
 		if (wp2->lineid2)
@@ -1388,6 +1389,7 @@ static void add_multipolygon(wayinfo **wayinfos, int layer,
 		j = i;
 	    } else if (wp2->to == to) {
 		wp2->ring = ring;
+		// buildmap_info(" and %d (%d) as left side", wp2->id, wp2->lineid, PolygonId);
 		buildmap_polygon_add_line (0, PolygonId, wp2->lineid,
 			POLYGON_SIDE_LEFT);
 		if (wp2->lineid2)
@@ -1402,10 +1404,11 @@ static void add_multipolygon(wayinfo **wayinfos, int layer,
 		j++;
 		continue;
 	    }
-	    if (to == from) { /* done with this ring */
+	    if (to == from) /* done with this ring */
 		break;
-	    }
 	}
+	if (to != from)
+	    buildmap_info(" WARNING: failed to close polygon %d", PolygonId);
     }
     /* clear the ring indicators, in case these ways are part
      * of another multipolygon, later. */
@@ -1428,7 +1431,7 @@ parse_relation_final(const void *user_data, const readosm_relation * relation)
     if (!rp)
 	return READOSM_OK;
 
-    // buildmap_info("warning: relation %s is interesting", rp->name);
+    // buildmap_info("relation %d (%s) is interesting", rp->id, rp->name);
 
     // note: assumes this is a multipolygon relation
 
