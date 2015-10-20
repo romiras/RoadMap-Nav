@@ -747,13 +747,12 @@ static int
 parse_node_final(const void *is_tile, const readosm_node * node)
 {
     const readosm_tag *tag;
-    const char *name = NULL, *place = NULL;
+    const char *name = NULL;
     int layer = 0, flags = 0;
     int point;
     RoadMapString s;
-    int i;
+    int i, referenced;
     int lat, lon;
-    // int places = 0;
 
     nNodes++;
 
@@ -764,26 +763,17 @@ parse_node_final(const void *is_tile, const readosm_node * node)
 	    name = tag->value;
         } else if (buildmap_osm_get_layer(PLACE, tag->key, tag->value,
 			    &flags, &layer)) {
-	    if (flags & PLACE)
-		place = tag->value;
-	    // fprintf(stderr, "t/v %s/%s, got place %d: %s %s\n",
-	    // 		tag->key, tag->value, places, place, name);
-	    // places++;
+	    // fprintf(stderr, "t/v %s/%s, got place: %s\n",
+	    // 		tag->key, tag->value, name);
 	}
     }
 
-    /* unnamed, not a place, and not referenced by a way.  skip it */
-    i = isNodeInteresting(node->id);
-    if (!name && (flags != PLACE) && !isNodeInteresting(node->id)) {
-	// fprintf(stderr, "dropping node %s, flags %d, interesting %d\n",
-	//     name, flags, i);
+    /* not a place we care about, and not referenced by a way.  skip it */
+    referenced = isNodeInteresting(node->id);
+    if (!layer && !referenced)
 	return READOSM_OK;
-    }
-	// fprintf(stderr, "keeping node %s, flags %d, place %s\n",
-	//     name, flags, place);
 
-
-    /* Add this interesting node as a point */
+    /* Add this node as a point */
     /* libreadosm uses float to handle lat/lon, which introduces
      * small errors.  try and ensure we get the same lat/lon as OSM
      * provided.  it doesn't make a difference in practice, but can
@@ -796,19 +786,12 @@ parse_node_final(const void *is_tile, const readosm_node * node)
 
     buildmap_osm_text_point_add(node->id, point);
 
-    /* If it's a place, add it to the place table as well */
-    if (place) {
-	int p;
-	if (layer) {
-	    s = str2dict (DictionaryCity, name);
-	    p = buildmap_place_add(s, layer, point);
-	    buildmap_debug("finishing %lld %1.7f %1.7f %s (%d) %s layer: %d",
-		node->id,
-		node->latitude, node->longitude,
-		place, p, name, layer);
-	} else {
-	    buildmap_debug( "dropping %s %s", place, name);
-	}
+    /* If it has a layer, add it to the place table as well */
+    if (layer) {
+	s = str2dict (DictionaryCity, name);
+	buildmap_place_add(s, layer, point);
+	buildmap_debug("finishing %lld %1.7f %1.7f %s layer: %d",
+	    node->id, node->latitude, node->longitude, name, layer);
     }
 
     return READOSM_OK;
@@ -967,7 +950,7 @@ parse_way(const void *is_tile, const readosm_way *way)
     if (!tourism && !amenity)
 	flags &= ~PLACE;
 
-    if (flags & AREA) {
+    if ((flags & AREA) && !relation_layer) {
 	// if it's supposed to be a polygon, but isn't, then it's not.
 	if (way->node_refs[0] != way->node_refs[way->node_ref_count-1])
 	    flags &= ~AREA;
@@ -1288,32 +1271,32 @@ parse_relation(const void *is_tile, const readosm_relation * relation)
     if (is_multipolygon && layer) {
 	for (i = 0; i < relation->member_count; i++)
 	{
-	    int innerlayer = 0;
-	    int innerflags = 0;
+	    int memberlayer = 0;
+	    int memberflags = 0;
 
 	    member = relation->members + i;
 	    switch(member->member_type) {
 	    case READOSM_MEMBER_WAY:
 		if (is_water) {
 		    if (strcmp(member->role, "inner") == 0) {
-			innerlayer = l_island;
+			memberlayer = l_island;
 		    } else if (strcmp(member->role, "outer") == 0
 			    || strcmp(member->role, "") == 0) {
-			innerlayer = l_lake;
+			memberlayer = layer;
 		    }
-		    innerflags = AREA;
+		    memberflags = AREA;
 		}
 
 		// a way can appear in multiple relations
 		wp = isWayInteresting(member->id);
 		if (wp) {
 		    if (is_water) { // "water" is more important than most
-			wp->layer = innerlayer;
-			wp->flags = innerflags;
+			wp->layer = memberlayer;
+			wp->flags = memberflags;
 		    }
 		} else {
-		    saveInterestingWay(member->id, 0, 0, innerlayer,
-		    	innerflags, layer, flags, relation->id);
+		    saveInterestingWay(member->id, 0, 0, memberlayer,
+		    	memberflags, layer, flags, relation->id);
 		    qsort(WayTable, nWayTable, sizeof(*WayTable),
 				qsort_compare_osm_ids);
     		    nSearchableWays = nWayTable;
@@ -1359,35 +1342,34 @@ static void add_multipolygon(relid_t id, wayinfo **wayinfos, int layer,
 
 	from = wp->from;
 	to = wp->to;
-	if (to == from)
-	    continue;
+	if (to != from) {
+	    for (j = i; j < count; ) {
+		wp2 = wayinfos[j];
+		if (wp2->ring) {
+		    j++;
+		    continue;
+		}
 
-	for (j = i; j < count; ) {
-	    wp2 = wayinfos[j];
-	    if (wp2->ring) {
-		j++;
-		continue;
+		if (wp2->from == to) {
+		    wp2->ring = ring;
+		    wp2->leftright = POLYGON_SIDE_RIGHT;
+		    twi[k++] = wp2;
+		    to = wp2->to;
+		    j = i;
+		} else if (wp2->to == to) {
+		    wp2->ring = ring;
+		    wp2->leftright = POLYGON_SIDE_LEFT;
+		    twi[k++] = wp2;
+		    to = wp2->from;
+		    j = i;
+		} else {
+		    /* no match */
+		    j++;
+		    continue;
+		}
+		if (to == from) /* done with this ring */
+		    break;
 	    }
-
-	    if (wp2->from == to) {
-		wp2->ring = ring;
-		wp2->leftright = POLYGON_SIDE_RIGHT;
-		twi[k++] = wp2;
-		to = wp2->to;
-		j = i;
-	    } else if (wp2->to == to) {
-		wp2->ring = ring;
-		wp2->leftright = POLYGON_SIDE_LEFT;
-		twi[k++] = wp2;
-		to = wp2->from;
-		j = i;
-	    } else {
-		/* no match */
-		j++;
-		continue;
-	    }
-	    if (to == from) /* done with this ring */
-		break;
 	}
 	if (to != from) {
 	    buildmap_info(" WARNING: failed to close polygon %d in relation %d", PolygonId, id);
@@ -1400,12 +1382,18 @@ static void add_multipolygon(relid_t id, wayinfo **wayinfos, int layer,
 	    for (j = 0; j < k; j++) {
 		buildmap_polygon_add_line (0, PolygonId, twi[j]->lineid,
 			twi[j]->leftright);
-		if (wp2->lineid2)
+		if (twi[j]->lineid2)
 		    buildmap_polygon_add_line (0, PolygonId, twi[j]->lineid2,
 			twi[j]->leftright);
 		adjust_polybox(polyarea, twi[j]->area.south, twi[j]->area.west);
 		adjust_polybox(polyarea, twi[j]->area.north, twi[j]->area.east);
 	    }
+	}
+	/* clear the ring indicators, in case these ways are part
+	 * of another multipolygon, later. */
+	for (i = 0; i < count; i++) {
+	    wp = wayinfos[i];
+	    wp->ring = 0;
 	}
     }
     free(twi);
@@ -1585,7 +1573,7 @@ buildmap_osm_text_read(char *fn, int tileid,
     l_shoreline = buildmap_layer_get("shore");;
     l_boundary = buildmap_layer_get("boundaries");;
     l_lake = buildmap_layer_get("lakes");;
-    l_lake = buildmap_layer_get("rivers");;
+    l_river = buildmap_layer_get("rivers");;
     l_island = buildmap_layer_get("islands");;
 
     nRels = 0;
