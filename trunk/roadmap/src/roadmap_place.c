@@ -214,15 +214,17 @@ int roadmap_place_in_square (int square, int layer, int *first, int *last) {
 
    layer = roadmap_locator_layer_to_db(layer);
 
-   if (layer <= 0 || layer > RoadMapPlaceActive->PlaceBySquare[square].count) {
+   layer--;  // switch to zero-based layer indexing
+
+   if (layer < 0 || layer >= RoadMapPlaceActive->PlaceBySquare[square].count) {
        return 0;
    }
 
    index = RoadMapPlaceActive->PlaceByLayer
               + RoadMapPlaceActive->PlaceBySquare[square].first;
 
-   *first = index[layer-1];
-   *last  = index[layer] - 1;
+   *first = index[layer];
+   *last  = index[layer+1] - 1;
 
    return (*first <= *last);
 }
