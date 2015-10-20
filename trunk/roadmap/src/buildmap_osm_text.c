@@ -40,6 +40,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <errno.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -997,6 +998,39 @@ parse_relation(const void *user_data, const readosm_relation * relation)
 }
 #endif
 
+static int text_file_is_pipe;
+FILE *buildmap_osm_text_fopen(char *fn)
+{
+    FILE *fp;
+    int len;
+
+    len = strlen(fn);
+    errno = 0;
+    if (len > 3 && strcmp(&fn[len-3], ".gz") == 0) {
+	char command[1024];
+	sprintf(command, "gzip -d -c %s", fn);
+	fp = popen(command, "r");
+	text_file_is_pipe = 1;
+    } else {
+	fp = fopen(fn, "r");
+	text_file_is_pipe = 0;
+    }
+
+    if (fp == NULL) {
+            buildmap_fatal(0, "couldn't open \"%s\", %s", fn, strerror(errno));
+            return NULL;
+    }
+
+    return fp;
+}
+
+int buildmap_osm_text_fclose(FILE *fp)
+{
+    if (text_file_is_pipe)
+	return pclose(fp);
+    else
+	return fclose(fp);
+}
 /**
  * @brief rather than trying to put an entire file's contents in memory,
  *	we parse it in two passes.  this routine is called for each pass.
@@ -1006,13 +1040,15 @@ void buildmap_readosm_pass(int pass, char *fn, int tileid)
     int ret;
     const void *handle;
     void *is_tile = 0;
+    FILE *fp;
 
     if (tileid) is_tile = (void *)1;
 
     buildmap_info("Starting pass %d", pass);
     // buildmap_set_source("pass %d", pass);
 
-    ret = readosm_open(fn, &handle);
+    fp = buildmap_osm_text_fopen(fn);
+    ret = readosm_fopen(fp, READOSM_OSM_FORMAT, &handle);
     if (ret != READOSM_OK) {
 	buildmap_fatal(0, "buildmap_osm_text: couldn't open \"%s\", %s",
 		fn, readosm_errors[-ret]);
@@ -1037,6 +1073,11 @@ void buildmap_readosm_pass(int pass, char *fn, int tileid)
     if (ret != READOSM_OK) {
 	buildmap_fatal(0, "buildmap_osm_text pass %d: %s",
 		pass, readosm_errors[-ret]);
+	return;
+    }
+    if (buildmap_osm_text_fclose(fp)) {
+	buildmap_fatal(0, "buildmap_osm_text pass %d: %s",
+		pass, strerror(errno));
 	return;
     }
 }
