@@ -141,7 +141,7 @@ int buildmap_shape_add (int line, int irec, int uid, int sequence, int longitude
       }
    }
 
-   buildmap_line_test_long (line, longitude, latitude);
+   buildmap_long_line_test (line, longitude, latitude);
 
    /* This shape was not known yet: create a new one. */
 

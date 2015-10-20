@@ -38,7 +38,7 @@ void buildmap_line_get_position_sorted
 
 void buildmap_line_sort (void);
 
-void buildmap_line_test_long (int line, int longitude, int latitude);
+void buildmap_long_line_test (int line, int longitude, int latitude);
 void buildmap_line_oneway(int way, int oneway);
 void buildmap_line_layer(int way, int layer);
 
