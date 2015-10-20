@@ -51,8 +51,8 @@ typedef struct roadmap_hash_struct RoadMapHash;
 
 RoadMapHash *roadmap_hash_new (char *name, int size);
 
-void roadmap_hash_add       (RoadMapHash *hash, int key, int index);
-int  roadmap_hash_get_first (RoadMapHash *hash, int key);
+void roadmap_hash_add       (RoadMapHash *hash, unsigned int key, int index);
+int  roadmap_hash_get_first (RoadMapHash *hash, unsigned int key);
 int  roadmap_hash_get_next  (RoadMapHash *hash, int index);
 void roadmap_hash_resize    (RoadMapHash *hash, int size);
 

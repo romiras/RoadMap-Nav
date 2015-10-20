@@ -94,7 +94,7 @@ RoadMapHash *roadmap_hash_new (char *name, int size) {
  * @param key
  * @param index
  */
-void roadmap_hash_add (RoadMapHash *hash, int key, int index) {
+void roadmap_hash_add (RoadMapHash *hash, unsigned int key, int index) {
 
    int hash_code = abs(key % ROADMAP_HASH_MODULO);
 
@@ -118,7 +118,7 @@ void roadmap_hash_add (RoadMapHash *hash, int key, int index) {
  * @param hash
  * @param key
  */
-int  roadmap_hash_get_first (RoadMapHash *hash, int key) {
+int  roadmap_hash_get_first (RoadMapHash *hash, unsigned int key) {
 
    int hash_code = abs(key % ROADMAP_HASH_MODULO);
 
