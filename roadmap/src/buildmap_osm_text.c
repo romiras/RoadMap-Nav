@@ -458,8 +458,8 @@ isNodeInteresting(nodeid_t nodeid)
  * @brief  checks to see if the tag and value found in the input data
  *	corresponds to a layer we're interested in recording in the map.
  *      the layer is returned if so (but we don't touch it if not).  the
- *	returned flags indicate what sort of layer this is (PLACE, AREA).
- * @param lookfor limits the search to matching types (PLACE, AREA)
+ *	returned flags indicate what sort of layer this is (LINE, PLACE, AREA).
+ * @param lookfor limits the search to matching types (LINE, PLACE, AREA)
  */
 
 int
@@ -470,12 +470,11 @@ buildmap_osm_get_layer(int lookfor, const char *tag, const char *value,
     value_info_t	*value_list;
 
     for (i=1; tag_info[i].osm_tname != 0; i++) {
-	if ((lookfor & tag_info[i].flags) &&
-		strcmp(tag, tag_info[i].osm_tname) == 0) {
+	if (strcmp(tag, tag_info[i].osm_tname) == 0) {
 	    value_list = tag_info[i].value_list;
 	    if (value_list) {
 		for (j=1; value_list[j].osm_vname; j++) {
-		    if ((lookfor & tag_info[i].flags) &&
+		    if ((lookfor & value_list[j].flags) &&
 		            strcmp(value, value_list[j].osm_vname) == 0) {
 			*flags = value_list[j].flags;
 			if (value_list[j].layerp)

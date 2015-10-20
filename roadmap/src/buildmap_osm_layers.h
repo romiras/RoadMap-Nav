@@ -35,7 +35,6 @@ typedef struct {
 typedef struct {
     char *osm_tname;
     value_info_t *value_list;
-    int flags;
 } tag_info_t;
 
 
@@ -229,20 +228,20 @@ value_info_t tourism_to_layer[] = {
 /* set the third column to a specific type only if that table
  * contains _only_ that type */
 tag_info_t tag_info[] = {
-        {0,                     NULL,			0	},
-        {"highway",             highway_to_layer,	ANY	},
-        {"cycleway",            cycleway_to_layer,	ANY	},
-        {"waterway",            waterway_to_layer,	ANY	},
-        {"railway",             railway_to_layer,	ANY	},
-        {"leisure",             leisure_to_layer,	ANY	},
-        {"amenity",             amenity_to_layer,	ANY	},
-        {"tourism",             tourism_to_layer,	ANY	},
-        {"historic",            historic_to_layer,	ANY	},
-        {"landuse",             landuse_to_layer,	ANY	},
-        {"aeroway",             aeroway_to_layer,	ANY	},
-        {"natural",             natural_to_layer,	ANY	},
-        {"place",               place_to_layer,		ANY	},
-        { 0,                    NULL,			0	},
+	{0,			NULL			},
+	{"highway",		highway_to_layer	},
+	{"cycleway",		cycleway_to_layer	},
+	{"waterway",		waterway_to_layer	},
+	{"railway",		railway_to_layer	},
+	{"leisure",		leisure_to_layer	},
+	{"amenity",		amenity_to_layer	},
+	{"tourism",		tourism_to_layer	},
+	{"historic",		historic_to_layer	},
+	{"landuse",		landuse_to_layer	},
+	{"aeroway",		aeroway_to_layer	},
+	{"natural",		natural_to_layer	},
+	{"place",		place_to_layer		},
+	{ 0,			NULL			},
 };
 
 /**
