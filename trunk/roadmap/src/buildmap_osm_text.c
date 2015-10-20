@@ -1134,8 +1134,6 @@ add_line(wayinfo *wp, const readosm_way *way, int rms_name, int layer,
 	if (polygon)
 	    buildmap_polygon_add_line (0, PolygonId, LineId, POLYGON_SIDE_RIGHT);
     }
-// FIXME  see comment below about lineids from ways that have been
-//  split in two.  we should be recording both LineIds.
     return LineId;
 }
 /**
@@ -1169,7 +1167,6 @@ parse_way_final(const void *user_data, const readosm_way *way)
 	    int minlat, minlon, maxlat, maxlon;
 	    minlat = minlon = 180000000;
 	    maxlat = maxlon = -180000000;
-// FIXME.  we've already calculated a bounding box in wp->area
 	    for (j = 0; j < way->node_ref_count; j++) {
 		    point = buildmap_osm_text_point_get(way->node_refs[j]);
 		    lon = buildmap_point_get_longitude(point);
@@ -1231,7 +1228,6 @@ parse_relation(const void *user_data, const readosm_relation * relation)
     const char *name = 0;
     int is_multipolygon = 0;
     int layer = 0, flags = 0;
-    int is_water = 0;
     int i;
 
     nRels++;
@@ -1258,16 +1254,11 @@ parse_relation(const void *user_data, const readosm_relation * relation)
 	    }
 	} else if (strcasecmp(tag->key, "name") == 0) {
 	    name = tag->value;
-	} else if (strcasecmp(tag->key, "natural") == 0 &&
-		    strcasecmp(tag->value, "water") == 0) {
-	    is_water = 1;
         }
 	
 	buildmap_osm_get_layer(AREA, tag->key, tag->value, &flags, &layer);
     }
 
-    if (layer == l_lake || layer == l_river)
-	is_water = 1;
 
     if (flags & PLACE) {
 	flags = 0;
@@ -1279,32 +1270,19 @@ parse_relation(const void *user_data, const readosm_relation * relation)
     if (is_multipolygon && layer) {
 	for (i = 0; i < relation->member_count; i++)
 	{
-	    int memberlayer = 0;
-	    int memberflags = 0;
 
 	    member = relation->members + i;
 	    switch(member->member_type) {
 	    case READOSM_MEMBER_WAY:
-		if (is_water) {
-		    if (strcmp(member->role, "inner") == 0) {
-			memberlayer = l_island;
-		    } else if (strcmp(member->role, "outer") == 0
-			    || strcmp(member->role, "") == 0) {
-			memberlayer = layer;
-		    }
-		    memberflags = AREA;
-		}
 
-		// a way can appear in multiple relations
+		// a way might already have been added, since it might
+		// appear in multiple relations
 		wp = isWayInteresting(member->id);
-		if (wp) {
-		    if (is_water) { // "water" is more important than most
-			wp->layer = memberlayer;
-			wp->flags = memberflags;
-		    }
-		} else {
-		    saveInterestingWay(member->id, 0, 0, memberlayer,
-		    	memberflags, layer, flags, relation->id);
+		if (!wp) {
+		    saveInterestingWay(member->id, 0, 0,
+			0, 0, layer, flags, relation->id);
+		    // unfortunately, we have to re-sort.  there's
+		    // probably a better scheme.  hash?
 		    qsort(WayTable, nWayTable, sizeof(*WayTable),
 				qsort_compare_osm_ids);
     		    nSearchableWays = nWayTable;
@@ -1397,13 +1375,15 @@ static void add_multipolygon(relid_t id, wayinfo **wayinfos, int layer,
 		adjust_polybox(polyarea, twi[j]->area.north, twi[j]->area.east);
 	    }
 	}
-	/* clear the ring indicators, in case these ways are part
-	 * of another multipolygon, later. */
-	for (i = 0; i < count; i++) {
-	    wp = wayinfos[i];
-	    wp->ring = 0;
-	}
     }
+
+    /* clear the ring indicators, in case these ways are part
+     * of another multipolygon, later. */
+    for (i = 0; i < count; i++) {
+	wp = wayinfos[i];
+	wp->ring = 0;
+    }
+
     free(twi);
 }
 
@@ -1414,6 +1394,7 @@ parse_relation_final(const void *user_data, const readosm_relation * relation)
     wayinfo *wp, **wayinfos, **innerwayinfos;
     const readosm_member *member;
     int i, wc, iwc;
+    int innerlayer;
     RoadMapString rms_name;
 
     rp = isRelationInteresting(relation->id);
@@ -1456,8 +1437,22 @@ parse_relation_final(const void *user_data, const readosm_relation * relation)
 
 
     add_multipolygon(relation->id, wayinfos, rp->layer, rms_name, wc, rp->name);
-    // FIXME:  shouldn't _always_ be l_island
-    add_multipolygon(relation->id, innerwayinfos, l_island, rms_name, iwc, rp->name);
+
+    if (rp->layer == l_lake || rp->layer == l_river) {
+#if LATER
+	// i'd like to do this, but the only layer that will draw
+	// on top of water is "island".  everything else draws
+	// _before_ water, and so becomes obscured.
+	innerlayer = wp->layer ? wp->layer : l_island;
+#else
+	innerlayer = l_island;
+#endif
+    } else {
+	// bad guess on a default layer for an inner polygon
+	innerlayer = wp->layer ? wp->layer : l_lake;
+    }
+
+    add_multipolygon(relation->id, innerwayinfos, innerlayer, rms_name, iwc, rp->name);
 
     free(wayinfos);
     free(innerwayinfos);
