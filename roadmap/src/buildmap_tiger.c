@@ -990,7 +990,7 @@ static void buildmap_tiger_read_rt8 (const char *source, int verbose) {
       cenid  = tiger2string (dictionary_cenid, cursor, 11, 15);
       polyid = tiger2int (cursor, 16, 25);
 
-      buildmap_polygon_add (landid, cenid, polyid);
+      buildmap_polygon_add (landid, cenid, polyid, 0);
 
       record_count += 1;
 
