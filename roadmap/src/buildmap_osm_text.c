@@ -188,24 +188,24 @@ buildmap_osm_text_point_hash_reset(void)
 static void
 buildmap_osm_text_point_add(nodeid_t id, int point)
 {
-        if (nPoints == nPointsAlloc) {
-		if (Points)
-		    nPointsAlloc *= 2;
-		else
-		    nPointsAlloc = 10000;
-		if (PointsHash == NULL)
-			PointsHash = roadmap_hash_new("PointsHash", nPointsAlloc);
-		else
-			roadmap_hash_resize(PointsHash, nPointsAlloc);
+    if (nPoints == nPointsAlloc) {
+	if (Points)
+	    nPointsAlloc *= 2;
+	else
+	    nPointsAlloc = 10000;
+	if (PointsHash == NULL)
+		PointsHash = roadmap_hash_new("PointsHash", nPointsAlloc);
+	else
+		roadmap_hash_resize(PointsHash, nPointsAlloc);
 
-                Points = realloc(Points, sizeof(struct points) * nPointsAlloc);
-		buildmap_check_allocated(Points);
-        }
+	Points = realloc(Points, sizeof(struct points) * nPointsAlloc);
+	buildmap_check_allocated(Points);
+    }
 
-	roadmap_hash_add(PointsHash, id, nPoints);
+    roadmap_hash_add(PointsHash, id, nPoints);
 
-        Points[nPoints].id = id;
-        Points[nPoints++].point = point;
+    Points[nPoints].id = id;
+    Points[nPoints++].point = point;
 }
 
 /**
@@ -216,14 +216,14 @@ buildmap_osm_text_point_add(nodeid_t id, int point)
 static int
 buildmap_osm_text_point_get(nodeid_t id)
 {
-        int     i;
+    int     i;
 
-        for (i = roadmap_hash_get_first(PointsHash, id);
-			i >= 0;
-			i = roadmap_hash_get_next(PointsHash, i))
-                if (Points[i].id == id)
-                        return Points[i].point;
-        return -1;
+    for (i = roadmap_hash_get_first(PointsHash, id);
+	    i >= 0;
+	    i = roadmap_hash_get_next(PointsHash, i))
+    if (Points[i].id == id)
+	    return Points[i].point;
+    return -1;
 }
 
 static int maxRelTable = 0;
@@ -364,7 +364,7 @@ static nodeid_t *NodeTable = NULL;
 
 
 /*
- * @brief creates our .ways table, later used by our neighbors so they
+ * @brief creates our .cov table, later used by our neighbors so they
  *    know which ways are already being taken care of by us.
  */
 void
@@ -372,30 +372,40 @@ buildmap_osm_text_save_wayids(const char *path, const char *outfile)
 {
     char nfn[1024];
     char *p;
-    FILE *fp;
+    FILE *fp = 0;
     wayinfo *wp;
+    relinfo *rp;
+    relinfo delim;
 
     strcpy(nfn, outfile);
     p = strrchr(nfn, '.');
     if (p) *p = '\0';
-    strcat(nfn, ".ways");
-
-    if (!nWayTable) {
-	unlink(nfn);
-	return;
-    }
+    strcat(nfn, ".cov");
 
     fp = roadmap_file_fopen (path, nfn, "w");
+    if (!fp) buildmap_fatal(0, "can't open %s/%s to write ways", path, nfn);
 
-    /* write out the list.  it's already sorted */
-    for (wp = WayTable; wp < &WayTable[nWayTable]; wp++) {
-	if (wp->id)
-	{
-	    fwrite(wp, sizeof(wp->id), 1, fp);
+    if (nWayTable) {
+	for (wp = WayTable; wp < &WayTable[nWayTable]; wp++) {
+	    if (wp->id) {
+		fwrite(wp, sizeof(wp->id), 1, fp);
+	    }
+	}
+    }
+
+    delim.id = ~0;
+    fwrite(&delim, sizeof(rp->id), 1, fp);
+
+    if (nRelTable) {
+	for (rp = RelTable; rp < &RelTable[nRelTable]; rp++) {
+	    if (rp->id) {
+		fwrite(rp, sizeof(rp->id), 1, fp);
+	    }
 	}
     }
 
     fclose(fp);
+
 }
 
 
@@ -478,42 +488,70 @@ buildmap_osm_get_layer(int lookfor, const char *tag, const char *value,
 
 
 /**
- * @brief neighbor_ways keeps track of ways our neighbors are already 
+ * @brief neighbor_coverage keeps track of ways our neighbors are already 
  *	taking care of.
  */
-struct neighbor_ways {
+struct neighbor_coverage {
     int tileid;		    // these are the ways for this tileid
     RoadMapFileContext fc;  // file context for the mmap
-    int count;	    	    // how many ways
-    const unsigned *wayids;    // the way ids for that tileid.
-			    // (also serves as the "populated" flag.)
-} Neighbor_Ways[8];
+    int waycount;	    // how many ways
+    const wayid_t *wayids; // the way ids for that tileid.
+    int relcount;	    // how many relations
+    const relid_t *relids; // the relations ids for that tileid.
+} Neighbor_Coverage[8];
 
 /*
  * @brief memory maps the way list for the give tileid, if it exists
  */
 void
-buildmap_osm_text_load_neighbor_ways(int neighbor,
-			struct neighbor_ways *neighbor_ways)
+buildmap_osm_text_load_neighbor_coverage(int neighbor,
+			struct neighbor_coverage *neighbor_coverage)
 {
-	const char *waysmap;
+	const wayid_t *covmap;
         RoadMapFileContext fc;
+	const wayid_t *idp;
+	int fs = 0;
 
-	waysmap = roadmap_file_map(BuildMapResult,
-		    roadmap_osm_filename(0, 1, neighbor, ".ways"), "r", &fc);
-	if (waysmap) {
-	    neighbor_ways->tileid = neighbor;
-	    neighbor_ways->fc = fc;
-	    neighbor_ways->count = roadmap_file_size(fc) / sizeof(unsigned);
+	covmap = (wayid_t *)roadmap_file_map(BuildMapResult,
+		    roadmap_osm_filename(0, 1, neighbor, ".cov"), "r", &fc);
+	if (covmap)
+	    fs = roadmap_file_size(fc) / sizeof(wayid_t);
+
+	neighbor_coverage->tileid = neighbor;
+
+	if (!covmap || fs <= 1) {
+	    if (covmap) roadmap_file_unmap (&fc);
+	    neighbor_coverage->fc = fc;
+	    neighbor_coverage->waycount = 0;
+	    neighbor_coverage->relcount = 0;
+	    return;
 	}
-	neighbor_ways->wayids = (unsigned *)waysmap;
+
+	idp = covmap;
+	while (*idp != (wayid_t)~0) {
+	    idp++;
+	    if ((idp - covmap) == fs) // didn't find delimiter
+		break;
+	}
+
+	neighbor_coverage->waycount = idp - covmap;
+	if (neighbor_coverage->waycount)
+	    neighbor_coverage->wayids = covmap;
+	else
+	    neighbor_coverage->wayids = 0;
+
+	neighbor_coverage->relcount = fs - neighbor_coverage->waycount - 1;
+	if (neighbor_coverage->relcount > 0)
+	    neighbor_coverage->relids = (relid_t *)(idp + 1);
+	else
+	    neighbor_coverage->relids = 0;
 }
 
 void
-buildmap_osm_text_unload_neighbor_ways(int i)
+buildmap_osm_text_unload_neighbor_coverage(int i)
 {
-	roadmap_file_unmap (&Neighbor_Ways[i].fc);
-	Neighbor_Ways[i].wayids = 0;
+	roadmap_file_unmap (&Neighbor_Coverage[i].fc);
+	Neighbor_Coverage[i].waycount = Neighbor_Coverage[i].relcount = 0;
 }
 
 /*
@@ -523,7 +561,7 @@ buildmap_osm_text_unload_neighbor_ways(int i)
 void
 buildmap_osm_text_neighbor_way_maps(int tileid)
 {
-	struct neighbor_ways new_neighbor_ways[8];
+	struct neighbor_coverage new_neighbor_coverage[8];
 	int neighbor_tile;
 	int i, j;
 
@@ -535,28 +573,28 @@ buildmap_osm_text_neighbor_way_maps(int tileid)
 
 	    /* if we already have that neighbor's ways, reuse */
 	    for (j = 0; j < 8; j++) {
-		if (Neighbor_Ways[j].tileid == neighbor_tile) {
-		    new_neighbor_ways[i] = Neighbor_Ways[j];
-		    Neighbor_Ways[j].wayids = 0;
+		if (Neighbor_Coverage[j].tileid == neighbor_tile) {
+		    new_neighbor_coverage[i] = Neighbor_Coverage[j];
+		    Neighbor_Coverage[i].waycount = Neighbor_Coverage[i].relcount = 0;
 		    break;
 		}
 	    }
 
 	    /* didn't find it -- fetch the neighbor's ways */
 	    if (j == 8) {
-		buildmap_osm_text_load_neighbor_ways(neighbor_tile,
-				&new_neighbor_ways[i]);
+		buildmap_osm_text_load_neighbor_coverage(neighbor_tile,
+				&new_neighbor_coverage[i]);
 	    }
 	}
 
 	/* release any old way lists we're not reusing */
 	for (i = 0; i < 8; i++)
-	    if (Neighbor_Ways[i].wayids)
-		buildmap_osm_text_unload_neighbor_ways(i);
+	    if (Neighbor_Coverage[i].waycount || Neighbor_Coverage[i].relcount )
+		buildmap_osm_text_unload_neighbor_coverage(i);
 
 	/* our new set of reused or freshly loaded way lists into place */
 	for (i = 0; i < 8; i++)
-	    Neighbor_Ways[i] = new_neighbor_ways[i];
+	    Neighbor_Coverage[i] = new_neighbor_coverage[i];
 
 }
 
@@ -564,17 +602,41 @@ buildmap_osm_text_neighbor_way_maps(int tileid)
  * @brief check to see if the given way exists in any of
  *        our neighbors.
  */
-int
-buildmap_osm_text_check_neighbors(wayid_t wayid)
+static int
+buildmap_osm_text_check_neighbor_way(wayid_t wayid)
 {
     int i;
     wayid_t *r;
 
     for (i = 0; i < 8; i++) {
-	if (Neighbor_Ways[i].wayids) {
-	    r = bsearch(&wayid, Neighbor_Ways[i].wayids,
-		    Neighbor_Ways[i].count, sizeof(*(Neighbor_Ways[i].wayids)),
-		     qsort_compare_unsigneds);
+	if (Neighbor_Coverage[i].waycount) {
+	    r = bsearch(&wayid, Neighbor_Coverage[i].wayids,
+			Neighbor_Coverage[i].waycount,
+			sizeof(*(Neighbor_Coverage[i].wayids)),
+		     qsort_compare_osm_ids);
+	    if (r)
+		return 1;
+	}
+    }
+    return 0;
+}
+
+/*
+ * @brief check to see if the given relation exists in any of
+ *        our neighbors.
+ */
+static int
+buildmap_osm_text_check_neighbor_relation(relid_t relid)
+{
+    int i;
+    relid_t *r;
+
+    for (i = 0; i < 8; i++) {
+	if (Neighbor_Coverage[i].relcount) {
+	    r = bsearch(&relid, Neighbor_Coverage[i].relids,
+			Neighbor_Coverage[i].relcount,
+			sizeof(*(Neighbor_Coverage[i].relids)),
+		     qsort_compare_osm_ids);
 	    if (r)
 		return 1;
 	}
@@ -814,7 +876,7 @@ parse_way(const void *is_tile, const readosm_way *way)
 
     /* if we're processing a quadtile, don't include any
      * ways that our neighbors already include */
-    if (is_tile && buildmap_osm_text_check_neighbors(way->id)) {
+    if (is_tile && buildmap_osm_text_check_neighbor_way(way->id) && !has_relation_layer) {
 	buildmap_verbose("dropping way %lld because a neighbor "
 		    "already has it", way->id);
 	return READOSM_OK;
@@ -1144,7 +1206,7 @@ parse_way_final(const void *is_tile, const readosm_way *way)
 }
 
 static int
-parse_relation(const void *user_data, const readosm_relation * relation)
+parse_relation(const void *is_tile, const readosm_relation * relation)
 {
     const readosm_tag *tag;
     const readosm_member *member;
@@ -1160,6 +1222,15 @@ parse_relation(const void *user_data, const readosm_relation * relation)
 
     if (relation->member_count == 0)
 	return READOSM_OK;
+
+    /* if we're processing a quadtile, don't include any
+     * relations that our neighbors already include */
+    if (is_tile && buildmap_osm_text_check_neighbor_relation(relation->id)) {
+	buildmap_verbose("dropping relation %lld because a neighbor "
+		    "already has it", relation->id);
+	return READOSM_OK;
+    }
+
 
     for (i = 0; i < relation->tag_count; i++)
     {
@@ -1479,9 +1550,7 @@ buildmap_osm_text_read(char *fn, int tileid,
 
     /* pass 1:
      *  record entire interesting relations, including layer and name, and
-     *  record the ways and nodes they refer to.  record the relation
-     *  id along with the way or node, so they can find the relation's
-     *  layer and name.
+     *  record the ways and nodes they refer to.
      */
     buildmap_readosm_pass(1, fn, tileid);
 
@@ -1491,22 +1560,23 @@ buildmap_osm_text_read(char *fn, int tileid,
 
     /* pass 2:
      *  record interesting ways, including layer and and name.  if there's
-     *   no layer, and relation id is present, fetch layer from there.
-FIXME:  how is naming done?  bbox of entire relation?  assigned to biggest
-    member?  at what point do i have all the information present to calculate
-    this?
-     *  record the nodes referred to by all recorded ways
+     * FIXME:  how is naming done?  bbox of entire relation?  assigned
+     * to biggest member?  at what point do i have all the information
+     * present to calculate this?
      */
     buildmap_readosm_pass(2, fn, tileid);
+
+    /* we've added to the WayTable, so need to sort again, and bump
+     * the number of searchable ways.
+     */
     qsort(WayTable, nWayTable, sizeof(*WayTable), qsort_compare_osm_ids);
     nSearchableWays = nWayTable;
-    // remove_duplicates(WayTable, &nWayTable);
 
     qsort(NodeTable, nNodeTable, sizeof(*NodeTable), qsort_compare_unsigneds);
 
     /* pass 3:
      *  save interesting nodes, either previously recorded,
-     *      or interesting by themselves.
+     *      or which are interesting by themselves.
      *  save recorded ways
      *  save recorded relations.  assign relation's layer and/or name to
      *      some or all of the related ways.
