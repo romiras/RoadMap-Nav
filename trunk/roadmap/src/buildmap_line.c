@@ -243,11 +243,11 @@ int buildmap_line_add (int tlid, int layer, int from, int to, int oneway)
    this_line = Line[block] + offset;
 
    if ((from < 0) || (to < 0)) {
-      buildmap_fatal (0, "invalid points");
+      buildmap_fatal (0, "buildmap_line_add: invalid points");
    }
    if (layer <= 0) {
 	   abort();
-      buildmap_fatal (0, "invalid layer %d in line #%d", layer, tlid);
+      buildmap_fatal (0, "buildmap_line_add: invalid layer %d in line #%d", layer, tlid);
    }
 
    this_line->tlid = tlid;
