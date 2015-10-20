@@ -115,6 +115,7 @@ value_info_t waterway_to_layer[] = {
 	{ "river",              &Rivers,        LINE },
 	{ "canal",              &Rivers,        LINE },
 	{ "stream",             &Rivers,        LINE },
+	{ "riverbank",          &Rivers,        AREA },
 #if 0
 	{ "drain",              &Rivers,        LINE },
 	{ "dock",               &Rivers,        LINE },
@@ -125,7 +126,6 @@ value_info_t waterway_to_layer[] = {
 	{ "water_point",        &Rivers,        LINE },
 	{ "weir",               &Rivers,        LINE },
 	{ "dam",                &Rivers,        LINE },
-	{ "riverbank",          &Rivers,        LINE },
 	{ "ditch",              &Rivers,        LINE },
 #endif
         { 0,                    NULL,           0 },
