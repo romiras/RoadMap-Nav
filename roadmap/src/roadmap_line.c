@@ -306,14 +306,16 @@ int roadmap_line_in_square (int square, int layer, int *first, int *last) {
 
    layer = roadmap_locator_layer_to_db(layer);
 
-   if (layer <= 0 || layer > RoadMapLineActive->LineBySquare1[square].count) {
+   layer--;  // switch to zero-based layer indexing
+
+   if (layer < 0 || layer >= RoadMapLineActive->LineBySquare1[square].count) {
        return 0;
    }
    index = RoadMapLineActive->LineByLayer1
               + RoadMapLineActive->LineBySquare1[square].first;
 
-   *first = index[layer-1];
-   *last = index[layer] - 1;
+   *first = index[layer];
+   *last = index[layer+1] - 1;
 
    return (*first <= *last);
 }
