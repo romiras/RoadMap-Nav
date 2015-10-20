@@ -190,7 +190,7 @@ static void arrow_keys_timeout(void) {
  */
 static void special_keypad_arrow_treatment(int keyval)
 {
-    int key;
+    int key = 0;
 
     switch (keyval) {
       case GDK_KP_Left:      key = 0;	break;
