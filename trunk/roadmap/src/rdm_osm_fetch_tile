@@ -18,8 +18,8 @@ server="www.overpass-api.de/api/xapi?*"
 #server="overpass.osm.rambler.ru/cgi/xapi?*"
 
 
-if ! opts="$(getopt -o b:B:x: \
-	-l bits:,bbox:,xmlfile: -n $program -- $@)"
+if ! opts="$(getopt -o b:B:x:f \
+	-l bits:,bbox:,xmlfile:,force -n $program -- $@)"
 then
     usage
 fi
@@ -27,6 +27,7 @@ fi
 eval set -- "$opts"
 
 xmlfile="-"
+force=;
 
 while true
 do
@@ -35,6 +36,7 @@ do
 	-b|--bits) bits=$2; shift 2 ;;
 	-B|--bbox) bbox=$2; shift 2 ;;
 	-x|--xmlfile) xmlfile=$2; shift 2 ;;
+	-f|--force) force=yes; shift 1 ;;
 	--) shift; break ;;
 	*) usage ;;
     esac
@@ -44,12 +46,12 @@ bbox="[bbox=$bbox]"
 
 trap "rm -f $xmlfile.tmp" 0
 
-if [ -e $xmlfile ]
+if [ ! "$force" -a -e $xmlfile ]
 then
     echo Already have $xmlfile
     exit
 fi
-if [ -e ${xmlfile%.gz} ]
+if [  ! "$force" -a -e ${xmlfile%.gz} ]
 then
     echo Already have uncompressed $xmlfile
     exit
@@ -58,7 +60,7 @@ fi
 # normally the .osm.gz files are stored alongside the .rdm files.
 # but for development, it can be convenient to be able to get the .osm from
 # somewhere else on the local system.
-localstore=/usr/local/share/roadmap/newquads
+#localstore=/usr/local/share/roadmap/newquads
 
 # isolate the qt19/.../file.osm.gz partial path
 wantqtpath=qt$bits/${xmlfile##*/qt$bits}
