@@ -1005,17 +1005,10 @@ out:
 
 void adjust_polybox(RoadMapArea *pbox, int lat, int lon)
 {
-      if (lon < pbox->west) {
-         pbox->west = lon;
-      } else if (lon > pbox->east) {
-         pbox->east = lon;
-      }
-
-      if (lat < pbox->south) {
-         pbox->south = lat;
-      } else if (lat > pbox->north) {
-         pbox->north = lat;
-      }
+      if (lon < pbox->west)  pbox->west = lon;
+      if (lon > pbox->east)  pbox->east = lon;
+      if (lat < pbox->south) pbox->south = lat;
+      if (lat > pbox->north) pbox->north = lat;
 }
 
 static void

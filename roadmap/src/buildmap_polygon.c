@@ -271,13 +271,15 @@ static void buildmap_polygon_adjust_bbox
 
       if (x1 < pa->west) {
          pa->west = x1;
-      } else if (x1 > pa->east) {
+      }
+      if (x1 > pa->east) {
          pa->east = x1;
       }
 
       if (x2 < pa->west) {
          pa->west = x2;
-      } else if (x2 > pa->east) {
+      }
+      if (x2 > pa->east) {
          pa->east = x2;
       }
 
