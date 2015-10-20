@@ -75,7 +75,13 @@
 
 extern char *BuildMapResult;
 
-/* OSM has over 2G nodes already -- enough to overflow a 32 bit signed int */
+/* OSM has over 3G nodes already -- enough to overflow a 32 bit signed
+ * integer.  nodeid_t should really be "long long".  i think that may have
+ * repercussions for the roadmap_hash layer, though.
+ *
+ * NB: the way->id and node->id elements passed in from readosm
+ * are already long longs.
+ */
 typedef unsigned nodeid_t;
 typedef unsigned wayid_t;
 
@@ -122,8 +128,8 @@ qsort_compare_unsigneds(const void *id1, const void *id2)
 static int nPointsAlloc = 0;
 static int nPoints = 0;
 static struct points {
-        int     id;
-        int     point;
+        nodeid_t    id;
+        int         point;
 } *Points = 0;
 
 RoadMapHash	*PointsHash = NULL;
@@ -139,7 +145,7 @@ buildmap_osm_text_point_hash_reset(void)
 }
 
 static void
-buildmap_osm_text_point_add(int id, int point)
+buildmap_osm_text_point_add(nodeid_t id, int point)
 {
         if (nPoints == nPointsAlloc) {
 		if (Points)
@@ -167,7 +173,7 @@ buildmap_osm_text_point_add(int id, int point)
  * @return the internal index
  */
 static int
-buildmap_osm_text_point_get(int id)
+buildmap_osm_text_point_get(nodeid_t id)
 {
         int     i;
 
@@ -562,7 +568,7 @@ parse_node(const void *is_tile, const readosm_node * node)
 
     if (name || (flags & PLACE)) {
 	buildmap_debug( "saving %s %s", place, name);
-	saveInterestingNode((nodeid_t)(node->id));
+	saveInterestingNode(node->id);
     }
 
     return READOSM_OK;
@@ -628,13 +634,12 @@ parse_node_finalize(const void *is_tile, const readosm_node * node)
     if (place) {
 	int p;
 	if (layer) {
-	    if (name) {
-		s = str2dict (DictionaryCity, (char *)name);
-		p = buildmap_place_add(s, layer, point);
-	    }
-	    buildmap_debug( "finishing %1.7f %1.7f [%d %d] %s (%d) %s layer: %d",
+	    s = str2dict (DictionaryCity, name);
+	    p = buildmap_place_add(s, layer, point);
+	    buildmap_debug("finishing %lld %1.7f %1.7f %s (%d) %s layer: %d",
+		node->id,
 		node->latitude, node->longitude,
-		lat, lon, place, p, name, layer);
+		place, p, name, layer);
 	} else {
 	    buildmap_debug( "dropping %s %s", place, name);
 	}
@@ -664,7 +669,7 @@ parse_way(const void *is_tile, const readosm_way *way)
     /* if we're processing a quadtile, don't include any
      * ways that our neighbors already include */
     if (is_tile && buildmap_osm_text_check_neighbors(way->id)) {
-	buildmap_verbose("dropping way %d because a neighbor "
+	buildmap_verbose("dropping way %lld because a neighbor "
 		    "already has it", way->id);
 	return READOSM_OK;
     }
@@ -737,9 +742,9 @@ parse_way(const void *is_tile, const readosm_way *way)
     }
 
     if (layer) {
-	saveInterestingWay((wayid_t)(way->id));
+	saveInterestingWay(way->id);
 	for (i = 0; i < way->node_ref_count; i++)
-	    saveInterestingNode((nodeid_t)way->node_refs[i]);
+	    saveInterestingNode(way->node_refs[i]);
     }
 
     return READOSM_OK;
@@ -792,7 +797,7 @@ parse_way_finalize(const void *is_tile, const readosm_way *way)
 
     if ( layer == 0) {
 	    wayid_t *wp;
-	    buildmap_debug("discarding way %d, not interesting (%s)", way->id, name);
+	    buildmap_debug("discarding way %lld, not interesting (%s)", way->id, name);
 	    wp = isWayInteresting(way->id);
 	    if (wp) {
 		WayTableCopy[wp-WayTable] = 0;
@@ -889,7 +894,7 @@ parse_way_finalize(const void *is_tile, const readosm_way *way)
 	    int     *lonsbuf, *latsbuf;
 
 	    /* Street name */
-	    buildmap_debug ("Way %d [%s] ref [%s]", way->id,
+	    buildmap_debug ("Way %lld [%s] ref [%s]", way->id,
 			    name ? name : "", ref ? ref : "");
 
 	    if (ref) {
