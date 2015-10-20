@@ -394,19 +394,19 @@ roadmap_canvas_draw_string_angle(RoadMapGuiPoint *position,
     pango_layout_context_changed(RoadMapLayout);
 }
 
+static GdkPoint *gdkPoints;
+static int ngdkPoints;
 
 void roadmap_canvas_draw_multiple_points (int count, RoadMapGuiPoint *points) {
 
-   GdkPoint gdkpoints[1024];
-
-   while (count > 1024) {
-       roadmap_canvas_convert_points (gdkpoints, points, 1024);
-       gdk_draw_points (RoadMapDrawingBuffer, RoadMapGc, gdkpoints, 1024);
-       points += 1024;
-       count -= 1024;
+   if (ngdkPoints < count) {
+	ngdkPoints = count;
+	gdkPoints = realloc(gdkPoints, ngdkPoints * sizeof(GdkPoint));
+	roadmap_check_allocated(gdkPoints);
    }
-   roadmap_canvas_convert_points (gdkpoints, points, count);
-   gdk_draw_points (RoadMapDrawingBuffer, RoadMapGc, gdkpoints, count);
+
+   roadmap_canvas_convert_points (gdkPoints, points, count);
+   gdk_draw_points (RoadMapDrawingBuffer, RoadMapGc, gdkPoints, count);
 }
 
 void roadmap_canvas_draw_multiple_lines 
@@ -414,27 +414,22 @@ void roadmap_canvas_draw_multiple_lines
 
    int i;
    int count_of_points;
-   GdkPoint gdkpoints[1024];
 
    for (i = 0; i < count; ++i) {
 
-      count_of_points = *lines;
+       count_of_points = *lines;
+       if (ngdkPoints < count_of_points) {
+	    ngdkPoints = count_of_points;
+	    gdkPoints = realloc(gdkPoints, ngdkPoints * sizeof(GdkPoint));
+	    roadmap_check_allocated(gdkPoints);
+       }
 
-      while (count_of_points > 1024) {
-          roadmap_canvas_convert_points (gdkpoints, points, 1024);
-          gdk_draw_lines (RoadMapDrawingBuffer, RoadMapGc, gdkpoints, 1024);
+       roadmap_canvas_convert_points (gdkPoints, points, count_of_points);
+       gdk_draw_lines (RoadMapDrawingBuffer,
+                      RoadMapGc, gdkPoints, count_of_points);
 
-          /* We shift by 1023 only, because we must link the lines. */
-          points += 1023;
-          count_of_points -= 1023;
-      }
-
-      roadmap_canvas_convert_points (gdkpoints, points, count_of_points);
-      gdk_draw_lines (RoadMapDrawingBuffer,
-                      RoadMapGc, gdkpoints, count_of_points);
-
-      points += count_of_points;
-      lines += 1;
+       points += count_of_points;
+       lines += 1;
    }
 }
 
@@ -445,28 +440,23 @@ void roadmap_canvas_draw_multiple_polygons
 
    int i;
    int count_of_points;
-   GdkPoint gdkpoints[1024];
 
    for (i = 0; i < count; ++i) {
 
-      count_of_points = *polygons;
+       count_of_points = *polygons;
+       if (ngdkPoints < count_of_points) {
+	    ngdkPoints = count_of_points;
+	    gdkPoints = realloc(gdkPoints, ngdkPoints * sizeof(GdkPoint));
+       }
+       roadmap_check_allocated(gdkPoints);
 
-      while (count_of_points > 1024) {
-          roadmap_canvas_convert_points (gdkpoints, points, 1024);
-          gdk_draw_polygon (RoadMapDrawingBuffer,
-                            RoadMapGc, filled, gdkpoints, 1024);
+       roadmap_canvas_convert_points (gdkPoints, points, count_of_points);
+       gdk_draw_polygon (RoadMapDrawingBuffer,
+                        RoadMapGc, filled, gdkPoints, count_of_points);
 
-          /* We shift by 1023 only, because we must link the lines. */
-          points += 1023;
-          count_of_points -= 1023;
-      }
+       polygons += 1;
+       points += count_of_points;
 
-      roadmap_canvas_convert_points (gdkpoints, points, count_of_points);
-      gdk_draw_polygon (RoadMapDrawingBuffer,
-                        RoadMapGc, filled, gdkpoints, count_of_points);
-
-      polygons += 1;
-      points += count_of_points;
    }
 }
 
