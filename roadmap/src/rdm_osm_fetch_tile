@@ -14,8 +14,30 @@ program=${0##*/}
 
 : args: $*
 
-server="www.overpass-api.de/api/xapi?*"
-#server="overpass.osm.rambler.ru/cgi/xapi?*"
+
+urlencode()
+{
+    sed -e 's/"/%22/g' \
+	-e 's/\//%2F/g' \
+	-e 's/\./%2E/g' \
+	-e 's/,/%2C/g' \
+	-e 's/:/%3A/g' \
+	-e 's/;/%3B/g' \
+	-e 's/</%3C/g' \
+	-e 's/>/%3E/g' \
+	-e 's/(/%28/g' \
+	-e 's/)/%29/g' \
+	-e 's/ /%20/g' \
+	-e 's/\&/%26/g'
+}
+
+make_url()
+{
+    #meta=" meta"   # include metadata
+    query="(node($bbox);<;>;);out$meta;"
+    server=overpass-api.de/api/interpreter
+    echo http://$server?data=$(echo "$query" | urlencode)
+}
 
 
 if ! opts="$(getopt -o b:B:x:f \
@@ -42,7 +64,7 @@ do
     esac
 done
 
-bbox="[bbox=$bbox]"
+#bbox="[bbox=$bbox]"
 
 trap "rm -f $xmlfile.tmp" 0
 
@@ -83,8 +105,7 @@ case $xmlfile in
 *.gz) want_compressed=1 ;;
 esac
 
-url="http://$server$bbox$query$me"
-
+url=$(make_url)
 echo "Fetching from $url"
 
 if [ "$want_compressed" ]
