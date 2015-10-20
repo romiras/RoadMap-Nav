@@ -125,6 +125,13 @@ static int      LineId = 0;
 static int l_shoreline, l_boundary, l_lake, l_river, l_island;
 static int nRels, nWays, nNodes;
 
+static BuildMapDictionary DictionaryPrefix;
+static BuildMapDictionary DictionaryStreet;
+static BuildMapDictionary DictionaryType;
+static BuildMapDictionary DictionarySuffix;
+static BuildMapDictionary DictionaryCity;
+
+
 /**
  * @brief add string to dictionary, taking note of null inputs
  * @param d
@@ -458,10 +465,11 @@ isNodeInteresting(nodeid_t nodeid)
 
 
 /**
- * @brief  checks to see if the tag and value found in the input data
- *	corresponds to a layer we're interested in recording in the map.
- *      the layer is returned if so (but we don't touch it if not).  the
- *	returned flags indicate what sort of layer this is (LINE, PLACE, AREA).
+ * @brief  looks up the layer corresponding to a tag/value pair.
+ *	only layers we might be interested in rendering on the
+ *	map will be in the tables.  if a match is found, the layer
+ *      is returned (but we don't touch the return parameter if not).  the
+ *	the returned flags indicate the layer type (LINE, PLACE, AREA).
  * @param lookfor limits the search to matching types (LINE, PLACE, AREA)
  */
 
@@ -469,21 +477,18 @@ int
 buildmap_osm_get_layer(int lookfor, const char *tag, const char *value,
 		int *flags, int *layer)
 {
-    int		i,j;
-    value_info_t	*value_list;
+    value_info_t *v;
+    tag_info_t *t;
 
-    for (i=1; tag_info[i].osm_tname != 0; i++) {
-	if (strcmp(tag, tag_info[i].osm_tname) == 0) {
-	    value_list = tag_info[i].value_list;
-	    if (value_list) {
-		for (j=1; value_list[j].osm_vname; j++) {
-		    if ((lookfor & value_list[j].flags) &&
-		            strcmp(value, value_list[j].osm_vname) == 0) {
-			*flags = value_list[j].flags;
-			if (value_list[j].layerp)
-				*layer = *(value_list[j].layerp);
-			return 1;
-		    }
+    for (t = tag_table; t->tag != 0; t++) {
+	if (strcmp(tag, t->tag) == 0) {
+	    v = t->value_table;
+	    for (v = t->value_table; v->value != 0; v++) {
+		if ((lookfor & v->flags) && strcmp(value, v->value) == 0) {
+		    *flags = v->flags;
+		    if (v->layerp)
+			    *layer = *v->layerp;
+		    return 1;
 		}
 	    }
 	    break;
