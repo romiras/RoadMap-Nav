@@ -78,8 +78,9 @@
 #include "roadmap_list.h"
 #include "roadmap_label.h"
 
-#define POLY_OUTLINE 0
-#define LABEL_USING_LINEID 0
+#define DRAW_LABEL_BBOX 0	// show where label should go
+#define LABEL_USING_LINEID 0	// add the line id to the label
+#define ALLOW_LABEL_OVERLAP 0	// don't suppress labels due to overlap
 
 #define MIN(a, b) (a) < (b) ? (a) : (b)
 #define MAX(a, b) (a) > (b) ? (a) : (b)
@@ -323,6 +324,9 @@ int roadmap_label_add_worker (int is_line, const RoadMapGuiPoint *point,
 
    cPtr->notext = 0;
    cPtr->text = NULL;
+#if LABEL_USING_LINEID
+   cPtr->otext = NULL;
+#endif
 
    cPtr->bbox.minx = 1;
    cPtr->bbox.maxx = -1;
@@ -575,7 +579,7 @@ int roadmap_label_draw_cache (int angles) {
          }
          angles = angles && can_tilt;
 
-#if POLY_OUTLINE
+#if DRAW_LABEL_BBOX
          {
             int lines = 4;
 	    RoadMapPen pen = roadmap_canvas_select_pen (RoadMapLabelPen);
@@ -640,7 +644,8 @@ int roadmap_label_draw_cache (int angles) {
 
 
             /* if bounding boxes don't overlap, we're clear */
-            if (roadmap_math_rectangle_overlap (&ocPtr->bbox, &cPtr->bbox)) {
+            if (!ALLOW_LABEL_OVERLAP &&
+		roadmap_math_rectangle_overlap (&ocPtr->bbox, &cPtr->bbox)) {
 
                /* if labels are horizontal, bbox check is sufficient */
                if(!angles) {
