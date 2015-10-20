@@ -197,7 +197,9 @@ void buildmap_square_initialize(void) {
    minlatitude = SortMinLatitude;
 
    count_longitude = (maxlongitude - minlongitude + 0x7fef) / 0x7ff0;
+   if (!count_longitude) count_longitude = 1;
    count_latitude  = (maxlatitude - minlatitude + 0x7fef) / 0x7ff0;
+   if (!count_latitude) count_latitude = 1;
 
    SquareTableSize = count_longitude * count_latitude;
    SquareCount = SquareTableSize;
@@ -212,7 +214,9 @@ void buildmap_square_initialize(void) {
 	   buildmap_fatal (0, "buildmap_square: not enough data");
 
    size_longitude = (maxlongitude - minlongitude) / count_longitude;
+   if (!size_longitude) size_longitude = 1;
    size_latitude = (maxlatitude - minlatitude) / count_latitude;
+   if (!size_latitude) size_latitude = 1;
 
    SortStepLongitude = size_longitude;
    SortStepLatitude  = size_latitude;
