@@ -607,7 +607,6 @@ void buildmap_line_sort (void) {
       j = SortedLine[i];
       one_line = Line[j/BUILDMAP_BLOCK] + (j % BUILDMAP_BLOCK);
       one_line->sorted = i;
-      one_line->sorted = i;
    }
 
    SortedLine2 = malloc (LineCrossingCount * sizeof(int));
