@@ -27,14 +27,14 @@
 #define ANY	7
 
 typedef struct {
-    char *osm_vname;
+    char *value;
     int  *layerp;
     int  flags;
 } value_info_t;
 
 typedef struct {
-    char *osm_tname;
-    value_info_t *value_list;
+    char *tag;
+    value_info_t *value_table;
 } tag_info_t;
 
 
@@ -52,15 +52,7 @@ struct layer_index_name {
 };
 
 
-BuildMapDictionary DictionaryPrefix;
-BuildMapDictionary DictionaryStreet;
-BuildMapDictionary DictionaryType;
-BuildMapDictionary DictionarySuffix;
-BuildMapDictionary DictionaryCity;
-
-
 value_info_t highway_to_layer[] = {
-        { 0,                    NULL,           0 },
 	{ "motorway",           &Freeways,      LINE },
 	{ "motorway_link",      &Freeways,      LINE },
 	{ "trunk",              &Freeways,      LINE },
@@ -73,6 +65,8 @@ value_info_t highway_to_layer[] = {
 	{ "minor",              &Streets,       LINE },
 	{ "residential",        &Streets,       LINE },
 	{ "service",            &Streets,       LINE },
+	{ "road",		&Streets,	LINE },
+	{ "secondary_link",	&Streets,	LINE },
 	{ "track",              &Trails,        LINE },
 	{ "cycleway",           &Trails,        LINE },
 	{ "bridleway",          &Trails,        LINE },
@@ -80,14 +74,11 @@ value_info_t highway_to_layer[] = {
 	{ "steps",              &Trails,        LINE },
 	{ "pedestrian",         &Trails,        LINE },
 	{ "pathway",            &Trails,        LINE },
-	{ "road",		&Streets,	LINE },
-	{ "secondary_link",	&Streets,	LINE },
 	{ "path",		&Trails,	LINE },
         { 0,                    NULL,           0 },
 };
 
 value_info_t cycleway_to_layer[] = {
-        { 0,                    NULL,           0 },
 	{ "lane",               &Trails,        LINE },
 	{ "track",              &Trails,        LINE },
 	{ "opposite_lane",      &Trails,        LINE },
@@ -96,21 +87,18 @@ value_info_t cycleway_to_layer[] = {
 };
 
 value_info_t aeroway_to_layer[] = {
-        { 0,                    NULL,           0 },
 	{ "runway",             &Airports,      AREA },
 	{ "aerodrome",          &Airports,      AREA },
         { 0,                    NULL,           0 },
 };
 
 value_info_t landuse_to_layer[] = {
-        { 0,                    NULL,           0 },
         { "reservoir",          &Lakes,         AREA },
         { "conservation",       &Nature,         AREA },
         { 0,                    NULL,           0 },
 };
 
 value_info_t waterway_to_layer[] = {
-        { 0,                    NULL,           0 },
 	{ "river",              &Rivers,        LINE },
 	{ "canal",              &Rivers,        LINE },
 	{ "stream",             &Rivers,        LINE },
@@ -131,7 +119,6 @@ value_info_t waterway_to_layer[] = {
 };
 
 value_info_t railway_to_layer[] = {
-	{ 0,			NULL,           0 },
 	{ "rail",               &Railroads,     LINE },
 	{ "tram",               &Railroads,     LINE },
 	{ "light_rail",         &Railroads,     LINE },
@@ -152,7 +139,6 @@ value_info_t railway_to_layer[] = {
 };
 
 value_info_t natural_to_layer[] = {
-        { 0,                    NULL,           0 },
         { "coastline",          &Shore,  	LINE },
         { "water",              &Lakes,         AREA },
         { "wood",               &Nature,        AREA },
@@ -162,28 +148,25 @@ value_info_t natural_to_layer[] = {
 };
 
 value_info_t amenity_to_layer[] = {
-        { 0,                    NULL,           0 },
-	{ "hospital",           &Hospitals,     LINE },
-	{ "pub",                &Drinks,        PLACE },
-	// { "parking",            &Parking,       AREA },
-	{ "fuel",               &Fuel,          PLACE },
 	{ "school",             &Schools,       AREA },
-	{ "restaurant",         &Food,          PLACE },
-	{ "fast_food",          &Food,          PLACE },
-	{ "cafe",               &Cafe,          PLACE },
-	{ "grave_yard",         &Parks,         AREA },
 	{ "university",         &Schools,       AREA },
 	{ "college",            &Schools,       AREA },
+	{ "hospital",           &Hospitals,     LINE },
+	{ "pub",                &Drinks,        PLACE },
+	{ "fuel",               &Fuel,          PLACE },
+	{ "restaurant",         &Food,          PLACE },
+	{ "fast_food",          &Food,          PLACE },
 	{ "food_court",         &Food,          PLACE },
-	{ "bbq",                &Food,          PLACE },
+	{ "cafe",               &Cafe,          PLACE },
+	{ "grave_yard",         &Parks,         AREA },
 	{ "bar",                &Drinks,        PLACE },
 	{ "biergarten",         &Drinks,        PLACE },
 	{ "atm",                &ATM,           PLACE },
+	// { "parking",            &Parking,       AREA },
         { 0,                    NULL,           0 },
 };
 
 value_info_t place_to_layer[] = {
-        { 0,                    NULL,           0 },
         { "city",               &City,          PLACE },
         { "town",               &Town,          PLACE },
         { "village",            &Village,       PLACE },
@@ -194,7 +177,6 @@ value_info_t place_to_layer[] = {
 };
 
 value_info_t leisure_to_layer[] = {
-        { 0,                    NULL,           0 },
         { "park",               &Parks,         AREA },
         { "common",             &Parks,         AREA },
         { "garden",             &Parks,         AREA },
@@ -207,15 +189,11 @@ value_info_t leisure_to_layer[] = {
 };
 
 value_info_t historic_to_layer[] = {
-        { 0,                    NULL,           0 },
         { "castle",             &Castle,        PLACE },
-        // { "archaeological_site",NULL,           AREA },
-        // { "ruins",              NULL,           AREA },
         { 0,                    NULL,           0 },
 };
 
 value_info_t tourism_to_layer[] = {
-        { 0,                    NULL,           0 },
         { "hotel",              &Hotel,         PLACE },
         { "motel",              &Motel,         PLACE },
         { "guest_house",        &Guesthouse,	PLACE },
@@ -225,10 +203,7 @@ value_info_t tourism_to_layer[] = {
 };
 
 
-/* set the third column to a specific type only if that table
- * contains _only_ that type */
-tag_info_t tag_info[] = {
-	{0,			NULL			},
+tag_info_t tag_table[] = {
 	{"highway",		highway_to_layer	},
 	{"cycleway",		cycleway_to_layer	},
 	{"waterway",		waterway_to_layer	},
