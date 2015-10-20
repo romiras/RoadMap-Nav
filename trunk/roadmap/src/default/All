@@ -1,6 +1,6 @@
 Class.Name: All
 Class.Lines: Freeways Ramps Highways Streets Trails Rivers Shore Railroads Boundaries
-Class.Polygons: Lakes Sea Parks Hospitals Airports Stations Schools Malls Nature Amenity
+Class.Polygons: Islands Lakes Sea Parks Hospitals Airports Stations Schools Malls Nature Amenity
 Class.Places: City Town Village Hamlet Suburbs Food Cafe Drinks Fuel ATM Hotel Motel Guesthouse Hostel
 Class.NavigationModes: Car Bike Foot Boat
 Navigation.Car: Freeways Ramps Highways Streets
@@ -92,6 +92,10 @@ Boundaries.Color: darkgreen
  .Declutter: 2147483647
  .Speed: 1
 Nature.Color: lightgreen
+ .Declutter: 600
+ .Thickness: 1
+ .Speed: 1
+Islands.Color: lightyellow
  .Declutter: 600
  .Thickness: 1
  .Speed: 1
