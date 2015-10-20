@@ -119,8 +119,11 @@ int polygon_debug = 0;
 /**
  * @brief some global variables
  */
-static int      PolygonId = 0;
-static int      LineId = 0;
+
+static int  CurrentTileID;
+
+static int  PolygonId = 0;
+static int  LineId = 0;
 
 static int l_shoreline, l_boundary, l_lake, l_river, l_island;
 static int nRels, nWays, nNodes;
@@ -749,7 +752,7 @@ osmfloat_to_rdmint(double f)
  * @brief callback for final node parsing, called via readosm_parse()
  */
 static int
-parse_node_final(const void *is_tile, const readosm_node * node)
+parse_node_final(const void *user_data, const readosm_node * node)
 {
     const readosm_tag *tag;
     const char *name = NULL;
@@ -842,7 +845,7 @@ road_name(const char *name, const char *ref)
  * @brief callback for initial way parsing, called via readosm_parse()
  */
 static int
-parse_way(const void *is_tile, const readosm_way *way)
+parse_way(const void *user_data, const readosm_way *way)
 {
     const readosm_tag *tag;
     const char *tourism = NULL, *amenity = NULL;
@@ -872,7 +875,7 @@ parse_way(const void *is_tile, const readosm_way *way)
 
     /* if we're processing a quadtile, don't include any
      * ways that our neighbors already include */
-    if (is_tile && buildmap_osm_text_check_neighbor_way(way->id) &&
+    if (CurrentTileID && buildmap_osm_text_check_neighbor_way(way->id) &&
     		!relation_layer) {
 	buildmap_verbose("dropping way %lld because a neighbor "
 		    "already has it", way->id);
@@ -1139,7 +1142,7 @@ add_line(wayinfo *wp, const readosm_way *way, int rms_name, int layer,
  * @brief callback for final way parsing, called via readosm_parse()
  */
 static int
-parse_way_final(const void *is_tile, const readosm_way *way)
+parse_way_final(const void *user_data, const readosm_way *way)
 {
     wayinfo *wp;
     int j;
@@ -1220,7 +1223,7 @@ parse_way_final(const void *is_tile, const readosm_way *way)
 }
 
 static int
-parse_relation(const void *is_tile, const readosm_relation * relation)
+parse_relation(const void *user_data, const readosm_relation * relation)
 {
     const readosm_tag *tag;
     const readosm_member *member;
@@ -1238,7 +1241,7 @@ parse_relation(const void *is_tile, const readosm_relation * relation)
 
     /* if we're processing a quadtile, don't include any
      * relations that our neighbors already include */
-    if (is_tile && buildmap_osm_text_check_neighbor_relation(relation->id)) {
+    if (CurrentTileID && buildmap_osm_text_check_neighbor_relation(relation->id)) {
 	buildmap_verbose("dropping relation %lld because a neighbor "
 		    "already has it", relation->id);
 	return READOSM_OK;
@@ -1377,7 +1380,7 @@ static void add_multipolygon(relid_t id, wayinfo **wayinfos, int layer,
 	    }
 	}
 	if (to != from) {
-	    buildmap_info(" WARNING: failed to close polygon %d in relation %d", PolygonId, id);
+	    buildmap_info(" WARNING: failed to close polygon %d in relation %d (0x%x)", PolygonId, id, CurrentTileID);
 	} else {
 	    PolygonId++;
 	    if (polygon_debug)
@@ -1498,14 +1501,12 @@ int buildmap_osm_text_fclose(FILE *fp)
  * @brief rather than trying to put an entire file's contents in memory,
  *	we parse it in two passes.  this routine is called for each pass.
  */
-void buildmap_readosm_pass(int pass, char *fn, int tileid)
+void buildmap_readosm_pass(int pass, char *fn)
 {
     int ret;
     const void *handle;
-    void *is_tile = 0;
+    void *user_data = 0;
     FILE *fp;
-
-    if (tileid) is_tile = (void *)1;
 
     buildmap_info("Starting pass %d", pass);
 
@@ -1518,13 +1519,13 @@ void buildmap_readosm_pass(int pass, char *fn, int tileid)
     }
 
     switch (pass) {
-    case 1: ret = readosm_parse(handle, is_tile,
+    case 1: ret = readosm_parse(handle, user_data,
     		NULL, NULL, parse_relation);
 	    break;
-    case 2: ret = readosm_parse(handle, is_tile,
+    case 2: ret = readosm_parse(handle, user_data,
     		NULL, parse_way, NULL);
 	    break;
-    case 3: ret = readosm_parse(handle, is_tile,
+    case 3: ret = readosm_parse(handle, user_data,
     		parse_node_final, parse_way_final, parse_relation_final);
 	    break;
     }
@@ -1566,6 +1567,8 @@ buildmap_osm_text_read(char *fn, int tileid,
     if (tileid)
 	buildmap_osm_text_neighbor_way_maps(tileid);
 
+    CurrentTileID = tileid;
+
     buildmap_osm_text_point_hash_reset();
 
     DictionaryPrefix = buildmap_dictionary_open("prefix");
@@ -1595,7 +1598,7 @@ buildmap_osm_text_read(char *fn, int tileid,
      *  record entire interesting relations, including layer and name, and
      *  record the ways and nodes they refer to.
      */
-    buildmap_readosm_pass(1, fn, tileid);
+    buildmap_readosm_pass(1, fn);
 
     qsort(RelTable, nRelTable, sizeof(*RelTable), qsort_compare_osm_ids);
     qsort(WayTable, nWayTable, sizeof(*WayTable), qsort_compare_osm_ids);
@@ -1607,7 +1610,7 @@ buildmap_osm_text_read(char *fn, int tileid,
      * to biggest member?  at what point do i have all the information
      * present to calculate this?
      */
-    buildmap_readosm_pass(2, fn, tileid);
+    buildmap_readosm_pass(2, fn);
 
     /* we've added to the WayTable, so need to sort again, and bump
      * the number of searchable ways.
@@ -1624,7 +1627,7 @@ buildmap_osm_text_read(char *fn, int tileid,
      *  save recorded relations.  assign relation's layer and/or name to
      *      some or all of the related ways.
      */
-    buildmap_readosm_pass(3, fn, tileid);
+    buildmap_readosm_pass(3, fn);
 
     buildmap_osm_text_ways_shapeinfo();
 
