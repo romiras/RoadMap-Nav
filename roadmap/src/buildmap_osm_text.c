@@ -108,10 +108,13 @@ struct wayinfo {
     nodeid_t from;
     nodeid_t to;
     int ring;
+    int leftright;
     RoadMapArea area;
 };
 typedef struct wayinfo wayinfo;
 
+
+int polygon_debug = 0;
 
 /**
  * @brief some global variables
@@ -1082,7 +1085,7 @@ add_line(wayinfo *wp, const readosm_way *way, int rms_name, int layer,
     from_point = buildmap_osm_text_point_get(way->node_refs[0]);
     to_point = buildmap_osm_text_point_get(way->node_refs[way->node_ref_count-1]);
 
-    if (from_point == to_point && way->node_ref_count > 1) {
+    if (from_point == to_point && way->node_ref_count > 2) {
 	/* the line code really doesn't want circular ways -- i.e.,
 	 * lines where from and to are the same.  split those cases
 	 * into two lines.
@@ -1158,8 +1161,10 @@ parse_way_final(const void *is_tile, const readosm_way *way)
     if (!wp)
 	return READOSM_OK;
 
-    if (way->node_ref_count == 0)
+    if (way->node_ref_count < 2) {
+	wp->lineid = -1;
 	return READOSM_OK;
+    }
 
     rms_name = str2dict(DictionaryStreet, wp->name);
 
@@ -1210,7 +1215,8 @@ parse_way_final(const void *is_tile, const readosm_way *way)
 	    RoadMapArea *polyarea;
 	    PolygonId++;
 
-	    // buildmap_info("adding %d (%s) as polygon %d", wp->id, wp->name, PolygonId);
+	    if (polygon_debug)
+		buildmap_info("adding %d (%s) as polygon %d", wp->id, wp->name, PolygonId);
 	    buildmap_polygon_add_landmark (PolygonId, wp->layer, rms_name);
 	    buildmap_polygon_add(PolygonId, 0, PolygonId, &polyarea);
 
@@ -1273,7 +1279,6 @@ parse_relation(const void *is_tile, const readosm_relation * relation)
 	is_water = 1;
 
     if (flags & PLACE) {
-	buildmap_info("discarding %s layer %d", name, layer);
 	flags = 0;
 	layer = 0;
 	return READOSM_OK;
@@ -1328,14 +1333,18 @@ parse_relation(const void *is_tile, const readosm_relation * relation)
     return READOSM_OK;
 }
 
-static void add_multipolygon(wayinfo **wayinfos, int layer,
+static void add_multipolygon(relid_t id, wayinfo **wayinfos, int layer,
 		int rms_name, int count, char *name)
 {
     wayinfo *wp, *wp2;
+    wayinfo **twi;  // temporary wayinfo
     nodeid_t from = 0, to = 0;
     int ring = 0;
-    int i, j;
+    int i, j, k;
     RoadMapArea *polyarea;
+
+    twi = calloc(count, sizeof(*wayinfos));
+    buildmap_check_allocated(twi);
 
     for (i = 0; i < count; i++) {
 	wp = wayinfos[i];
@@ -1343,15 +1352,10 @@ static void add_multipolygon(wayinfo **wayinfos, int layer,
 	wp->ring = ++ring;
 	// if (wp->flags & AREA) continue; // already a polygon
 
-	PolygonId++;
-	// buildmap_info("add_multi: adding %d (%s) as polygon %d", wp->id, name, PolygonId);
-	buildmap_polygon_add_landmark (PolygonId, layer, rms_name);
-	buildmap_polygon_add(PolygonId, 0, PolygonId, &polyarea);
-	buildmap_polygon_add_line (0, PolygonId, wp->lineid, POLYGON_SIDE_RIGHT);
-	if (wp->lineid2)
-	    buildmap_polygon_add_line (0, PolygonId, wp->lineid2, POLYGON_SIDE_RIGHT);
-	adjust_polybox(polyarea, wp->area.south, wp->area.west);
-	adjust_polybox(polyarea, wp->area.north, wp->area.east);
+	k = 0;
+
+	wp->leftright = POLYGON_SIDE_RIGHT;
+	twi[k++] = wp;
 
 	from = wp->from;
 	to = wp->to;
@@ -1367,26 +1371,14 @@ static void add_multipolygon(wayinfo **wayinfos, int layer,
 
 	    if (wp2->from == to) {
 		wp2->ring = ring;
-		// buildmap_info(" and %d (%d) as right side", wp2->id, wp2->lineid, PolygonId);
-		buildmap_polygon_add_line (0, PolygonId, wp2->lineid,
-			POLYGON_SIDE_RIGHT);
-		if (wp2->lineid2)
-		    buildmap_polygon_add_line (0, PolygonId, wp2->lineid2,
-			    POLYGON_SIDE_RIGHT);
-		adjust_polybox(polyarea, wp2->area.south, wp2->area.west);
-		adjust_polybox(polyarea, wp2->area.north, wp2->area.east);
+		wp2->leftright = POLYGON_SIDE_RIGHT;
+		twi[k++] = wp2;
 		to = wp2->to;
 		j = i;
 	    } else if (wp2->to == to) {
 		wp2->ring = ring;
-		// buildmap_info(" and %d (%d) as left side", wp2->id, wp2->lineid, PolygonId);
-		buildmap_polygon_add_line (0, PolygonId, wp2->lineid,
-			POLYGON_SIDE_LEFT);
-		if (wp2->lineid2)
-		    buildmap_polygon_add_line (0, PolygonId, wp2->lineid2,
-			    POLYGON_SIDE_LEFT);
-		adjust_polybox(polyarea, wp2->area.south, wp2->area.west);
-		adjust_polybox(polyarea, wp2->area.north, wp2->area.east);
+		wp2->leftright = POLYGON_SIDE_LEFT;
+		twi[k++] = wp2;
 		to = wp2->from;
 		j = i;
 	    } else {
@@ -1397,15 +1389,26 @@ static void add_multipolygon(wayinfo **wayinfos, int layer,
 	    if (to == from) /* done with this ring */
 		break;
 	}
-	if (to != from)
-	    buildmap_info(" WARNING: failed to close polygon %d", PolygonId);
+	if (to != from) {
+	    buildmap_info(" WARNING: failed to close polygon %d in relation %d", PolygonId, id);
+	} else {
+	    PolygonId++;
+	    if (polygon_debug)
+		buildmap_info("add_multi: adding %d (%s) as polygon %d", wp->id, name, PolygonId);
+	    buildmap_polygon_add_landmark (PolygonId, layer, rms_name);
+	    buildmap_polygon_add(PolygonId, 0, PolygonId, &polyarea);
+	    for (j = 0; j < k; j++) {
+		buildmap_polygon_add_line (0, PolygonId, twi[j]->lineid,
+			twi[j]->leftright);
+		if (wp2->lineid2)
+		    buildmap_polygon_add_line (0, PolygonId, twi[j]->lineid2,
+			twi[j]->leftright);
+		adjust_polybox(polyarea, twi[j]->area.south, twi[j]->area.west);
+		adjust_polybox(polyarea, twi[j]->area.north, twi[j]->area.east);
+	    }
+	}
     }
-    /* clear the ring indicators, in case these ways are part
-     * of another multipolygon, later. */
-    for (i = 0; i < count; i++) {
-	wp = wayinfos[i];
-	wp->ring = 0;
-    }
+    free(twi);
 }
 
 static int
@@ -1439,6 +1442,7 @@ parse_relation_final(const void *user_data, const readosm_relation * relation)
 	switch(member->member_type) {
 	case READOSM_MEMBER_WAY:
 	    wp = isWayInteresting(member->id);
+	    if (wp->lineid == -1) continue;
 	    if (!wp->lineid) buildmap_fatal(0, "found null lineid");
 	    if (strcmp(member->role, "inner") == 0) {
 		innerwayinfos[iwc++] = wp;
@@ -1455,9 +1459,9 @@ parse_relation_final(const void *user_data, const readosm_relation * relation)
     }
 
 
-    add_multipolygon(wayinfos, rp->layer, rms_name, wc, rp->name);
+    add_multipolygon(relation->id, wayinfos, rp->layer, rms_name, wc, rp->name);
     // FIXME:  shouldn't _always_ be l_island
-    add_multipolygon(innerwayinfos, l_island, rms_name, iwc, rp->name);
+    add_multipolygon(relation->id, innerwayinfos, l_island, rms_name, iwc, rp->name);
 
     free(wayinfos);
     free(innerwayinfos);
