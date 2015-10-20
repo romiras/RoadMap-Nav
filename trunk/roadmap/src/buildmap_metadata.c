@@ -47,6 +47,17 @@
 #include "buildmap.h"
 #include "buildmap_metadata.h"
 
+/* metadata is somewhat special, in that if we're creating more than
+ * one rdm file in a single invocation, the metadata will be the same
+ * for all those files.  this only happens in buildmap_osm, and only
+ * when asked to create quadtiles to cover an entire region.  in all
+ * other cases (i.e., when buildmap is creating from tiger data, or
+ * when buildmap_osm is creating a single country iso), the metadata
+ * will be used just once before we exit.  so:  we skip doing a reset
+ * of the metadata table, which allows it to be duplicated for all
+ * .rdm files created in a single invocation.
+ */
+#define DO_METADATA_RESET 0
 
 #define BUILDMAP_MAX_VALUES 64
 
@@ -100,9 +111,7 @@ void buildmap_metadata_add_attribute (const char *category,
    RoadMapString coded_name;
    RoadMapString coded_value;
 
-
    if (AttributeByName == NULL) buildmap_metadata_initialize();
-
 
    /* First check if the attribute is already known. */
 
@@ -274,6 +283,7 @@ static void buildmap_metadata_summary (void) {
 
 static void buildmap_metadata_reset (void) {
 
+#if DO_METADATA_RESET
    int i;
 
    for (i = 0; i < BUILDMAP_BLOCK; i++) {
@@ -287,6 +297,7 @@ static void buildmap_metadata_reset (void) {
 
    roadmap_hash_delete (AttributeByName);
    AttributeByName = NULL;
+#endif
 }
 
 
