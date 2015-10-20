@@ -475,7 +475,8 @@ buildmap_osm_get_layer(int lookfor, const char *tag, const char *value,
 	    value_list = tag_info[i].value_list;
 	    if (value_list) {
 		for (j=1; value_list[j].osm_vname; j++) {
-		    if (strcmp(value, value_list[j].osm_vname) == 0) {
+		    if ((lookfor & tag_info[i].flags) &&
+		            strcmp(value, value_list[j].osm_vname) == 0) {
 			*flags = value_list[j].flags;
 			if (value_list[j].layerp)
 				*layer = *(value_list[j].layerp);
@@ -1173,7 +1174,7 @@ parse_way_final(const void *is_tile, const readosm_way *way)
 	    int minlat, minlon, maxlat, maxlon;
 	    minlat = minlon = 180000000;
 	    maxlat = maxlon = -180000000;
-
+// FIXME.  we've already calculated a bounding box in wp->area
 	    for (j = 0; j < way->node_ref_count; j++) {
 		    point = buildmap_osm_text_point_get(way->node_refs[j]);
 		    lon = buildmap_point_get_longitude(point);
@@ -1216,7 +1217,6 @@ parse_way_final(const void *is_tile, const readosm_way *way)
 
 	    add_line(wp, way, rms_name, wp->layer, 1, polyarea);
     } 
-    
     if (!wp->lineid) {
 	    buildmap_debug ("Way %lld [%s]", way->id, wp->name ? wp->name : "");
 	    add_line(wp, way, rms_name,
@@ -1235,9 +1235,7 @@ parse_relation(const void *is_tile, const readosm_relation * relation)
     const char *name = 0;
     int is_multipolygon = 0;
     int layer = 0, flags = 0;
-    int is_building = 0;
     int is_water = 0;
-    const char *tourism = NULL, *amenity = NULL;
     int i;
 
     nRels++;
@@ -1264,12 +1262,6 @@ parse_relation(const void *is_tile, const readosm_relation * relation)
 	    }
 	} else if (strcasecmp(tag->key, "name") == 0) {
 	    name = tag->value;
-	} else if (strcasecmp(tag->key, "building") == 0) {
-	    is_building = 1;
-	} else if (strcasecmp(tag->key, "tourism") == 0) {
-	    tourism = tag->value;
-	} else if (strcasecmp(tag->key, "amenity") == 0) {
-	    amenity = tag->value;
 	} else if (strcasecmp(tag->key, "natural") == 0 &&
 		    strcasecmp(tag->value, "water") == 0) {
 	    is_water = 1;
@@ -1278,15 +1270,11 @@ parse_relation(const void *is_tile, const readosm_relation * relation)
 	buildmap_osm_get_layer(AREA, tag->key, tag->value, &flags, &layer);
     }
 
-    /* only save buildings that are amenities or touristic */
-    if (is_building) {
-	if (tourism) {
-	    buildmap_osm_get_layer(PLACE, "tourism", tourism, &flags, &layer);
-	} else if (amenity) {
-	    buildmap_osm_get_layer(PLACE, "amenity", amenity, &flags, &layer);
-	} else {
-	    return READOSM_OK;
-	}
+    if (flags & PLACE) {
+	buildmap_info("discarding %s layer %d", name, layer);
+	flags = 0;
+	layer = 0;
+	return READOSM_OK;
     }
 
 
