@@ -24,6 +24,7 @@ layer_define( Rivers )
 // layer_define( Canals )
 layer_define( Lakes )
 // layer_define( Sea )
+layer_define( Islands )
 
 layer_define( Nature )
 layer_define( Peak )
