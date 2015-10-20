@@ -821,7 +821,7 @@ static int  buildmap_dictionary_save (void) {
       return 1;
    }
 
-   buildmap_info ("saving dictionary...");
+   buildmap_info ("saving %d dictionary volumes...", DictionaryVolumeCount);
 
    for (i = 0; i < DictionaryVolumeCount; i++) {
 
