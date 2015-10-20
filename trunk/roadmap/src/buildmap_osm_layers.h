@@ -216,6 +216,7 @@ value_info_t place_to_layer[] = {
         { "village",            &Village,       PLACE },
         { "hamlet",             &Hamlet,        PLACE },
         { "suburb",             &Suburbs,       PLACE },
+        { "island",             &Islands,       AREA },
         { 0,                    NULL,           0 },
 };
 
@@ -266,7 +267,7 @@ tag_info_t tag_info[] = {
         {"landuse",             landuse_to_layer,	ANY	},
         {"aeroway",             aeroway_to_layer,	ANY	},
         {"natural",             natural_to_layer,	ANY	},
-        {"place",               place_to_layer,		PLACE	},
+        {"place",               place_to_layer,		ANY	},
         { 0,                    NULL,			0	},
 };
 

@@ -1122,6 +1122,8 @@ add_shaped_line(const readosm_way *way, int rms_name, int layer, int polygon)
 	if (polygon)
 	    buildmap_polygon_add_line (0, PolygonId, LineId, POLYGON_SIDE_RIGHT);
     }
+// FIXME  see comment below about lineids from ways that have been
+//  split in two.  we should be recording both LineIds.
     return LineId;
 }
 /**
@@ -1310,7 +1312,7 @@ parse_relation(const void *is_tile, const readosm_relation * relation)
     return READOSM_OK;
 }
 
-static void add_multipolygon(wayinfo **wayinfos, relinfo *rp, int layer, int rms_name, int count)
+static void add_multipolygon(wayinfo **wayinfos, int layer, int rms_name, int count)
 {
     wayinfo *wp, *wp2;
     nodeid_t from = 0, to = 0;
@@ -1341,6 +1343,9 @@ static void add_multipolygon(wayinfo **wayinfos, relinfo *rp, int layer, int rms
 
 	    if (wp2->from == to) {
 		wp2->ring = ring;
+// FIXME it's possible that a way may have more than one lineid, as
+// a result of being a circular way that's been split in two in add_shaped_line().
+// we should record both and add both here.
 		buildmap_polygon_add_line (0, PolygonId, wp2->lineid,
 			POLYGON_SIDE_RIGHT);
 		to = wp2->to;
@@ -1373,9 +1378,9 @@ static int
 parse_relation_final(const void *user_data, const readosm_relation * relation)
 {
     relinfo *rp;
-    wayinfo *wp, **wayinfos;
+    wayinfo *wp, **wayinfos, **innerwayinfos;
     const readosm_member *member;
-    int i, wc;
+    int i, wc, iwc;
     RoadMapString rms_name;
 
     rp = isRelationInteresting(relation->id);
@@ -1392,20 +1397,22 @@ parse_relation_final(const void *user_data, const readosm_relation * relation)
 
     wayinfos = calloc(relation->member_count, sizeof(*wayinfos));
     buildmap_check_allocated(wayinfos);
+    innerwayinfos = calloc(relation->member_count, sizeof(*wayinfos));
+    buildmap_check_allocated(innerwayinfos);
 
-    wc = 0;
+    wc = iwc = 0;
     for (i = 0; i < relation->member_count; i++)
     {
 	member = relation->members + i;
 	switch(member->member_type) {
 	case READOSM_MEMBER_WAY:
-	    if (strcmp(member->role, "outer") != 0 &&
-	        strcmp(member->role, "") != 0) {
-		continue;
-	    }
 	    wp = isWayInteresting(member->id);
 	    if (!wp->lineid) buildmap_fatal(0, "found null lineid");
-	    wayinfos[wc++] = wp;
+	    if (strcmp(member->role, "inner") == 0) {
+		innerwayinfos[iwc++] = wp;
+	    } else {
+		wayinfos[wc++] = wp;
+	    }
 	    break;
 
 	case READOSM_MEMBER_NODE:
@@ -1415,9 +1422,12 @@ parse_relation_final(const void *user_data, const readosm_relation * relation)
 	}
     }
 
-    add_multipolygon(wayinfos, rp, rp->layer, rms_name, wc);
+    add_multipolygon(wayinfos, rp->layer, rms_name, wc);
+    // FIXME:  shouldn't _always_ be l_island
+    add_multipolygon(innerwayinfos, l_island, rms_name, iwc);
 
     free(wayinfos);
+    free(innerwayinfos);
     return READOSM_OK;
 }
 
