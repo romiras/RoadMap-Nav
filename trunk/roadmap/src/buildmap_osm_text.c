@@ -108,6 +108,7 @@ struct wayinfo {
     nodeid_t from;
     nodeid_t to;
     int ring;
+    RoadMapArea area;
 };
 typedef struct wayinfo wayinfo;
 
@@ -115,7 +116,6 @@ typedef struct wayinfo wayinfo;
 /**
  * @brief some global variables
  */
-static int      LandmarkId = 0;
 static int      PolygonId = 0;
 static int      LineId = 0;
 
@@ -333,6 +333,8 @@ saveInterestingWay(wayid_t id, const readosm_way *way,
 	    wp->to = way->node_refs[way->node_ref_count-1];
 	}
 
+        wp->area.west = wp->area.south = 180000000;
+        wp->area.east = wp->area.north = -180000000;
 
 	nWayTable++;
 }
@@ -856,9 +858,9 @@ parse_way(const void *is_tile, const readosm_way *way)
     int adminlevel = 0;
     int is_building = 0, is_territorial = 0, is_coast = 0;  // booleans
     int layer = 0, flags = 0;
+    int relation_layer = 0, relation_flags = 0;
     const char *name = 0, *ref = 0;
     wayinfo *wp;
-    int relation_layer, relation_flags;
     int i;
 
     nWays++;
@@ -879,7 +881,8 @@ parse_way(const void *is_tile, const readosm_way *way)
 
     /* if we're processing a quadtile, don't include any
      * ways that our neighbors already include */
-    if (is_tile && buildmap_osm_text_check_neighbor_way(way->id) && !relation_layer) {
+    if (is_tile && buildmap_osm_text_check_neighbor_way(way->id) &&
+    		!relation_layer) {
 	buildmap_verbose("dropping way %lld because a neighbor "
 		    "already has it", way->id);
 	return READOSM_OK;
@@ -958,39 +961,41 @@ parse_way(const void *is_tile, const readosm_way *way)
 	}
     }
 
-    if (flags & PLACE) {
-	if (!tourism && !amenity)
-	    flags &= ~PLACE;
-	if (way->node_refs[0] == way->node_refs[way->node_ref_count-1])
-	    flags |= AREA;
-    }
+    if (!tourism && !amenity)
+	flags &= ~PLACE;
+
     if (flags & AREA) {
+	// if it's supposed to be a polygon, but isn't, then it's not.
 	if (way->node_refs[0] != way->node_refs[way->node_ref_count-1])
 	    flags &= ~AREA;
     }
-
 
 out:
     if (layer || relation_layer) {
 	const char *n = road_name(name, ref);
 
-	if (wp) {
+	if (wp) { // then we're part of a relation
 	    if (n)
 		wp->name = strdup(n);
+
+	    // we might have already set the way, e.g. we might have
+	    // set it to "island" if it's an inner polygon of a lake
 	    if (!wp->layer) {
-		if (layer) {
+		if (layer) { // if it's not set yet, prefer the way layer
 		    wp->layer = layer;
 		    wp->flags = flags;
-		} else {
+		} else {  // else use the relation's layer
 		    wp->layer = relation_layer;
-		    wp->flags = 0; // relation_flags;
+		    wp->flags = relation_flags;
 		}
 	    }
 	    wp->from = way->node_refs[0];
 	    wp->to = way->node_refs[way->node_ref_count-1];
-	} else {
-	    saveInterestingWay( way->id, way, n ? strdup(n) : 0, layer, flags, 0, 0, 0);
+	} else { // not in a relation
+	    saveInterestingWay( way->id, way, n ?  strdup(n) :  0,
+	    		layer, flags, 0, 0, 0);
 	}
+
 	for (i = 0; i < way->node_ref_count; i++)
 	    saveInterestingNode(way->node_refs[i]);
     }
@@ -1166,14 +1171,15 @@ parse_way_final(const void *is_tile, const readosm_way *way)
     rms_name = str2dict(DictionaryStreet, wp->name);
 
     if (wp->flags & PLACE) {
-	/* we're finishing a way, but the flags may say PLACE if
-	 * we're treating a polygon as a place, for instance.  find
-	 * the center of the bounding box (which is good enough, for
-	 * these purposes), and make it into a place.
-	 */
-	    int minlat = 999999999, maxlat = -999999999;
-	    int minlon = 999999999, maxlon = -999999999;
+	    /* we're finishing a way, but the flags may say PLACE if
+	     * we're treating a polygon as a place, for instance.  find
+	     * the center of the bounding box (which is good enough, for
+	     * these purposes), and make it into a place.
+	     */
 	    int point, lon, lat;
+	    int minlat, minlon, maxlat, maxlon;
+	    minlat = minlon = 180000000;
+	    maxlat = maxlon = -180000000;
 
 	    for (j = 0; j < way->node_ref_count; j++) {
 		    point = buildmap_osm_text_point_get(way->node_refs[j]);
@@ -1186,10 +1192,10 @@ parse_way_final(const void *is_tile, const readosm_way *way)
 		    if (lon > maxlon) maxlon = lon;
 	    }
 
+	    // take the center of the bounding box
 	    lat = (maxlat + minlat) / 2;
 	    lon = (maxlon + minlon) / 2;
 
-	    /* this code looks like buildmap_osm_text_node_finish() */
 	    point = buildmap_point_add(lon, lat);
 
 	    if (wp->layer) {
@@ -1197,37 +1203,32 @@ parse_way_final(const void *is_tile, const readosm_way *way)
 		int p;
 		s = str2dict (DictionaryCity, wp->name);
 		p = buildmap_place_add(s, wp->layer, point);
-		// buildmap_debug( "wayplace: finishing %f %f %s (%d) %s layer: %d",
 		buildmap_debug( "wayplace: finishing %f %f (%d) %s layer: %d",
 		    (float)lat/1000000.0, (float)lon/1000000.0,
-		    // tourism ? tourism : amenity, p, wp->name, wp->layer);
 		    p, wp->name, wp->layer);
 	    } 
 
-	    if (wp->relation_layer && (wp->relation_flags & AREA)) {
-		goto add_as_poly;
-	    } else if (wp->relation_layer) {
-		goto add_as_way;
-	    }
-
-    } else if (wp->flags & AREA) {
+    } 
+    
+    /* add the polygon here if there's no relation, otherwise let the
+     * relation do it.
+     */
+    if ((wp->flags & AREA) && !wp->relation_id) {
 	    RoadMapArea *polyarea;
-	add_as_poly:
-	    LandmarkId++;
 	    PolygonId++;
 
-	    buildmap_info("adding %s as polygon %d", wp->name, PolygonId);
-	    buildmap_polygon_add_landmark (LandmarkId, wp->layer, rms_name);
-	    buildmap_polygon_add(LandmarkId, 0, PolygonId, &polyarea);
+	    // buildmap_info("adding %s as polygon %d", wp->name, PolygonId);
+	    buildmap_polygon_add_landmark (PolygonId, wp->layer, rms_name);
+	    buildmap_polygon_add(PolygonId, 0, PolygonId, &polyarea);
 
 	    add_line(wp, way, rms_name, wp->layer, 1, polyarea);
-    } else {
-	add_as_way:
-	    buildmap_debug ("Way %lld [%s]", way->id,
-			    wp->name ? wp->name : "");
-
+    } 
+    
+    if (!wp->lineid) {
+	    buildmap_debug ("Way %lld [%s]", way->id, wp->name ? wp->name : "");
 	    add_line(wp, way, rms_name,
-		wp->layer ? wp->layer: wp->relation_layer, 0, NULL);
+		wp->layer ? wp->layer: wp->relation_layer, 0,
+		wp->relation_id ? &wp->area : 0);
     }
     return READOSM_OK;
 }
@@ -1237,6 +1238,7 @@ parse_relation(const void *is_tile, const readosm_relation * relation)
 {
     const readosm_tag *tag;
     const readosm_member *member;
+    wayinfo *wp;
     const char *name = 0;
     int is_multipolygon = 0;
     int layer = 0, flags = 0;
@@ -1313,7 +1315,15 @@ parse_relation(const void *is_tile, const readosm_relation * relation)
 		    }
 		    innerflags = AREA;
 		}
-		if (!isWayInteresting(member->id)) {
+
+		// a way can appear in multiple relations
+		wp = isWayInteresting(member->id);
+		if (wp) {
+		    if (is_water) { // "water" is more important than most
+			wp->layer = innerlayer;
+			wp->flags = innerflags;
+		    }
+		} else {
 		    saveInterestingWay(member->id, 0, 0, innerlayer,
 		    	innerflags, layer, flags, relation->id);
 		    qsort(WayTable, nWayTable, sizeof(*WayTable),
@@ -1342,19 +1352,23 @@ static void add_multipolygon(wayinfo **wayinfos, int layer,
     nodeid_t from = 0, to = 0;
     int ring = 0;
     int i, j;
-    // RoadMapArea *polyarea;
+    RoadMapArea *polyarea;
 
     for (i = 0; i < count; i++) {
 	wp = wayinfos[i];
 	if (wp->ring) continue;
 	wp->ring = ++ring;
+	// if (wp->flags & AREA) continue; // already a polygon
 
 	PolygonId++;
-    buildmap_info("add_multi: adding %s as polygon %d", name, PolygonId);
-	buildmap_polygon_add(LandmarkId, 0, PolygonId, 0); // &polyarea);
+	// buildmap_info("add_multi: adding %s as polygon %d", name, PolygonId);
+	buildmap_polygon_add_landmark (PolygonId, layer, rms_name);
+	buildmap_polygon_add(PolygonId, 0, PolygonId, &polyarea);
 	buildmap_polygon_add_line (0, PolygonId, wp->lineid, POLYGON_SIDE_RIGHT);
 	if (wp->lineid2)
 	    buildmap_polygon_add_line (0, PolygonId, wp->lineid2, POLYGON_SIDE_RIGHT);
+	adjust_polybox(polyarea, wp->area.south, wp->area.west);
+	adjust_polybox(polyarea, wp->area.north, wp->area.east);
 
 	from = wp->from;
 	to = wp->to;
@@ -1370,14 +1384,13 @@ static void add_multipolygon(wayinfo **wayinfos, int layer,
 
 	    if (wp2->from == to) {
 		wp2->ring = ring;
-// FIXME it's possible that a way may have more than one lineid, as
-// a result of being a circular way that's been split in two in add_line().
-// we should record both and add both here.
 		buildmap_polygon_add_line (0, PolygonId, wp2->lineid,
 			POLYGON_SIDE_RIGHT);
 		if (wp2->lineid2)
 		    buildmap_polygon_add_line (0, PolygonId, wp2->lineid2,
 			    POLYGON_SIDE_RIGHT);
+		adjust_polybox(polyarea, wp2->area.south, wp2->area.west);
+		adjust_polybox(polyarea, wp2->area.north, wp2->area.east);
 		to = wp2->to;
 		j = i;
 	    } else if (wp2->to == to) {
@@ -1387,6 +1400,8 @@ static void add_multipolygon(wayinfo **wayinfos, int layer,
 		if (wp2->lineid2)
 		    buildmap_polygon_add_line (0, PolygonId, wp2->lineid2,
 			    POLYGON_SIDE_LEFT);
+		adjust_polybox(polyarea, wp2->area.south, wp2->area.west);
+		adjust_polybox(polyarea, wp2->area.north, wp2->area.east);
 		to = wp2->from;
 		j = i;
 	    } else {
@@ -1420,11 +1435,9 @@ parse_relation_final(const void *user_data, const readosm_relation * relation)
     if (!rp)
 	return READOSM_OK;
 
-    buildmap_info("warning: relation %s is interesting", rp->name);
+    // buildmap_info("warning: relation %s is interesting", rp->name);
 
     // note: assumes this is a multipolygon relation
-
-    LandmarkId++;
 
     rms_name = str2dict(DictionaryStreet, rp->name);
 
@@ -1455,7 +1468,6 @@ parse_relation_final(const void *user_data, const readosm_relation * relation)
 	}
     }
 
-    buildmap_polygon_add_landmark (LandmarkId, rp->layer, rms_name);
 
     add_multipolygon(wayinfos, rp->layer, rms_name, wc, rp->name);
     // FIXME:  shouldn't _always_ be l_island
