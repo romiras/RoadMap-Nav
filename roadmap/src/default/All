@@ -37,7 +37,7 @@ Service.Color: darkgrey
  .Color1: lightgrey
  .Delta1: -2
  .Declutter: 100
- .Thickness: 2
+ .Thickness: 1
  .Speed: 50
 Tracks.Color: brown
  .Color1: white
