@@ -1,5 +1,5 @@
 Class.Name: All
-Class.Lines: Freeways Ramps Highways Streets Trails Rivers Shore Railroads Boundaries
+Class.Lines: Freeways Ramps Highways Streets Service Tracks Trails Rivers Shore Railroads Boundaries
 Class.Polygons: Islands Lakes Sea Parks Hospitals Airports Stations Schools Malls Nature Amenity
 Class.Places: City Town Village Hamlet Suburbs Food Cafe Drinks Fuel ATM Hotel Motel Guesthouse Hostel
 Class.NavigationModes: Car Bike Foot Boat
@@ -33,11 +33,25 @@ Streets.Color: black
  .Declutter: 160
  .Thickness: 2
  .Speed: 90
-Trails.Color: DarkGrey
+Service.Color: darkgrey
+ .Color1: lightgrey
+ .Delta1: -2
+ .Declutter: 100
+ .Thickness: 2
+ .Speed: 50
+Tracks.Color: brown
+ .Color1: white
+ .Delta1: -2
+ .Declutter: 100
+ .Thickness: 2
+ .Style: dashed
+ .Speed: 50
+Trails.Color: Brown
  .LabelFontColor: Black
  .LabelFontSize: 10
  .Declutter: 160
  .Thickness: 1
+ .Style: dashed
  .Speed: 50
 Railroads.Color: black
  .Declutter: 250
