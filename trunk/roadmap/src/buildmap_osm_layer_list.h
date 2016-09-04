@@ -9,6 +9,8 @@ layer_define( Freeways )
 // layer_define( Ramps )
 layer_define( Highways )
 layer_define( Streets )
+layer_define( Tracks )
+layer_define( Service )
 layer_define( Trails )
 layer_define( Railroads )
 
